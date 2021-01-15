@@ -108,19 +108,17 @@ warnings.filterwarnings('ignore')
 import pandas as pd, numpy as np
 import re
 
+from tsfresh import extract_relevant_features, extract_features
+from tsfresh.utilities.dataframe_functions import roll_time_series
+
 
 try :
-    from tsfresh import extract_relevant_features, extract_features
-    from tsfresh.utilities.dataframe_functions import roll_time_series
-    from deltapy import transform, interact, mapper, extract
-    import pandasvault
+  import pandasvault
 
-except :
-    os.system(" pip install deltapy tsfresh pandasvault")
-    from tsfresh import extract_relevant_features, extract_features
-    from tsfresh.utilities.dataframe_functions import roll_time_series
-    from deltapy import transform, interact, mapper, extract
-    import pandasvault
+except:
+  pass
+
+
 
 
 ###########################################################################################
@@ -136,6 +134,7 @@ def data_copy():
 
 
 def test_prepro_all():
+  from deltapy import transform, interact, mapper, extract
   df = data_copy(); df.head()
 
   df_out = transform.robust_scaler(df, drop=["Close_1"])
@@ -295,9 +294,6 @@ def pd_tsfresh_features_single_row(df_single_row, cols):
     :param cols:
     :return:
     """
-
-
-
     df_cols = df_single_row.columns.tolist()
     selected_cols = [x for x in df_cols if re.match("d_[0-9]",x)]
     single_row_df_T = df_single_row[selected_cols].T
