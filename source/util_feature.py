@@ -93,9 +93,29 @@ def load(file_name):
 
 
 def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
+    """
+      https://raw.github.com/someguy/brilliant/master/somefile.txt
+
+    :param path_data_x:
+    :param path_data_y:
+    :param colid:
+    :param n_sample:
+    :return:
+    """
     log('loading', colid, path_data_x)
-    import glob
-    import ntpath
+    import glob, ntpath
+
+    if "github.com" in  path_data_x :
+        # https://github.com/arita37/dsa2/tree/main/data/input/titanic/train
+        # https://github.com/arita37/dsa2/blob/main/data/input/titanic/train/features.csv
+        #  https://raw.githubusercontent.com/arita37/dsa2/main/data/input/titanic/train/features.csv
+        urlx = path_data_x.replace(  "github.com", "raw.githubusercontent.com" )
+        urlx = urlx.replace("blob/", "")
+        import requests
+
+        #https://raw.github.com/someguy/brilliant/master/somefile.txt
+
+
     flist = glob.glob( ntpath.dirname(path_data_x)+"/*" )#ntpath.dirname(path_data_x)+"/*"
     flist = [ f for f in flist if os.path.splitext(f)[1][1:].strip().lower() in [ 'zip', 'parquet'] and ntpath.basename(f)[:8] in ['features'] ]
     assert len(flist) > 0 , " No file: " +path_data_x

@@ -12,9 +12,8 @@ warnings.filterwarnings('ignore')
 root_repo      =  os.path.abspath(os.getcwd()).replace("\\", "/") + "/"     ; print(root_repo)
 THIS_FILEPATH  =  os.path.abspath(__file__) 
 
-
 sys.path.append(root_repo)
-from source.util_feature import save,os_get_function_name
+from source.util_feature import save, os_get_function_name, log
 
 
 def global_pars_update(model_dict,  data_name, config_name):
@@ -61,21 +60,19 @@ config_default   = 'titanic1'          ### name of function which contains data 
 
 
 cols_input_type_2 = {
-     "coly"   :   "Survived"
-    ,"colid"  :   "PassengerId"
-    ,"colcat" :   ["Sex", "Embarked" ]
-    ,"colnum" :   ["Pclass", "Age","SibSp", "Parch","Fare"]
-    ,"coltext" :  ["Name", "Ticket"]
-    ,"coldate" :  []
-    ,"colcross" : [ "Name", "Sex", "Ticket","Embarked","Pclass", "Age","SibSp", "Parch","Fare" ]
+     "coly"     :  "Survived"
+    ,"colid"    :  "PassengerId"
+    ,"colcat"   :  ["Sex", "Embarked" ]
+    ,"colnum"   :  ["Pclass", "Age","SibSp", "Parch","Fare"]
+    ,"coltext"  :  ["Name", "Ticket"]
+    ,"coldate"  :  []
+    ,"colcross" :  [ "Name", "Sex", "Ticket","Embarked","Pclass", "Age","SibSp", "Parch","Fare" ]
 
-    ,'colgen'  :  [   "Pclass", "Age","SibSp", "Parch","Fare" ]
+    ,'colgen'  :   [   "Pclass", "Age","SibSp", "Parch","Fare" ]
 }
 
 
 #################################################################################
-
-
 def titanic1(path_model_out="") :
     """
        Contains all needed informations for Light GBM Classifier model,
@@ -143,43 +140,81 @@ def titanic1(path_model_out="") :
     return model_dict
 
 
-def hyperparam_optim():
+
+
+#####################################################################################
+########## Hyper-parans #############################################################
+def hyperparam(config_full="",
+               ntrials=2, n_sample=5000, debug=1,
+               path_output         = "data/output/titanic1/",
+               path_optuna_storage = 'data/output/optuna_hyper/optunadb.db'):
+    """
+        python test_hyperopt.py  hyperparam  --ntrials 2
+
+    :param ntrials:
+    :param n_sample:
+    :param debug:
+    :return:
+    """
+    from source.util_feature import load_function_uri
     from source.run_train import  run_train
     from source.run_hyperopt import run_hyper_optuna
+    import json
 
-    ####### Initial dict
-    mdict = titanic1()
-    
-    def objective_fun(mdict):
-        metric_name = "accuracy_score"
-        print(mdict)
-        ddict       = run_train(config_name="", config_path="", n_sample=5000,
-                             mode="run_preprocess", model_dict=mdict,
-                             return_mode='dict')
-        print(ddict['stats']['metrics_test'].to_dict('records')[0])
-        ddict['stats']['accuracy_score'] = ddict['stats']['metrics_test'].to_dict('records')[0]['metric_val']
-        
-        print(ddict)
-        res = ddict['stats'][metric_name]
-        return res
-  
 
-    ###### Range in parameters
+    config_name = 'titanic1'
+    metric_name = "accuracy_score"
+    config_full = THIS_FILEPATH + "::" + config_name  if config_full == "" else config_full
+
+
+    ###### model_dict  adding Range in parameters  ###############################
     mdict_range =   {'model_pars': {
-        ### LightGBM API model   #######################################
+        ### LightGBM API model
         'model_pars' : { 'objective': 'binary',
                          'n_estimators': ('int', 20, 100),
                        },
-          }
+        }
     }
-    
- 
 
-    
+    ##############################################################################
+    ####### model_dict initial dict of params  ###################################
+    mdict = load_function_uri( config_full) #titanic1()
+    mdict = mdict()
 
-    engine_pars = {'metric_target':'loss'}
-    result_p    = run_hyper_optuna(objective_fun, mdict, mdict_range, engine_pars, ntrials= 3)
-    return result_p
+    ####### Objective   ##########################################################
+    def objective_fun(mdict):
+        if debug : log(mdict)#
+        ddict       = run_train(config_name="", config_path="", n_sample= n_sample,
+                                mode="run_preprocess", model_dict=mdict,
+                                return_mode='dict')
+
+        # print(ddict['stats']['metrics_test'].to_dict('records')[0])
+        ddict['stats'][metric_name] = ddict['stats']['metrics_test'].to_dict('records')[0]['metric_val']
+        
+        if debug : print(ddict)
+        res = ddict['stats'][metric_name]
+        return res
+
+    ##### Optuna Params   ####################################################
+    engine_pars = {'metric_target' :'loss',
+                   'study_name'    : config_name  ,
+                   'storage'       : f"sqlite:///" + os.path.abspath(path_optuna_storage).replace("\\", "/") }
+
+    ##### Running the optim
+    best_dict   = run_hyper_optuna(objective_fun, mdict, mdict_range, engine_pars, ntrials= ntrials)
+
+
+    ##### Export
+    os.makedirs(path_output, exist_ok=True)
+    json.dump(best_dict, open(path_output + "/hyper_params_best.json", mode='a'))
+
+    log(engine_pars['storage'])
+    log(best_dict)
+    log(path_output)
+
+
+
+
 
 
 ###################################################################################
@@ -202,25 +237,20 @@ from core_run import predict
 
 
 
+
 ###########################################################################################################
 ###########################################################################################################
 """
-python  hyperopt.py  train   --nsample 200
+python  test_hyperopt.py  train   --nsample 200
 
-python  hyperopt.py  hyperparam_optim
+python  test_hyperopt.py  hyperparam  --ntrials 2
 
 
 """
-
-def test():
-    hyperparam_optim()
-    
-
-
-
 if __name__ == "__main__":
     import fire
     fire.Fire()
-    #test()
+
+
 
 

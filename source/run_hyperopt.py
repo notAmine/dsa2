@@ -39,6 +39,7 @@ def run_hyper_optuna(obj_fun, pars_dict_init,  pars_dict_range,  engine_pars, nt
       obj_fun(pars_dict) :  Objective function
       engine_pars :    {   }  optuna parameters
     """
+    import os
     print(pars_dict_init)
     def parse_dict(mdict, trial):
         #### Recursive parse the dict
@@ -90,12 +91,13 @@ def run_hyper_optuna(obj_fun, pars_dict_init,  pars_dict_range,  engine_pars, nt
 
     if "study_name" in engine_pars:
         study_name = engine_pars['study_name']
-        storage    = engine_pars.get('storage', 'optunadb.db')
+        storage    = engine_pars.get('storage', 'sqlite:///optunadb.db')  # {}
+        # os.makedirs( os.path.dirname(storage), exist_ok= True)
         # study = optuna.load_study(study_name='distributed-example', storage='sqlite:///example.db')
         try:
             study = optuna.load_study(study_name, storage)
         except:
-            study = optuna.create_study(study_name, storage, pruner=pruner)
+            study = optuna.create_study(study_name=study_name, storage=storage, pruner=pruner)
     else:
         study = optuna.create_study(pruner=pruner)
         
