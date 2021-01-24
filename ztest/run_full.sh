@@ -22,12 +22,11 @@ python example/regress_airbnb.py  predict  --nsample 5000
 
 
 
-
-
-
 python example/classifier_income.py  train    --nsample 1000   ;
 python example/classifier_income.py  predict  --nsample 1000   ;
 
 
+### HyperOpt optuna testing
+python  test_hyperopt.py  hyperparam  --ntrials 1
 
 
