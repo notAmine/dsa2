@@ -150,22 +150,12 @@ def hyperparam(config_full="",
                path_optuna_storage = 'data/output/optuna_hyper/optunadb.db'):
     """
         python test_hyperopt.py  hyperparam  --ntrials 2
-
-    :param ntrials:
-    :param n_sample:
-    :param debug:
-    :return:
     """
-    from source.util_feature import load_function_uri
-    from source.run_train import  run_train
-    from source.run_hyperopt import run_hyper_optuna
-    import json
-
+    # from core_run import  hyperparam_wrapper
 
     config_name = 'titanic1'
     metric_name = "accuracy_score"
-    config_full = THIS_FILEPATH + "::" + config_name  if config_full == "" else config_full
-
+    config_full = THIS_FILEPATH + "::" + config_name
 
     ###### model_dict  adding Range in parameters  ###############################
     mdict_range =   {'model_pars': {
@@ -176,10 +166,36 @@ def hyperparam(config_full="",
         }
     }
 
+    hyperparam_wrapper(config_full,
+                       ntrials, n_sample, debug,
+                       path_output, path_optuna_storage,
+                       metric_name,
+                       mdict_range
+                       )
+
+
+
+
+
+
+#####################################################################################
+########## Hyper-parans Wrapper #####################################################
+def hyperparam_wrapper(config_full="",
+                       ntrials=2, n_sample=5000, debug=1,
+                       path_output         = "data/output/titanic1/",
+                       path_optuna_storage = 'data/output/optuna_hyper/optunadb.db',
+                       metric_name='accuracy_score', mdict_range=None):
+
+    from source.util_feature import load_function_uri
+    from source.run_train import  run_train
+    from source.run_hyperopt import run_hyper_optuna
+    import json
+
     ##############################################################################
     ####### model_dict initial dict of params  ###################################
-    mdict = load_function_uri( config_full) #titanic1()
-    mdict = mdict()
+    config_name = config_full.split("::")[-1]
+    mdict       = load_function_uri(config_full) #titanic1()
+    mdict       = mdict()
 
     ####### Objective   ##########################################################
     def objective_fun(mdict):
@@ -211,10 +227,6 @@ def hyperparam(config_full="",
     log(engine_pars['storage'])
     log(best_dict)
     log(path_output)
-
-
-
-
 
 
 ###################################################################################
