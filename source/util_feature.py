@@ -44,6 +44,34 @@ def os_getcwd():
 
 
 #############################################################################################
+def save_features(df, name, path=None):
+    """ Save dataframe on disk
+    :param df:
+    :param name:
+    :param path:
+    :return:
+    """
+    if path is not None :
+       os.makedirs( f"{path}/{name}" , exist_ok=True)
+       if isinstance(df, pd.Series):
+           df0=df.to_frame()
+       else:
+           df0=df
+       log( f"{path}/{name}/features.parquet" )
+       log(df0, list(df0.columns))
+       df0.to_parquet( f"{path}/{name}/features.parquet")
+    else:
+       log("No saved features, path is none")
+
+
+def load_features(name, path):
+    try:
+        return pd.read_parquet(f"{path}/{name}/features.parquet")
+    except:
+        log("Not available", path, name)
+        return None
+
+
 def save_list(path, name_list, glob):
     import pickle, os
     os.makedirs(path, exist_ok=True)
@@ -65,9 +93,29 @@ def load(file_name):
 
 
 def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
+    """
+      https://raw.github.com/someguy/brilliant/master/somefile.txt
+
+    :param path_data_x:
+    :param path_data_y:
+    :param colid:
+    :param n_sample:
+    :return:
+    """
     log('loading', colid, path_data_x)
-    import glob
-    import ntpath
+    import glob, ntpath
+
+    if "github.com" in  path_data_x :
+        # https://github.com/arita37/dsa2/tree/main/data/input/titanic/train
+        # https://github.com/arita37/dsa2/blob/main/data/input/titanic/train/features.csv
+        #  https://raw.githubusercontent.com/arita37/dsa2/main/data/input/titanic/train/features.csv
+        urlx = path_data_x.replace(  "github.com", "raw.githubusercontent.com" )
+        urlx = urlx.replace("blob/", "")
+        import requests
+
+        #https://raw.github.com/someguy/brilliant/master/somefile.txt
+
+
     flist = glob.glob( ntpath.dirname(path_data_x)+"/*" )#ntpath.dirname(path_data_x)+"/*"
     flist = [ f for f in flist if os.path.splitext(f)[1][1:].strip().lower() in [ 'zip', 'parquet'] and ntpath.basename(f)[:8] in ['features'] ]
     assert len(flist) > 0 , " No file: " +path_data_x
