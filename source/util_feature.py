@@ -92,8 +92,74 @@ def load(file_name):
 
 
 
+
+def pd_read_file(path_glob="*.pkl", ignore_index=True,  cols=None,
+                 verbose=False, nrows=-1, concat_sort=True, n_pool=1, drop_duplicates=None, col_filter=None,  col_filter_val=None,  **kw):
+  """
+      Read file in parallel from disk : very Fast
+  :param path_glob:
+  :param ignore_index:
+  :param cols:
+  :param verbose:
+  :param nrows:
+  :param concat_sort:
+  :param n_pool:
+  :param drop_duplicates:
+  :param shop_id:
+  :param kw:
+  :return:
+  """
+  import glob, gc,  pandas as pd, os
+  readers = {
+          ".pkl"     : pd.read_pickle,
+          ".parquet" : pd.read_parquet,
+          ".csv"     : pd.read_csv,
+          ".txt"     : pd.read_csv,
+   }
+  from multiprocessing.pool import ThreadPool
+  pool = ThreadPool(processes=n_pool)
+
+  file_list = glob.glob(path_glob)
+  # print("ok", verbose)
+  dfall = pd.DataFrame()
+  n_file = len(file_list)
+  if verbose : log(n_file,  n_file // n_pool )
+  for j in range(n_file // n_pool +1 ) :
+      log("Pool", j, end=",")
+      job_list =[]
+      for i in range(n_pool):
+         if n_pool*j + i >= n_file  : break
+         filei         = file_list[n_pool*j + i]
+         ext           = os.path.splitext(filei)[1]
+         pd_reader_obj = readers[ext]
+         job_list.append( pool.apply_async(pd_reader_obj, (filei, )))
+         if verbose :
+            log(j, filei)
+
+      for i in range(n_pool):
+        if i >= len(job_list): break
+        dfi   = job_list[ i].get()
+
+        if col_filter is not None : dfi = dfi[ dfi[col_filter] == col_filter_val ]
+        if cols is not None :       dfi = dfi[cols]
+        if nrows > 0        :       dfi = dfi.iloc[:nrows,:]
+        if drop_duplicates is not None  : dfi = dfi.drop_duplicates(drop_duplicates)
+        gc.collect()
+
+        dfall = pd.concat( (dfall, dfi), ignore_index=ignore_index, sort= concat_sort)
+        #log("Len", n_pool*j + i, len(dfall))
+        del dfi; gc.collect()
+
+  if verbose : log(n_file, j * n_file//n_pool )
+  return dfall
+
+
+
+
 def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
     """
+
+      return a datraframe
       https://raw.github.com/someguy/brilliant/master/somefile.txt
 
     :param path_data_x:
@@ -105,6 +171,7 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
     log('loading', colid, path_data_x)
     import glob, ntpath
 
+
     if "github.com" in  path_data_x :
         # https://github.com/arita37/dsa2/tree/main/data/input/titanic/train
         # https://github.com/arita37/dsa2/blob/main/data/input/titanic/train/features.csv
@@ -115,6 +182,25 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
 
         #https://raw.github.com/someguy/brilliant/master/somefile.txt
 
+        path_data_x = ''
+
+
+    if "drive.google.com" in  path_data_x :
+        from util import  download_googledrive
+
+        path_data_x = ''
+
+
+
+    if "dropbox.com" in  path_data_x :
+        from util import download_dtopbox
+
+
+        
+        path_data_x = ''
+
+
+
 
     flist = glob.glob( ntpath.dirname(path_data_x)+"/*" )#ntpath.dirname(path_data_x)+"/*"
     flist = [ f for f in flist if os.path.splitext(f)[1][1:].strip().lower() in [ 'zip', 'parquet'] and ntpath.basename(f)[:8] in ['features'] ]
@@ -122,20 +208,19 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
 
     log("###### Load dfX target values #####################################")
     print(flist)
-    df    = None
-    for fi in flist :
-        if ".parquet" in fi :  dfi = pd.read_parquet(fi) # + "/features.zip")
-        if ".zip" in fi  :     dfi = pd.read_csv(fi) # + "/features.zip")
-        df = pd.concat((df, dfi))  if df is not None else dfi
+    #df    = None
+    df  = pd_read_file(flist)
+    #for fi in flist :
+    #    if ".parquet" in fi :  dfi = pd.read_parquet(fi) # + "/features.zip")
+    #    if ".zip" in fi  :     dfi = pd.read_csv(fi) # + "/features.zip")
+    #    df = pd.concat((df, dfi))  if df is not None else dfi
     assert len(df) > 0 , " Dataframe is empty: " + path_data_x
     log("dfX_raw", df.T.head(4))
 
-
-    # df = pd.read_csv(path_data_x) # + "/features.zip")
+    #### Add unique column_id  ###############################################
     if colid not in list(df.columns ):
       df[colid] = np.arange(0, len(df))
     df        = df.set_index(colid)
-
 
     if n_sample > 0:
         df = df.iloc[:n_sample, :]
@@ -144,12 +229,13 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
     try:
         flist = glob.glob( ntpath.dirname(path_data_y)+"/*" )
         flist = [ f for f in flist if os.path.splitext(f)[1][1:].strip().lower() in [ 'zip', 'parquet'] and ntpath.basename(f)[:6] in ['target']]
-        dfy   = pd.DataFrame()
-        dfi   = None
-        for fi in flist :
-            if ".parquet" in fi :  dfi = pd.read_parquet(fi) # + "/features.zip")
-            if ".zip" in fi  :     dfi = pd.read_csv(fi) # + "/features.zip")
-            dfy = pd.concat((dfy, dfi))
+        # dfy   = pd.DataFrame()
+        dfy = pd_read_file(flist)
+        # dfi   = None
+        #for fi in flist :
+        #    if ".parquet" in fi :  dfi = pd.read_parquet(fi) # + "/features.zip")
+        #    if ".zip" in fi  :     dfi = pd.read_csv(fi) # + "/features.zip")
+        #    dfy = pd.concat((dfy, dfi))
 
         log("dfy", dfy.head(4).T)
         if colid not in list(dfy.columns) :

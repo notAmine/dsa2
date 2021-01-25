@@ -206,8 +206,6 @@ def download_dtopbox(data_pars):
 
 
 ####################################################################################
-
-
 def import_data():
   def sent_generator(TRAIN_DATA_FILE, chunksize):
       import pandas as pd
@@ -229,9 +227,6 @@ def import_data():
                   epochs          = epochs,
                   steps_per_epoch = n_steps,
                   validation_data = (data_pars["data_1_val"], data_pars["data_1_val"]))
-
-
-
 
 
 
