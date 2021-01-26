@@ -115,6 +115,8 @@ def pd_read_file(path_glob="*.pkl", ignore_index=True,  cols=None,
           ".parquet" : pd.read_parquet,
           ".csv"     : pd.read_csv,
           ".txt"     : pd.read_csv,
+          ".zip"     : pd.read_csv,
+          ".gzip"    : pd.read_csv,
    }
   from multiprocessing.pool import ThreadPool
   pool = ThreadPool(processes=n_pool)
@@ -209,7 +211,8 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
     log("###### Load dfX target values #####################################")
     print(flist)
     #df    = None
-    df  = pd_read_file(flist)
+    fstr = ",".join(flist)
+    df   = pd_read_file(fstr)
     #for fi in flist :
     #    if ".parquet" in fi :  dfi = pd.read_parquet(fi) # + "/features.zip")
     #    if ".zip" in fi  :     dfi = pd.read_csv(fi) # + "/features.zip")
@@ -230,7 +233,8 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
         flist = glob.glob( ntpath.dirname(path_data_y)+"/*" )
         flist = [ f for f in flist if os.path.splitext(f)[1][1:].strip().lower() in [ 'zip', 'parquet'] and ntpath.basename(f)[:6] in ['target']]
         # dfy   = pd.DataFrame()
-        dfy = pd_read_file(flist)
+        fstr = ",".join(flist)
+        dfy  = pd_read_file(fstr)
         # dfi   = None
         #for fi in flist :
         #    if ".parquet" in fi :  dfi = pd.read_parquet(fi) # + "/features.zip")
@@ -248,105 +252,6 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
     return df
 
 
-
-
-
-def pd_read_file(path_glob="*.pkl", ignore_index=True,  cols=None,
-                  verbose=False, nrows=-1, concat_sort=True, n_pool=1,
-                  drop_duplicates=None, shop_id=None, nmax= 1000000000,  **kw):
-  """
-     "*.pkl, *.parquet"
-
-  """
-  # os.environ["MODIN_ENGINE"] = "dask"
-  # import modin.pandas as pd
-  import glob, gc,  pandas as pd, os
-  readers = {
-          ".pkl"     : pd.read_pickle,
-          ".parquet" : pd.read_parquet,
-          ".csv"     : pd.read_csv,
-          ".txt"     : pd.read_csv,
-   }
-  from multiprocessing.pool import ThreadPool
-  pool = ThreadPool(processes=n_pool)
-
-  path_glob_list = [ t.strip() for t in  path_glob.split(",") ]
-  file_list = []
-  for pg in path_glob_list :
-    file_list = file_list + glob.glob(pg)
-  file_list.sort()
-  n_file = len(file_list)
-  if n_file < 1: raise Exception("No file exist", path_glob)
-
-  # print("ok", verbose)
-  dfall = pd.DataFrame()
-
-  if verbose : log(n_file,  n_file // n_pool )
-  for j in range(n_file // n_pool +1 ) :
-      log("Pool", j)
-      job_list =[]
-      for i in range(n_pool):
-         if n_pool*j + i >= n_file  : break
-         filei         = file_list[n_pool*j + i]
-         ext           = os.path.splitext(filei)[1]
-         pd_reader_obj = readers[ext]
-         job_list.append( pool.apply_async(pd_reader_obj, (filei, )))
-         if verbose : log(j, filei)
-
-      for i in range(n_pool):
-        if i >= len(job_list): break
-        dfi   = job_list[i].get()
-
-        if shop_id is not None and "shop_id" in  dfi.columns : dfi = dfi[ dfi['shop_id'] == shop_id ]
-        if cols is not None :    dfi = dfi[cols]
-        if nrows > 0        :    dfi = dfi.iloc[:nrows,:]
-        if drop_duplicates is not None  : dfi = dfi.drop_duplicates(drop_duplicates)
-        gc.collect()
-
-        dfall = pd.concat( (dfall, dfi), ignore_index=ignore_index, sort= concat_sort)
-        #log("Len", n_pool*j + i, len(dfall))
-        del dfi; gc.collect()
-
-        if len(dfall) > nmax : return dfall
-
-  if verbose : log(n_file, j * n_file//n_pool )
-  gc.collect()
-  return dfall
-
-
-def load_function_uri2(uri_name="module_name.function_or_class"):
-    """
-    #load dynamically function from URI pattern
-    #"dataset"        : "mlmodels.preprocess.generic:pandasDataset"
-    ###### External File processor :
-    #"dataset"        : "MyFolder/preprocess/myfile.py:pandasDataset"
-    """
-    import importlib, sys
-    from pathlib import Path
-    pkg = uri_name.split("::")
-
-    assert len(pkg) > 1, "  Missing :   in  uri_name module_name:function_or_class "
-    package, name = pkg[0], pkg[1]
-
-    try:
-        #### Import from package mlmodels sub-folder
-        return  getattr(importlib.import_module(package), name)
-
-    except Exception as e1:
-        try:
-            ### Add Folder to Path and Load absoluate path module
-            path_parent = str(Path(package).parent.parent.absolute())
-            sys.path.append(path_parent)
-            log(path_parent)
-
-            #### import Absolute Path model_tf.1_lstm
-            model_name   = Path(package).stem  # remove .py
-            package_name = str(Path(package).parts[-2]) + "." + str(model_name)
-            #log(package_name, config_name)
-            return  getattr(importlib.import_module(package_name), name)
-
-        except Exception as e2:
-            raise NameError(f"Module {pkg} notfound, {e1}, {e2}")
 
 def load_function_uri(uri_name="myfolder/myfile.py::myFunction"):
     """
