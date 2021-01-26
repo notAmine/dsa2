@@ -157,14 +157,25 @@ def hyperparam(config_full="",
     metric_name = "accuracy_score"
     config_full = THIS_FILEPATH + "::" + config_name
 
-    ###### model_dict  adding Range in parameters  ###############################
+    ###### model_dict  adding Range in parameters sampling  ###############################
     mdict_range =   {'model_pars': {
         ### LightGBM API model
         'model_pars' : { 'objective': 'binary',
                          'n_estimators': ('int', 20, 100),
                        },
+        },
+
+        'data_pars' :  {
+            'cols_model_group' : ('categorical',   #### Categorical sampling
+                 [  [ 'colnum'  ] ,
+                    [ 'colnum', 'colcat_bin']
+
+                 ]
+            ),
         }
+
     }
+
 
     hyperparam_wrapper(config_full,
                        ntrials, n_sample, debug,
