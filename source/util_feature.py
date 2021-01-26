@@ -8,13 +8,10 @@ import copy
 import os
 from collections import OrderedDict
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import re
-
-# from tsfresh import extract_relevant_features, extract_features
-# from tsfresh.utilities.dataframe_functions import roll_time_series
 
 
 #############################################################################################
