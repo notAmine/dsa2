@@ -4,7 +4,7 @@
 Automatic Feature generator
 
 """
-import warnings, copy, os, sys
+import warnings, copy, os, sys, numpy as np
 warnings.filterwarnings('ignore')
 
 ####################################################################################
@@ -150,31 +150,37 @@ def hyperparam(config_full="",
                path_optuna_storage = 'data/output/optuna_hyper/optunadb.db'):
     """
         python test_hyperopt.py  hyperparam  --ntrials 2
+
     """
     # from core_run import  hyperparam_wrapper
 
+    #### Base nodel_dict params ##########################################################
     config_name = 'titanic1'
-    metric_name = "accuracy_score"
     config_full = THIS_FILEPATH + "::" + config_name
 
-    ###### model_dict  adding Range in parameters sampling  ###############################
+    ###### model_dict  adding range for parameters sampling  #############################
     mdict_range =   {'model_pars': {
         ### LightGBM API model
-        'model_pars' : { 'objective': 'binary',
-                         'n_estimators': ('int', 20, 100),
+        'model_pars' : { 'objective':      'binary',
+                         'n_estimators':   ('int', 20, 100),
+                         'learning_rate' : ('log_uniform', 0.0001, 0.1),
+                         'reg_alpha ' :    ('uniform', 0.0001, 0.01),  ### l1 reg
+
                        },
         },
 
         'data_pars' :  {
-            'cols_model_group' : ('categorical',   #### Categorical sampling
-                 [  [ 'colnum'  ] ,
-                    [ 'colnum', 'colcat_bin']
-
-                 ]
+            #### Categorical sampling
+            'cols_model_group' : ('categorical',  [  [ 'colnum'  ] ,
+                                                     [ 'colnum', 'colcat_bin']
+                                                  ]
             ),
         }
 
     }
+
+    ###################################################################################
+    metric_name = "accuracy_score"
 
 
     hyperparam_wrapper(config_full,
@@ -216,10 +222,13 @@ def hyperparam_wrapper(config_full="",
                                 return_mode='dict')
 
         # print(ddict['stats']['metrics_test'].to_dict('records')[0])
-        ddict['stats'][metric_name] = ddict['stats']['metrics_test'].to_dict('records')[0]['metric_val']
-        
+        #res = ddict['stats']['metrics_test'].to_dict('records')[0]['metric_val']
+        df  =  ddict['stats']['metrics_test']
+
+        #### Beware of the sign
+        res = -np.mean(df[ df['metric_name'] == metric_name ]['metric_val'].values)
+
         if debug : print(ddict)
-        res = ddict['stats'][metric_name]
         return res
 
     ##### Optuna Params   ####################################################
