@@ -19,9 +19,11 @@ Preprocessors Check
 
 ### Looking for contributors
      Maintain and setup roadmap of this excellent Data Science / ML repo.
-     Goal is to unified Data Science and Machine Learning :
-      REDUCE BOILERPLATE CODE for daily task.
-      
+     Goal is to unified Data Science and Machine Learning .
+     Basic idea is to have one single dictionary/json for
+            model, compute, data definition,
+     --> easy to define, easy to track, easy to modify.
+     
 
 ### Install 
      pip install -r zrequirements.txt
