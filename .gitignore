@@ -179,3 +179,4 @@ dmypy.json
 ./source/bin/cross_feature_rl_CAFEM.zip
 ./source/bin/reinforcement_feature_CAFEM/data/40910/40910.arff
 /.vscode
+/data/input/online_intention/code_results
