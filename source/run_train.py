@@ -256,7 +256,7 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
 
     from run_mlflow import register
 
-    register(model_dict['global_pars']['config_name'],model_dict['model_pars']["model_pars"],stats["metrics_test"])
+    register(model_dict['global_pars']['config_name'],model_dict['global_pars'],stats["metrics_test"])
 
 
     if return_mode == 'dict' :
