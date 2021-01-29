@@ -254,6 +254,10 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     post_process_fun      = model_dict['model_pars']['post_process_fun']
     dfXy, dfXytest,stats  = train(model_dict, dfXy, cols, post_process_fun)
 
+    from run_mlflow import register
+
+    register(model_dict['global_pars']['config_name'],model_dict['model_pars']["model_pars"],stats["metrics_test"])
+
 
     if return_mode == 'dict' :
         return { 'dfXy' : dfXy, 'dfXytest': dfXytest, 'stats' : stats   }
