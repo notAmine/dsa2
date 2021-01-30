@@ -88,8 +88,6 @@ def load(file_name):
     return pickle.load(open(f'{file_name}', mode='rb'))
 
 
-
-
 def pd_read_file(path_glob="*.pkl", ignore_index=True,  cols=None,
                  verbose=False, nrows=-1, concat_sort=True, n_pool=1, drop_duplicates=None, col_filter=None,  col_filter_val=None,  **kw):
   """
@@ -157,7 +155,6 @@ def pd_read_file(path_glob="*.pkl", ignore_index=True,  cols=None,
 
 def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
     """
-
       return a datraframe
       https://raw.github.com/someguy/brilliant/master/somefile.txt
 

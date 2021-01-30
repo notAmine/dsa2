@@ -194,7 +194,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 ####################################################################################################
 ############CLI Command ############################################################################
 def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
-              mode="run_preprocess", model_dict=None, return_mode='file'):
+              mode="run_preprocess", model_dict=None, return_mode='file', use_mlmflow= False):
     """
       Configuration of the model is in config_model.py file
     :param config_name:
@@ -253,6 +253,11 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     log(str(model_dict)[:1000])
     post_process_fun      = model_dict['model_pars']['post_process_fun']
     dfXy, dfXytest,stats  = train(model_dict, dfXy, cols, post_process_fun)
+
+
+    if use_mlmflow : 
+       from run_mlflow import register
+       register(model_dict['global_pars']['config_name'],model_dict['global_pars'],stats["metrics_test"])
 
 
     if return_mode == 'dict' :

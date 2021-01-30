@@ -62,14 +62,23 @@ Preprocessors Check
         python  mydata_classifier.py  train
         python  mydata_classifier.py  predict
 
+
         
 ### Examples
 
       In example/
 
 
-```
 
 
+### Mlflow
+    1) Need to install optional dependencies (mlflow). Just Install requirements
+        pip install -r zrequirements.txt
 
+    2) Just serve MLFLOW with this command
+        mlflow server --backend-store-uri sqlite:///local.db --default-artifact-root ./mlruns
 
+    3) Run
+        python  titanic_classifier.py  train 
+        
+        
