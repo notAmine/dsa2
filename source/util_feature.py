@@ -171,10 +171,11 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
     import glob, ntpath
 
     supported_extensions = [ ".txt", ".csv", ".zip", ".gzip", ".pkl", ".parquet" ]
-    fallback_name = "features"
-    download_path = os.path.join(os.path.curdir, "data/input/download")
+    fallback_name        = "features"
+    download_path        = os.path.join(os.path.curdir, "data/input/download")
 
     if (path_data_x.startswith("http")):
+        log("###### Download ##################################################")
         path_data_x = fetch_dataset(path_data_x, download_path)
         for file_extension in supported_extensions:
             path_link_x = os.path.join(download_path, fallback_name + file_extension)
@@ -187,7 +188,7 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
     flist = [ f for f in flist if os.path.splitext(f)[1].strip().lower() in supported_extensions and ntpath.basename(f)[:8] in ['features'] ]
     assert len(flist) > 0 , " No file: " +path_data_x
 
-    log("###### Load dfX target values #####################################")
+    log("###### Load dfX target values ######################################")
     print(flist)
     #df    = None
     fstr = ",".join(flist)
@@ -198,12 +199,10 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
                 break
         except:
             pass
-    #for fi in flist :
-    #    if ".parquet" in fi :  dfi = pd.read_parquet(fi) # + "/features.zip")
-    #    if ".zip" in fi  :     dfi = pd.read_csv(fi) # + "/features.zip")
+
     #    df = pd.concat((df, dfi))  if df is not None else dfi
     assert len(df) > 0 , " Dataframe is empty: " + path_data_x
-    log("dfX_raw", df.T.head(4))
+    log("dfX", df.T.head(4))
 
     #### Add unique column_id  ###############################################
     if colid not in list(df.columns ):
@@ -220,11 +219,6 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
         # dfy   = pd.DataFrame()
         fstr = ",".join(flist)
         dfy  = pd_read_file(fstr)
-        # dfi   = None
-        #for fi in flist :
-        #    if ".parquet" in fi :  dfi = pd.read_parquet(fi) # + "/features.zip")
-        #    if ".zip" in fi  :     dfi = pd.read_csv(fi) # + "/features.zip")
-        #    dfy = pd.concat((dfy, dfi))
 
         log("dfy", dfy.head(4).T)
         if colid not in list(dfy.columns) :
@@ -248,7 +242,6 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
     :param file_target:   File to save dataset
 
     """
-
     from tempfile import mktemp, mkdtemp
     from urllib.parse import urlparse, parse_qs
     import pathlib
@@ -278,7 +271,7 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
 
     if "drive.google.com" in url_dataset:
         from util import download_googledrive
-        urlx = urlparse(url_dataset)
+        urlx    = urlparse(url_dataset)
         file_id = parse_qs(urlx.query)['id'][0]
         download_googledrive([{'fileid': file_id, "path_target":
                                full_filename}])
@@ -286,12 +279,13 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
     if "dropbox.com" in url_dataset:
         from util import download_dtopbox
         dbox_path_target = mkdtemp(dir=path_target)
-        download_dtopbox({'url': url_dataset,
+        download_dtopbox({'url':      url_dataset,
                           'out_path': os.path.join(dbox_path_target)})
         dbox_file_target = os.listdir(dbox_path_target)[0]
         full_filename = os.path.join(dbox_path_target, dbox_file_target)
 
     return full_filename
+
 
 def load_function_uri(uri_name="myfolder/myfile.py::myFunction"):
     """
