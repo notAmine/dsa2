@@ -175,14 +175,13 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
     download_path        = os.path.join(os.path.curdir, "data/input/download")
 
     if (path_data_x.startswith("http")):
-        log("###### Download ##################################################")
         path_data_x = fetch_dataset(path_data_x, download_path)
-        for file_extension in supported_extensions:
-            path_link_x = os.path.join(download_path, fallback_name + file_extension)
-            if os.path.exists(path_link_x):
-                os.unlink(path_link_x)
-            os.link(path_data_x, path_link_x)
-        path_data_x = download_path + "/*"
+        # for file_extension in supported_extensions:
+        #    path_link_x = os.path.join(download_path, fallback_name + file_extension)
+        #    if os.path.exists(path_link_x):
+        #        os.unlink(path_link_x)
+        #    os.link(path_data_x, path_link_x)
+        # path_data_x = download_path + "/*"
 
     flist = glob.glob( ntpath.dirname(path_data_x)+"/*" )#ntpath.dirname(path_data_x)+"/*"
     flist = [ f for f in flist if os.path.splitext(f)[1].strip().lower() in supported_extensions and ntpath.basename(f)[:8] in ['features'] ]
@@ -214,6 +213,9 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
 
     log("###### Load dfy target values ###################################")
     try:
+        if (path_data_y.startswith("http")):
+           path_data_y = fetch_dataset(path_data_y, download_path)
+
         flist = glob.glob( ntpath.dirname(path_data_y)+"/*" )
         flist = [ f for f in flist if os.path.splitext(f)[1][1:].strip().lower() in [ 'zip', 'parquet'] and ntpath.basename(f)[:6] in ['target']]
         # dfy   = pd.DataFrame()
@@ -242,9 +244,13 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
     :param file_target:   File to save dataset
 
     """
+    log("###### Download ##################################################")
     from tempfile import mktemp, mkdtemp
     from urllib.parse import urlparse, parse_qs
     import pathlib
+
+    download_path = path_target
+    supported_extensions = [ ".txt", ".csv", ".zip", ".gzip", ".pkl", ".parquet" ]
 
     if path_target is None:
         path_target = mkdtemp(dir=os.path.curdir)
@@ -290,7 +296,16 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
         dbox_file_target = os.listdir(dbox_path_target)[0]
         full_filename = os.path.join(dbox_path_target, dbox_file_target)
 
-    return full_filename
+    path_data_x = full_filename
+    for file_extension in supported_extensions:
+        path_link_x = os.path.join(download_path, fallback_name + file_extension)
+        if os.path.exists(path_link_x):
+            os.unlink(path_link_x)
+        os.link(path_data_x, path_link_x)
+    path_data_x = download_path + "/*"
+
+    return path_data_x
+    #return full_filename
 
 
 def load_function_uri(uri_name="myfolder/myfile.py::myFunction"):
