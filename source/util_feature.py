@@ -256,8 +256,14 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
     full_filename = os.path.join(path_target, file_target)
 
     if "github.com" in url_dataset:
-        urlx = url_dataset.replace(  "github.com", "raw.githubusercontent.com" )
-        urlx = urlx.replace("blob/", "")
+        # urlx = url_dataset.replace(  "github.com", "raw.githubusercontent.com" )
+        urlx = url_dataset.replace("/blob/", "/raw/")
+        urlx = urlx.replace("/tree/", "/raw/")
+
+
+
+        #urlx = url_dataset.replace(  "github.com", "raw.githubusercontent.com" )
+        #urlx = urlx.replace("blob/", "")
 
         import requests
         with requests.Session() as s:
