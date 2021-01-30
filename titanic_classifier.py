@@ -21,14 +21,15 @@ from source.util_feature import save,os_get_function_name
 
 
 """
-https://github.com/arita37/dsa2_data/raw/main/input/titanic/train/features.zip
+  https://github.com/arita37/dsa2_data/raw/main/input/titanic/train/features.zip
 
-https://raw.githubusercontent.com/arita37/dsa2_data/main/input/titanic/train/features.csv
+  https://raw.githubusercontent.com/arita37/dsa2_data/main/input/titanic/train/features.csv
 
-https://raw.githubusercontent.com/arita37/dsa2_data/tree/main/input/titanic/train/features.zip
+  https://raw.githubusercontent.com/arita37/dsa2_data/tree/main/input/titanic/train/features.zip
  
- https://github.com/arita37/dsa2_data/blob/main/input/titanic/train/features.zip
+  https://github.com/arita37/dsa2_data/blob/main/input/titanic/train/features.zip
  
+
  
 """
 
@@ -46,8 +47,8 @@ def global_pars_update(model_dict,  data_name, config_name):
     m['path_data_preprocess'] = dir_data + f'/input/{data_name}/train/'
 
     #### train input path
-    m['path_data_train']      = dir_data_url + f'/input/{data_name}/train/'
-    m['path_data_test']       = dir_data_url + f'/input/{data_name}/test/'
+    m['path_data_train']      = dir_data + f'/input/{data_name}/train/'
+    m['path_data_test']       = dir_data + f'/input/{data_name}/test/'
     #m['path_data_val']       = dir_data + f'/input/{data_name}/test/'
 
     #### train output path
@@ -90,21 +91,10 @@ cols_input_type_1 = {
 }
 
 
-cols_input_type_2 = {
-     "coly"   :   "Survived"
-    ,"colid"  :   "PassengerId"
-    ,"colcat" :   ["Sex", "Embarked" ]
-    ,"colnum" :   ["Pclass", "Age","SibSp", "Parch","Fare"]
-    ,"coltext" :  ["Name", "Ticket"]
-    ,"coldate" :  []
-    ,"colcross" : [ "Name", "Sex", "Ticket","Embarked","Pclass", "Age","SibSp", "Parch","Fare" ]
-}
-
-
 ####################################################################################
 def titanic_lightgbm() :
     """
-       Contains all needed informations for Light GBM Classifier model,
+       ONE SINGLE DICT Contains all needed informations for
        used for titanic classification task
     """
     data_name    = "titanic"         ### in data/input/

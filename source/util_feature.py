@@ -266,6 +266,10 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
         urlx = url_dataset.replace("/blob/", "/raw/")
         urlx = urlx.replace("/tree/", "/raw/")
 
+        # https://github.com/arita37/dsa2_data/raw/main/input/titanic/train/features.zip
+        path_suffix = urlx.replace("https://github.com", "github_").replace("/","-").replace('-raw-','-')
+        path_data_x = download_path + path_suffix + "/"
+        
 
 
         #urlx = url_dataset.replace(  "github.com", "raw.githubusercontent.com" )
