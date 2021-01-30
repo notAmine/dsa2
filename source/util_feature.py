@@ -248,7 +248,7 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
     from tempfile import mktemp, mkdtemp
     from urllib.parse import urlparse, parse_qs
     import pathlib
-
+    fallback_name        = "features"
     download_path = path_target
     supported_extensions = [ ".txt", ".csv", ".zip", ".gzip", ".pkl", ".parquet" ]
 
