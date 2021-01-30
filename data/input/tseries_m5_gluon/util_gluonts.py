@@ -242,7 +242,6 @@ def gluonts_create_dynamic(df, submission=True, single_pred_length=28, submissio
         
         I think the issue is that when you run on the test in the way above, 
         the predict method would expect that your target has some length n and the dynamic features n + prediction length.
-
         
     """
     df_dynamic = df
@@ -370,25 +369,38 @@ def gluonts_create_startdate(date="2011-01-29", freq="1D", n_timeseries=1):
    return start_dates_list
 
 
-def gluonts_create_dataset(train_timeseries_list, start_dates_list, train_dynamic_list,  train_static_list, freq="D" ) :
-    from gluonts.dataset.field_names import FieldName
-    
-    train_ds = [
-        {
-            FieldName.TARGET            : target.tolist(),
-            FieldName.START             : start,
-            FieldName.FEAT_DYNAMIC_REAL : fdr.tolist(),
-            FieldName.FEAT_STATIC_CAT   : fsc.tolist()
-        } for (target, start, fdr, fsc) in zip(train_timeseries_list,   # list of individual time series
-                                               start_dates_list,              # list of start dates
-                                               train_dynamic_list,   # List of Dynamic Features
-                                               train_static_list)              # List of Static Features 
-        ]
+def gluonts_create_dataset(timeseries_list, start_dates_list, feat_dynamic_list=None,  feat_static_list=None, feat_static_real_list=None, freq="D" ) :
+    feat_dynamic = True
+    feat_static = True
+    feat_static_real = True
+    k = len(start_dates_list)
+    train_ds = []
+    if feat_dynamic_list is None :     feat_dynamic_list, feat_dynamic     = [ [] ]  * k  , False
+    if feat_static_list is None :      feat_static_list, feat_static       = [ [] ]  * k  , False
+    if feat_static_real_list is None : feat_static_real_list, feat_static_real = [ [] ]  * k  , False
+
+    for (target, start, fdr, fsr, fsc ) in zip(timeseries_list,               # List of individual time series
+                                               start_dates_list,        # list of start dates
+                                               feat_dynamic_list,       # List of Dynamic Features
+                                               feat_static_real_list,   # List of static real Features                                         
+                                               feat_static_list)  :     # List of Static Features     
+ 
+      xi = {}
+      xi[FieldName.TARGET]  = target.tolist()
+      xi[FieldName.START ]  = start
+      if feat_dynamic     : xi[FieldName.FEAT_DYNAMIC_REAL] = fdr.tolist()
+      if feat_static_real : xi[FieldName.FEAT_STATIC_REAL]  = fsr
+      if feat_static      : xi[FieldName.FEAT_STATIC_CAT]  = fsc
+      train_ds.append(xi)
+
     return train_ds
 
 
 
-def gluonts_save_to_file(path="", data=None):
+
+
+from typing import Dict, List
+def gluonts_save_to_file(path:Path, data: List[Dict]):
     import os
     print(f"saving time-series into {path}")
     path=os.path.join(path ,"data.json")
@@ -398,7 +410,6 @@ def gluonts_save_to_file(path="", data=None):
         for d in data:
             fp.write(json.dumps(d).encode("utf-8"))
             fp.write("\n".encode('utf-8'))
-
 
 
 def pandas_to_gluonts_multiseries(df_timeseries, df_dynamic, df_static,
@@ -433,7 +444,7 @@ def pandas_to_gluonts_multiseries(df_timeseries, df_dynamic, df_static,
     train_timeseries_list, test_timeseries_list = gluonts_create_timeseries(df_timeseries, submission=submission, single_pred_length=single_pred_length,
                                                                             submission_pred_length=submission_pred_length, n_timeseries=n_timeseries, transpose=0)
     #print(train_timeseries_list[0])
-    start_dates_list = create_startdate(date=start_date, freq=freq, n_timeseries=n_timeseries)
+    start_dates_list = gluonts_create_startdate(date=start_date, freq=freq, n_timeseries=n_timeseries)
 
     train_ds = gluonts_create_dataset(train_timeseries_list, start_dates_list, train_dynamic_list, train_static_list, freq=freq )
     test_ds  = gluonts_create_dataset(test_timeseries_list,  start_dates_list, test_dynamic_list,  test_static_list,  freq=freq )
@@ -507,100 +518,148 @@ def pandas_to_gluonts(df_timeseries, df_dynamic, df_static,
         return train_ds, test_ds, cardinalities
 
 
-
-            
-def gluonts_to_pandas(dataset_path=None):
-  from gluonts.dataset.common import load_datasets
+def gluonts_to_pandas(dataset_path, data_type):
+  from gluonts.dataset.common import ListDataset,load_datasets  
+  from copy import deepcopy
   all_targets = []
   all_dynamic = []
   all_static  = []
+  all_static_Real = []
   start       = []
-  TD             =load_datasets( metadata=dataset_path,
-                                train=dataset_path / "train", test=dataset_path / "test")
-  instance=next(iter(TD.test))
-  #### load decode pars ########
+  TD          = load_datasets(  metadata=dataset_path,
+                                  train=dataset_path / "train", test=dataset_path / "test")
+  
+  ### json iterator  Why Test only   ###############
+  if data_type == "test"  : TD_current = deepcopy( TD.test )
+  if data_type == "train" : TD_current = deepcopy( TD.train )
+
+
+  instance_iter =next(iter(TD_current))
+  df_static_real = None
+  df_dynamic = None
+  df_static = None
+  df_static_real = None
+
+  #### load decode pars ############################
   decode_pars = json.load(open(dataset_path / "decode.json", mode='r'),object_hook=lambda d: {int(k) 
-                         if k.lstrip('-').isdigit() else k: v for k, v in d.items()})
+                          if k.lstrip('-').isdigit() else k: v for k, v in d.items()})
+  print(decode_pars)
   df_dynamic_labels   = decode_pars["df_dynamic_labels"]
   df_dynamic_cols     = decode_pars["df_dynamic_cols"]
   df_static_labels    = decode_pars["df_static_labels"]
   df_static_cols      = decode_pars["df_static_cols"]
+  df_static_real_cols = decode_pars["df_static_real_cols"]
+
   df_timeseries_cols  = decode_pars["df_timeseries_cols"]
   df_timeseries_dtype = decode_pars["df_timeseries_dtype"]
   df_dynamic_dtype    = decode_pars["df_dynamic_dtype"]
   df_static_dtype     = decode_pars["df_static_dtype"]
+  df_static_real_dtype =decode_pars["df_static_real_dtype"]
 
   #################################################
-  dynamic_features=np.transpose(instance["feat_dynamic_real"])
-  for items in TD.test:
+  if "feat_dynamic_real" in instance_iter:
+    dynamic_features = np.transpose(instance_iter["feat_dynamic_real"])
+  else:
+    dynamic_features = None
+
+
+  for items in TD_current :
     #print(items)
     target=np.transpose(items["target"]).tolist() 
-    static= np.transpose(items["feat_static_cat"]).tolist()
-  
+    if "feat_static_cat" in items:
+      static= np.transpose(items["feat_static_cat"]).tolist()
+
+    if "feat_static_real" in items:
+      static_real = items["feat_static_real"]
+      all_static_Real.append(static_real)
+    
     all_static.append(static)
     all_targets.append(target)
-  del TD
+
+  
+
   df_timeseries =pd.DataFrame(all_targets)
   del all_targets
-  df_dynamic =pd.DataFrame(dynamic_features)
-  df_static =pd.DataFrame(all_static)
 
-  ################ decode  df_dynamic #############
-  if  df_dynamic_labels is not None:
-    for key in  df_dynamic_labels:
-      col = key
-      labels= df_dynamic_labels[key]
-      for l in labels:
-        v = labels[l]
-        df_dynamic[col]=df_dynamic[col].apply(lambda x: v if x == l else x)
-  for col in df_dynamic.columns:       
-    df_dynamic[col]=df_dynamic[col].apply(lambda x: np.NAN if x == -l else x)  
-  if  df_dynamic_cols is not None:
-    df_dynamic.rename(columns =  df_dynamic_cols, inplace = True) 
+  ############# decode df_static real ############################
+  if len(all_static_Real)>0:
+    df_static_real=pd.DataFrame(all_static_Real)
+    df_static_real     = df_static_real.astype(df_static_real_dtype) 
+
+  ################ decode  df_dynamic #####   
+  if dynamic_features:
+    df_dynamic =pd.DataFrame(dynamic_features)
+    if  df_dynamic_labels is not None:
+      for key in  df_dynamic_labels:
+        col = key
+        labels= df_dynamic_labels[key]
+        for l in labels:
+          v = labels[l]
+          df_dynamic[col]=df_dynamic[col].apply(lambda x: v if x == l else x)
+
+    for col in df_dynamic.columns:       
+      df_dynamic[col]=df_dynamic[col].apply(lambda x: np.NAN if x == -l else x)  
+    
+    if  df_dynamic_cols is not None:
+      df_dynamic.rename(columns =  df_dynamic_cols, inplace = True) 
+    df_dynamic    = df_dynamic.astype(df_dynamic_dtype)
+  
+  if len(all_static)>0:  
+    df_static =pd.DataFrame(all_static)
 
 
-  ##### decode df_timeseries########################################
+  ##### decode df_timeseries#############
   if  df_timeseries_cols is not None:
     df_timeseries.rename(columns = df_timeseries_cols , inplace = True) 
-  del all_dynamic
-
-  ####### decode df staic###########################################
-  if df_static_labels  is not None:
-       for key in df_static_labels: 
-         d =  df_static_labels[key]
-         df_static[key] = df_static[key].map(d)
-  if  df_static_cols is not None:
-      df_static.rename(columns = df_static_cols, inplace = True) 
-
-  #####################
-  del all_static
   df_timeseries = df_timeseries.astype(df_timeseries_dtype)
-  df_dynamic    = df_dynamic.astype(df_dynamic_dtype)
-  df_static     = df_static.astype(df_static_dtype)
   
-  return df_timeseries,df_dynamic,df_static
+
+  ####### decode df staic################
+  if not df_static.empty:
+    if df_static_labels  is not None:
+        for key in df_static_labels: 
+          d =  df_static_labels[key]
+          df_static[key] = df_static[key].map(d)
+    if  df_static_cols is not None:
+        df_static.rename(columns = df_static_cols, inplace = True) 
+    df_static     = df_static.astype(df_static_dtype)    
+ 
+
+
+  
+  
+  #####################################
+  return df_timeseries,df_dynamic,df_static,df_static_real
 
 
 
-
-def pd_difference(df1, df2):
+def pd_difference(df1, df2,is_real=False):
   """Identify differences between two pandas DataFrames
     
   """
   if (df1.columns != df2.columns).any(0):
     print("DataFrame column names are different")
     return None
+ 
   if any(df1.dtypes != df2.dtypes):
         print("Data Types are different, trying to convert")
         df2 = df2.astype(df1.dtypes)
+        
   if df1.equals(df2):
         print("Exactly Same")
         return None
   else:
         df1=df1.fillna(-1)
         df2=df2.fillna(-1)
-        # need to account for np.nan != np.nan returning True
-        diff_mask = (df1 != df2) & ~(df1.isnull() & df2.isnull())
+        if is_real:
+          if not (np.abs(df1 - df2) >9.62340710e2).any().values:
+            print("Real Dataframes are equal")
+            return None 
+          else: 
+            diff_mask=(np.abs(df1 - df2) >9.62340710e2)
+        else:
+          # need to account for np.nan != np.nan returning True
+          diff_mask = (df1 != df2) & ~(df1.isnull() & df2.isnull())
         ne_stacked = diff_mask.stack()
         changed = ne_stacked[ne_stacked]
         changed.index.names = ['id', 'col']
@@ -611,27 +670,21 @@ def pd_difference(df1, df2):
                             index=changed.index)
 
 
-
-def gluonts_json_check(gluonts_data_path, train_df, static_df) :
+def gluonts_json_check() :
   ##### Check Code
   from pathlib import Path
 
-  dataset_path = Path(gluonts_data_path)
-  df_timeseries1,df_dynamic1,df_static_real1 = gluonts_to_pandas(dataset_path)
+  dataset_path = Path(gluonts_data)
+  df_timeseries1,df_dynamic1,df_static1,df_static_real1 = gluonts_to_pandas(dataset_path, data_type="test")
   #print('###sum of df_static_real ####' )
   #print(static_df-df_static_real1.sum())
   print(df_timeseries1.shape,df_static_real1.shape  )
 
   print('### matching  df_timeseries ####' )
-  print(pd_difference(train_df, df_timeseries1))
+  print(pd_difference(train_df,df_timeseries1))
 
   print('### matching  df_static_real ####' )
-  print(pd_difference(static_df, df_static_real1))
-
-
-
-
-
+  print(pd_difference(static_df,df_static_real1,is_real=True))
 
 
 
@@ -725,20 +778,20 @@ def test_gluonts_to_pandas() :
     print(pd_difference(df_dynamic0,df_dynamic1))
     print(pd_difference(df_static0,df_static1))
 
-
+    '''
     ### test above function #####
     firstProductSet = {'Product1': ['Computer','Phone','Printer','Desk'],
                        'Price1': [1200,800,200,350]
                        }
     df1 = pd.DataFrame(firstProductSet,columns= ['Product1', 'Price1'])
     print(df1)
-
     secondProductSet = {'Product1': ['Computer','Phone','Printer','Desk'],
                         'Price1': [900,800,300,350]
                         }
     df2 = pd.DataFrame(secondProductSet,columns= ['Product1', 'Price1'])
     print(df2)
     pd_difference(df1,df2)
+    ''''
 
 
 
@@ -778,35 +831,25 @@ if __name__ == '__main__':
 
 
 """
-
-
 a,b = gluonts_create_dynamic(df_dynamic, submission=True, single_pred_length=28, submission_pred_length=10, 
                            n_timeseries=1, transpose=1) 
-
 col = "event_type_1"
 df_dynamic[col].apply(lambda x: to_flag(x) )
-
-
  to_flag('ok')
-
-
 cal_features = calendar.drop(
     ['date', 'wm_yr_wk', 'weekday', 'wday', 'month', 'year', 'event_name_1', 'event_name_2', 'd'], 
     axis=1
 )
 cal_features['event_type_1'] = cal_features['event_type_1'].apply(lambda x: 0 if str(x)=="nan" else 1)
 cal_features['event_type_2'] = cal_features['event_type_2'].apply(lambda x: 0 if str(x)=="nan" else 1)
-
 test_cal_features = cal_features.values.T
 if submission:
     train_cal_features = test_cal_features[:,:-submission_prediction_length]
 else:
     train_cal_features = test_cal_features[:,:-submission_prediction_length-single_prediction_length]
     test_cal_features = test_cal_features[:,:-submission_prediction_length]
-
 test_cal_features_list = [test_cal_features] * len(sales_train_validation)
 train_cal_features_list = [train_cal_features] * len(sales_train_validation)
-
 """
 
 '''
@@ -819,16 +862,8 @@ if __name__ == '__main__':
        
    df=create_timeseries1d(fun= myfun)
    print(df.head(5))
-
-
     #test()
-
 '''
-
-
-
-
-
 
 
 
