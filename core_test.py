@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 All test are located here
-python  core_test_auto.py    test_json --config_file test/pullrequest.json
-python  core_test_auto.py   test_all  --config_file  mlmdodels/config/test_config.json"
+python  core_test.py    test_json --config_file test/pullrequest.json
+python  core_test.py   test_all  --config_file  mlmdodels/config/test_config.json"
 
 
 """
@@ -542,7 +542,7 @@ def test_all_files():
     log("os.getcwd", os.getcwd())
     import time, glob
     
-    block_list =  []  # [ "core_run.py", "core_test_auto.py"  ]
+    block_list =  []  # [ "core_run.py", "core_test.py"  ]
     flist = glob.glob("*.py")      
     flist = [ t for t in flist if t not in block_list ]  
 
@@ -565,7 +565,7 @@ def test_all_data():
     log("os.getcwd", os.getcwd())
     import time, glob
     
-    block_list =  []  # [ "core_run.py", "core_test_auto.py"  ]
+    block_list =  []  # [ "core_run.py", "core_test.py"  ]
     flist = glob.glob("example/*.py")      
     flist = [ t for t in flist if t not in block_list ]  
 
