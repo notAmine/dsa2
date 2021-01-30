@@ -172,7 +172,7 @@ def download_dtopbox(data_pars):
   """
   from cli_code.cli_download import Downloader
 
-  folder = data_pars['from_path']  # dataset/text/
+  folder = data_pars.get('from_path', None)  # dataset/text/
 
   urlmap = {
      "text" :    "https://www.dropbox.com/sh/d2n3hgsq2ycpmjf/AADHrhC7rLkd42_CEqK6A9oYa/dataset/text?dl=1&subfolder_nav_tracking=1"
@@ -184,23 +184,28 @@ def download_dtopbox(data_pars):
 
   }
 
-  url = urlmap[folder]
+  if data_pars.get('url', None):
+      url = data_pars['url']
+  elif folder:
+      url = urlmap[folder]
 
   #prefix = "https://www.dropbox.com/sh/d2n3hgsq2ycpmjf/"
   #url= f"{prefix}/AADHrhC7rLkd42_CEqK6A9oYa/{folder}?dl=1&subfolder_nav_tracking=1"
 
   out_path = data_pars['out_path']
 
-  zipname = folder.split("/")[0]
+  if folder:
+      zipname = folder.split("/")[0]
 
 
   os.makedirs(out_path, exist_ok=True)
   downloader = Downloader(url)
   downloader.download(out_path)
 
-  import zipfile
-  with zipfile.ZipFile( out_path + "/" + zipname + ".zip" ,"r") as zip_ref:
-      zip_ref.extractall(out_path)
+  if folder:
+      import zipfile
+      with zipfile.ZipFile( out_path + "/" + zipname + ".zip" ,"r") as zip_ref:
+          zip_ref.extractall(out_path)
 
 
 
