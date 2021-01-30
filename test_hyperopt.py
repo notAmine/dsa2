@@ -150,7 +150,6 @@ def hyperparam(config_full="",
                path_optuna_storage = 'data/output/optuna_hyper/optunadb.db'):
     """
         python test_hyperopt.py  hyperparam  --ntrials 2
-
     """
     # from core_run import  hyperparam_wrapper
 
@@ -181,7 +180,6 @@ def hyperparam(config_full="",
 
     ###################################################################################
     metric_name = "accuracy_score"
-
 
     hyperparam_wrapper(config_full,
                        ntrials, n_sample, debug,
@@ -227,8 +225,6 @@ def hyperparam_wrapper(config_full="",
 
         #### Beware of the sign
         res = -np.mean(df[ df['metric_name'] == metric_name ]['metric_val'].values)
-
-        if debug : print(ddict)
         return res
 
     ##### Optuna Params   ####################################################
