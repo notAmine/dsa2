@@ -180,3 +180,4 @@ dmypy.json
 ./source/bin/reinforcement_feature_CAFEM/data/40910/40910.arff
 /.vscode
 /data/input/online_intention/code_results
+/data/input/download
