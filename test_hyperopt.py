@@ -75,8 +75,7 @@ cols_input_type_2 = {
 #################################################################################
 def titanic1(path_model_out="") :
     """
-       Contains all needed informations for Light GBM Classifier model,
-       used for titanic classification task
+       One big dict
     """
     config_name  = os_get_function_name()
     data_name    = "titanic"         ### in data/input/
