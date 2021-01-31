@@ -271,8 +271,8 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
                  params= model_dict['global_pars'],
                  metrics=stats["metrics_test"],
                  signature=signature,
-                 model_class=model_dict["model_class"],
-                 tracking_uri=  mlflow_pars.get( 'tracking_db',   "sqlite:///local.db")
+                 model_class=model_dict['model_pars']["model_class"],
+                 tracking_uri=  mlflow_pars.get( 'tracking_db', "sqlite:///local.db")
                 )
 
 
