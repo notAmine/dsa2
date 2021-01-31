@@ -234,7 +234,7 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
     """Fetch dataset from a given URL and save it.
 
     Currently `github`, `gdrive` and `dropbox` are the only supported sources of
-    data.
+    data. Also only zip files are supported.
 
     :param url_dataset:   URL to send
     :param path_target:   Path to save dataset
@@ -247,10 +247,11 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
     import pathlib
     fallback_name        = "features"
     download_path = path_target
-    supported_extensions = [ ".txt", ".csv", ".zip", ".gzip", ".pkl", ".parquet" ]
+    supported_extensions = [ ".zip" ]
 
     if path_target is None:
         path_target = mkdtemp(dir=os.path.curdir)
+        download_path = path_target
     else:
         pathlib.Path(path_target).mkdir(parents=True, exist_ok=True)
     if file_target is None:
@@ -264,7 +265,7 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
         urlx = urlx.replace("/tree/", "/raw/")
 
         # https://github.com/arita37/dsa2_data/raw/main/input/titanic/train/features.zip
-        path_suffix = urlx.replace("https://github.com", "github_").replace("/","-").replace('-raw-','-')
+        path_suffix = urlx.replace("https://github.com/", "github_").replace("/","-").replace('-raw-','-')
         path_data_x = download_path + path_suffix + "/"
 
 
