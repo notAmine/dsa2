@@ -17,4 +17,4 @@ echo $'predict finished see data/zlog/log_mlflow_predict.txt for output\n'
 
 
 echo $'######## Serving mlflow server visit http://localhost:5000 ########'
-mlflow server --backend-store-uri sqlite:///local.db --default-artifact-root ./mlruns
+# mlflow server --backend-store-uri sqlite:///local.db --default-artifact-root ./mlruns
