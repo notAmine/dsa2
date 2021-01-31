@@ -181,3 +181,7 @@ dmypy.json
 /.vscode
 /data/input/online_intention/code_results
 /data/input/download
+
+mlruns/
+
+local.db
