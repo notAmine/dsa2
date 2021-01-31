@@ -6,8 +6,8 @@ ls .
 
 echo $'\n ######## Mlflow register run experiment to local.db ######## \n'
 
-python example/classifier_mlflow.py preprocess > data/zlog/log_mlflow_prepro.txt 2>&1
-echo $'preprocess finished see data/zlog/log_mlflow_prepro.txt for output\n'
+# python example/classifier_mlflow.py preprocess > data/zlog/log_mlflow_prepro.txt 2>&1
+# echo $'preprocess finished see data/zlog/log_mlflow_prepro.txt for output\n'
 
 python example/classifier_mlflow.py train > data/zlog/log_mlflow_train.txt 2>&1
 echo $'train finished see data/zlog/log_mlflow_train.txt for output\n'

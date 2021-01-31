@@ -228,9 +228,7 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     log(cols_group)
 
 
-    log("#### Preprocess  ################################################################")
-    
-        
+    log("#### Preprocess  ################################################################")        
     preprocess_pars = model_dict['model_pars']['pre_process_pars']
      
     if mode == "run_preprocess" :
@@ -267,12 +265,12 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
         y_signature     = dfXy[model_dict['data_pars']['coly']]
         signature       = infer_signature(train_signature, y_signature)
 
-        register( run_name= model_dict['global_pars']['config_name'],
-                 params= model_dict['global_pars'],
-                 metrics=stats["metrics_test"],
-                 signature=signature,
-                 model_class=model_dict['model_pars']["model_class"],
-                 tracking_uri=  mlflow_pars.get( 'tracking_db', "sqlite:///local.db")
+        register( run_name    = model_dict['global_pars']['config_name'],
+                 params       = model_dict['global_pars'],
+                 metrics      = stats["metrics_test"],
+                 signature    = signature,
+                 model_class  = model_dict['model_pars']["model_class"],
+                 tracking_uri = mlflow_pars.get( 'tracking_db', "sqlite:///mlflow_local.db")
                 )
 
 
