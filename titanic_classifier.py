@@ -139,7 +139,7 @@ def titanic_lightgbm() :
 
       'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
 
-                        ,'use_mlflow' : True
+                        ,'mlflow_pars' : {}   ### Not empty --> use mlflow
                       },
 
       'data_pars': { 'n_sample' : n_sample,
