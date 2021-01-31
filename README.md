@@ -36,7 +36,7 @@ Preprocessors Check
 
 ### How to train a new dataset ?
     1) Put your data file   in   data/input/mydata/raw/   
-       (folder)[https://github.com/arita37/dsa2/tree/multi/data/input/mydata]
+       ![folder](https://github.com/arita37/dsa2/tree/multi/data/input/mydata)
        
 
     2) Update script        in   data/input/mydata/clean.py
