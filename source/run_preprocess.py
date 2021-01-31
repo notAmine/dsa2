@@ -394,6 +394,11 @@ def run_preprocess(config_name, config_path, n_sample=5000,
     except :
         cols_group = json.load(open(path_data + "/cols_group.json", mode='r'))
 
+    #pars_download = model_dict['data_pars'].get('download_pars', None )
+    #if pars_download :
+    #    for url, target_path in pars_download['']:
+    #        pass
+
 
     log("#### Preprocess  #################################################################")
     preprocess_pars = model_dict['model_pars']['pre_process_pars']
@@ -407,7 +412,7 @@ def run_preprocess(config_name, config_path, n_sample=5000,
                                  preprocess_pars,  path_features_store)
     model_dict['data_pars']['coly'] = cols['coly']
 
-    ### Generate actual column names from colum groups : colnum , colcat
+    ### Generate actual column names from colum groups  INTO a single list of columns
     model_dict['data_pars']['cols_model'] = sum([  cols[colgroup] for colgroup in model_dict['data_pars']['cols_model_group'] ]   , [])
     log(  model_dict['data_pars']['cols_model'] , model_dict['data_pars']['coly'])
 

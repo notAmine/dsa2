@@ -20,24 +20,13 @@ sys.path.append(root_repo)
 from source.util_feature import save,os_get_function_name
 
 
-"""
-  https://github.com/arita37/dsa2_data/raw/main/input/titanic/train/features.zip
 
-  https://raw.githubusercontent.com/arita37/dsa2_data/main/input/titanic/train/features.csv
-
-  https://raw.githubusercontent.com/arita37/dsa2_data/tree/main/input/titanic/train/features.zip
- 
-  https://github.com/arita37/dsa2_data/blob/main/input/titanic/train/features.zip
- 
-
- 
-"""
 
 def global_pars_update(model_dict,  data_name, config_name):
     print("config_name", config_name)
     dir_data  = root_repo + "/data/"  ; print("dir_data", dir_data)
 
-    dir_data_url = "https://github.com/arita37/dsa2_data/tree/main/"
+    dir_data_url = "https://github.com/arita37/dsa2_data/tree/main/"  #### Remote Data directory
 
     m                      = {}
     m['config_path']       = THIS_FILEPATH  
@@ -47,8 +36,8 @@ def global_pars_update(model_dict,  data_name, config_name):
     m['path_data_preprocess'] = dir_data + f'/input/{data_name}/train/'
 
     #### train input path
-    m['path_data_train']      = dir_data + f'/input/{data_name}/train/'
-    m['path_data_test']       = dir_data + f'/input/{data_name}/test/'
+    m['path_data_train']      = dir_data_url + f'/input/{data_name}/train/'
+    m['path_data_test']       = dir_data_url + f'/input/{data_name}/test/'
     #m['path_data_val']       = dir_data + f'/input/{data_name}/test/'
 
     #### train output path
@@ -154,6 +143,10 @@ def titanic_lightgbm() :
                       },
 
       'data_pars': { 'n_sample' : n_sample,
+
+          'download_pars' : None,
+
+
           'cols_input_type' : cols_input_type_1,
           ### family of columns for MODEL  #########################################################
           #  "colnum", "colnum_bin", "colnum_onehot", "colnum_binmap",  #### Colnum columns

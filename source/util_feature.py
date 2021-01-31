@@ -168,21 +168,17 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
     import glob, ntpath
 
     supported_extensions = [ ".txt", ".csv", ".zip", ".gzip", ".pkl", ".parquet" ]
-    fallback_name        = "features"
-    download_path        = os.path.join(os.path.curdir, "data/input/download")
+    # fallback_name        = "features"
 
     if (path_data_x.startswith("http")):
+        download_path        = os.path.join(os.path.curdir, "data/input/download")
         path_data_x = fetch_dataset(path_data_x, download_path)
-        # for file_extension in supported_extensions:
-        #    path_link_x = os.path.join(download_path, fallback_name + file_extension)
-        #    if os.path.exists(path_link_x):
-        #        os.unlink(path_link_x)
-        #    os.link(path_data_x, path_link_x)
-        # path_data_x = download_path + "/*"
 
+    #### grab files in the folder
     flist = glob.glob( ntpath.dirname(path_data_x)+"/*" )#ntpath.dirname(path_data_x)+"/*"
     flist = [ f for f in flist if os.path.splitext(f)[1].strip().lower() in supported_extensions and ntpath.basename(f)[:8] in ['features'] ]
     assert len(flist) > 0 , " No file: " +path_data_x
+
 
     log("###### Load dfX target values ######################################")
     print(flist)
@@ -250,28 +246,40 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
     supported_extensions = [ ".zip" ]
 
     if path_target is None:
-        path_target = mkdtemp(dir=os.path.curdir)
+        path_target   = mkdtemp(dir=os.path.curdir)
         download_path = path_target
     else:
         pathlib.Path(path_target).mkdir(parents=True, exist_ok=True)
-    if file_target is None:
-        file_target = mktemp(dir="")
 
-    full_filename = os.path.join(path_target, file_target)
+    if file_target is None:
+        file_target = fallback_name # mktemp(dir="")
+
+
 
     if "github.com" in url_dataset:
+        """
+                # https://github.com/arita37/dsa2_data/raw/main/input/titanic/train/features.zip
+ 
+              https://github.com/arita37/dsa2_data/raw/main/input/titanic/train/features.zip            
+              https://raw.githubusercontent.com/arita37/dsa2_data/main/input/titanic/train/features.csv            
+              https://raw.githubusercontent.com/arita37/dsa2_data/tree/main/input/titanic/train/features.zip             
+              https://github.com/arita37/dsa2_data/blob/main/input/titanic/train/features.zip
+                 
+        """
         # urlx = url_dataset.replace(  "github.com", "raw.githubusercontent.com" )
         urlx = url_dataset.replace("/blob/", "/raw/")
         urlx = urlx.replace("/tree/", "/raw/")
+        log(urlx)
 
-        # https://github.com/arita37/dsa2_data/raw/main/input/titanic/train/features.zip
-        path_suffix = urlx.replace("https://github.com/", "github_").replace("/","-").replace('-raw-','-')
-        path_data_x = download_path + path_suffix + "/"
+        urlpath = urlx.replace("https://github.com/", "github_")
+        urlpath = urlpath.split("/")
+        fname = urlpath[-1]  ## filaneme
+        fpath = "-".join(urlpath[:-1])[:-1]   ### prefix path normalized
+        assert "." in fname, f"No filename in the url {urlx}"
 
-
-
-        #urlx = url_dataset.replace(  "github.com", "raw.githubusercontent.com" )
-        #urlx = urlx.replace("blob/", "")
+        os.makedirs(download_path + "/" + fpath, exist_ok= True)
+        full_filename = os.path.abspath( download_path + "/" + fpath + "/" + fname )
+        log('#### Download saving in ', full_filename)
 
         import requests
         with requests.Session() as s:
@@ -282,15 +290,23 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
                     f.write(res.content)
             else:
                 raise res.raise_for_status()
+        return full_filename
+
+
 
     if "drive.google.com" in url_dataset:
+        full_filename = os.path.join(path_target, file_target)
         from util import download_googledrive
         urlx    = urlparse(url_dataset)
         file_id = parse_qs(urlx.query)['id'][0]
         download_googledrive([{'fileid': file_id, "path_target":
                                full_filename}])
 
+
+
+
     if "dropbox.com" in url_dataset:
+        full_filename = os.path.join(path_target, file_target)
         from util import download_dtopbox
         dbox_path_target = mkdtemp(dir=path_target)
         download_dtopbox({'url':      url_dataset,
@@ -298,13 +314,19 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
         dbox_file_target = os.listdir(dbox_path_target)[0]
         full_filename = os.path.join(dbox_path_target, dbox_file_target)
 
+
+
+
     path_data_x = full_filename
+
+    #### Very Hacky : need to be removed.  ######################################
     for file_extension in supported_extensions:
         path_link_x = os.path.join(download_path, fallback_name + file_extension)
         if os.path.exists(path_link_x):
             os.unlink(path_link_x)
         os.link(path_data_x, path_link_x)
-    path_data_x = download_path + "/*"
+
+    #path_data_x = download_path + "/*"
 
     return path_data_x
     #return full_filename

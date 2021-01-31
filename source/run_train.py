@@ -205,6 +205,8 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     model_dict  = model_dict_load(model_dict, config_path, config_name, verbose=True)
 
     use_mlmflow = model_dict.get('compute_pars', {}).get('use_mlflow', False)
+
+
     m           = model_dict['global_pars']
     path_data_train   = m['path_data_train']
     path_train_X      = m.get('path_train_X', path_data_train + "/features.zip") #.zip
@@ -267,7 +269,7 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
         register(model_dict['global_pars']['config_name'],
                  model_dict['global_pars'],
                  stats["metrics_test"], signature,
-                 model_dict["model_pars"]["model_class"])
+                 model_dict["model_pars"])
 
 
     if return_mode == 'dict' :
