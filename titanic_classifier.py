@@ -263,10 +263,7 @@ def train(config=None, nsample=None):
     from source import run_train
     run_train.run_train(config_name       =  config_name,
                         config_path       =  m['config_path'],
-                        n_sample          =  nsample if nsample is not None else m['n_sample'],
-                        
-                        ### Optional
-                        mlflow_mode       =  True
+                        n_sample          =  nsample if nsample is not None else m['n_sample']
                         )
 """
 
