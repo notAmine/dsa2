@@ -204,7 +204,7 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     """
     model_dict  = model_dict_load(model_dict, config_path, config_name, verbose=True)
 
-    use_mlmflow = model_dict.get('compute_pars', {}).get('use_mlflow', False)
+    mlflow_pars = model_dict.get('compute_pars', {}).get('mlflow_pars', None)
 
 
     m           = model_dict['global_pars']
@@ -257,8 +257,9 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     post_process_fun      = model_dict['model_pars']['post_process_fun']
     dfXy, dfXytest,stats  = train(model_dict, dfXy, cols, post_process_fun)
 
-    if use_mlmflow:
+    if mlflow_pars is not None:
         log("#### Using mlflow #########################################################")
+        # def register(run_name, params, metrics, signature, model_class, tracking_uri= "sqlite:///local.db"):
         from run_mlflow import register
         from mlflow.models.signature import infer_signature
 
@@ -266,10 +267,13 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
         y_signature     = dfXy[model_dict['data_pars']['coly']]
         signature       = infer_signature(train_signature, y_signature)
 
-        register(model_dict['global_pars']['config_name'],
-                 model_dict['global_pars'],
-                 stats["metrics_test"], signature,
-                 model_dict["model_pars"])
+        register( run_name= model_dict['global_pars']['config_name'],
+                 params= model_dict['global_pars'],
+                 metrics=stats["metrics_test"],
+                 signature=signature,
+                 model_class=model_dict["model_class"],
+                 tracking_uri=  mlflow_pars.get( 'tracking_db',   "sqlite:///local.db")
+                )
 
 
     if return_mode == 'dict' :

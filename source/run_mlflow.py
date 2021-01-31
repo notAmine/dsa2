@@ -5,7 +5,7 @@ import mlflow
 from source.util_feature import load
 
 
-def register(run_name, params, metrics, signature, model_class):
+def register(run_name, params, metrics, signature, model_class, tracking_uri= "sqlite:///local.db"):
     """
     :run_name: Name of model
     :log_params: dict with model params
@@ -14,7 +14,7 @@ def register(run_name, params, metrics, signature, model_class):
     :model_class: Type of class model
     :return:
     """
-    mlflow.set_tracking_uri("sqlite:///local.db")
+    mlflow.set_tracking_uri(tracking_uri)
     with mlflow.start_run(run_name=run_name) as run:
         run_id = run.info.run_uuid
         experiment_id = run.info.experiment_id
