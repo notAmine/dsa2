@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import mlflow
-from source.util_feature import load
+from source.util_feature import load, log
 
 
 def register(run_name, params, metrics, signature, model_class, tracking_uri= "sqlite:///local.db"):
@@ -16,10 +16,10 @@ def register(run_name, params, metrics, signature, model_class, tracking_uri= "s
     """
     mlflow.set_tracking_uri(tracking_uri)
     with mlflow.start_run(run_name=run_name) as run:
-        run_id = run.info.run_uuid
+        run_id        = run.info.run_uuid
         experiment_id = run.info.experiment_id
 
-        sk_model = load(params['path_train_model'] + "/model.pkl")
+        sk_model      = load(params['path_train_model'] + "/model.pkl")
         mlflow.log_params(params)
 
         metrics.apply(lambda x: mlflow.log_metric(x.metric_name, x.metric_val), axis=1)
@@ -27,5 +27,6 @@ def register(run_name, params, metrics, signature, model_class, tracking_uri= "s
         mlflow.sklearn.log_model(sk_model, run_name, signature=signature,
                                  registered_model_name="sklearn_"+run_name+"_"+model_class)
 
-        print("MLFLOW identifiers", run_id, experiment_id)
+        log("MLFLOW identifiers", run_id, experiment_id)
+
     mlflow.end_run()
