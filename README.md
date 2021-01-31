@@ -62,6 +62,11 @@ Preprocessors Check
 
         
 
+### Dashboard for hyper-params optimization
+
+https://user-images.githubusercontent.com/18707623/106399211-a1d72d80-645a-11eb-8288-a6e3c9dc66ad.png
+
+
 
 
 ```
