@@ -194,7 +194,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 ####################################################################################################
 ############CLI Command ############################################################################
 def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
-              mode="run_preprocess", model_dict=None, return_mode='file', use_mlmflow=False):
+              mode="run_preprocess", model_dict=None, return_mode='file', **kw):
     """
       Configuration of the model is in config_model.py file
     :param config_name:
@@ -202,9 +202,10 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     :param n_sample:
     :return:
     """
-    model_dict = model_dict_load(model_dict, config_path, config_name, verbose=True)
+    model_dict  = model_dict_load(model_dict, config_path, config_name, verbose=True)
 
-    m = model_dict['global_pars']
+    use_mlmflow = model_dict.get('compute_pars', {}).get('use_mlflow', False)
+    m           = model_dict['global_pars']
     path_data_train   = m['path_data_train']
     path_train_X      = m.get('path_train_X', path_data_train + "/features.zip") #.zip
     path_train_y      = m.get('path_train_y', path_data_train + "/target.zip")   #.zip
@@ -255,16 +256,18 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     dfXy, dfXytest,stats  = train(model_dict, dfXy, cols, post_process_fun)
 
     if use_mlmflow:
+        log("#### Using mlflow #########################################################")
         from run_mlflow import register
         from mlflow.models.signature import infer_signature
 
         train_signature = dfXy[model_dict['data_pars']['cols_model']]
-        y_signature = dfXy[model_dict['data_pars']['coly']]
+        y_signature     = dfXy[model_dict['data_pars']['coly']]
+        signature       = infer_signature(train_signature, y_signature)
 
-        signature = infer_signature(train_signature, y_signature)
-
-        register(model_dict['global_pars']['config_name'],model_dict['global_pars'],
-                 stats["metrics_test"], signature, model_dict["model_pars"]["model_class"])
+        register(model_dict['global_pars']['config_name'],
+                 model_dict['global_pars'],
+                 stats["metrics_test"], signature,
+                 model_dict["model_pars"]["model_class"])
 
 
     if return_mode == 'dict' :

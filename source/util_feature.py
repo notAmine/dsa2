@@ -246,7 +246,7 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
     from urllib.parse import urlparse, parse_qs
     import pathlib
     fallback_name        = "features"
-    download_path = path_target
+    download_path        = path_target
     supported_extensions = [ ".zip" ]
 
     if path_target is None:
