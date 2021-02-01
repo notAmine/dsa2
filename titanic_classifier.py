@@ -15,7 +15,6 @@ warnings.filterwarnings('ignore')
 root_repo      =  os.path.abspath(os.getcwd()).replace("\\", "/") + "/"     ; print(root_repo)
 THIS_FILEPATH  =  os.path.abspath(__file__) 
 
-
 sys.path.append(root_repo)
 from source.util_feature import save,os_get_function_name
 
@@ -26,8 +25,6 @@ def global_pars_update(model_dict,  data_name, config_name):
     print("config_name", config_name)
     dir_data  = root_repo + "/data/"  ; print("dir_data", dir_data)
 
-    dir_data_url = "https://github.com/arita37/dsa2_data/tree/main/"  #### Remote Data directory
-
     m                      = {}
     m['config_path']       = THIS_FILEPATH  
     m['config_name']       = config_name
@@ -36,6 +33,7 @@ def global_pars_update(model_dict,  data_name, config_name):
     m['path_data_preprocess'] = dir_data + f'/input/{data_name}/train/'
 
     #### train input path
+    dir_data_url              = "https://github.com/arita37/dsa2_data/tree/main/"  #### Remote Data directory
     m['path_data_train']      = dir_data_url + f'/input/{data_name}/train/'
     m['path_data_test']       = dir_data_url + f'/input/{data_name}/test/'
     #m['path_data_val']       = dir_data + f'/input/{data_name}/test/'
@@ -151,8 +149,7 @@ def titanic_lightgbm() :
           ### family of columns for MODEL  #########################################################
           #  "colnum", "colnum_bin", "colnum_onehot", "colnum_binmap",  #### Colnum columns
           #  "colcat", "colcat_bin", "colcat_onehot", "colcat_bin_map",  #### colcat columns
-          #  'colcross_single_onehot_select', "colcross_pair_onehot",  'colcross_pair',  #### colcross columns
-          #  'coldate', 'coltext',
+          #  'colcross_single_onehot_select', "colcross_pair_onehot",  'colcross_pair',  #### colcross columns  'coldate', 'coltext',
           'cols_model_group': [ 'colnum_bin',
                                 'colcat_bin',
                                 # 'coltext',
