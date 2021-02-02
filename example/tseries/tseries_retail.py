@@ -11,7 +11,7 @@ import glob
 import pdb
 
 ##### import all Feature engineering functions
-from source.preprocessors_tseries import *
+from source.prepro_tseries import *
 
 
 
@@ -209,90 +209,6 @@ def featurestore_get_feature_fromcolname(path, selected_cols, colid):
 ########################################################################################################################
 ########################################################################################################################
 
-def pd_tsfresh_m5data_sales(df_sales, dir_out, features_group_name, drop_cols, df_calendar, index_cols, merge_cols_mapping, id_cols):
-    """
-
-    :param df_sales:
-    :param dir_out:
-    :param features_group_name:
-    :param drop_cols:
-    :param df_calendar:
-    :param index_cols:
-    :param merge_cols_mapping:
-    :param id_cols:
-    :return:
-    """
-    # X_feat = pd.DataFrame()
-    auxiliary_dropped_cols = [x for x in df_calendar.columns.tolist() if x in drop_cols]
-    df_calendar.drop(auxiliary_dropped_cols, inplace = True, axis = 1)
-
-    for i in range(len(df_sales.index)):
-        single_row_df = df_sales.loc[[i]]
-        X_feat_single_row_df = pd_tsfresh_features_single_row(single_row_df, index_cols)
-        if i % 5 ==0:
-            X_feat = X_feat_single_row_df
-        if (i+1) % 5 == 0 :
-            merged_df = pd.merge(X_feat, df_calendar, how = 'left', left_on = [merge_cols_mapping["left"]], right_on = [merge_cols_mapping["right"]])
-
-            # merged_df = pd.concat([df_sales_val_melt, df_submi_val, df_submi_eval], axis = 0)
-            # selected_cols = [x for x in merged_df.columns.tolist() if x not in drop_cols]
-            selected_cols = [x for x in merged_df.columns.tolist() if x in id_cols or str(x).startswith("val__")]
-            merged_df_selected_cols = merged_df[selected_cols]
-            merged_df_selected_cols.columns = merged_df_selected_cols.columns.astype(str)
-            merged_df_selected_cols.to_parquet(f'{dir_out}/{features_group_name}_{i}.parquet')
-        else:
-            X_feat.append(X_feat_single_row_df, ignore_index = True)
-    return merged_df_selected_cols
-
-
-
-
-def pd_tsfresh_m5data(df):
-    df = df[['snap_CA', 'snap_TX', 'snap_WI', 'sell_price', 'item_id', 'date', 'store_id', 'id']]
-    df = roll_time_series(df, column_id="item_id", column_sort="date")
-    existing_cols = df.columns.tolist()
-    y = df['demand']
-    X_cols = [x for x in existing_cols if not x == "demand"]
-    X = df[X_cols]
-    X = X.fillna(value = {'sell_price' : X['sell_price'].mean(skipna = True)})
-    X = X[['snap_CA', 'snap_TX', 'snap_WI', 'sell_price', 'item_id', 'date']]
-    X_filtered = extract_relevant_features(X, y, column_id='item_id', column_sort='date')
-
-    filtered_col_names = X_filtered.columns.tolist()
-
-    filtered_col_names_mapping = {}
-
-    for filtered_col_name in filtered_col_names:
-        filtered_col_names_mapping[filtered_col_name] = filtered_col_name.replace('"','').replace(',','')
-
-    X_filtered = X_filtered.rename(columns = filtered_col_names_mapping)
-    # This is done because lightgbm can not have features with " in the feature name
-
-    feature_df = pd.concat([X[['item_id', 'date']], X_filtered])
-
-    return feature_df, []
-
-
-
-
-
-def pd_ts_tsfresh(df, input_raw_path, dir_out, features_group_name, auxiliary_csv_path, drop_cols, index_cols, merge_cols_mapping, cat_cols = None, id_cols = None, dep_col = None, coldate = None, max_rows = 10):
-    # df is taken as an argument to make it work in the existing pipeline of saving features in meta_csv
-    df_sales_val              = pd.read_csv(input_raw_path)
-    df_calendar               = pd.read_csv(auxiliary_csv_path)
-
-    merged_df         = pd_tsfresh_m5data_sales(df_sales_val[0:max_rows], dir_out, features_group_name, drop_cols, df_calendar, index_cols, merge_cols_mapping, id_cols)
-    # df_calendar.drop(['weekday', 'wday', 'month', 'year'], inplace = True, axis = 1)
-    # merged_df = pd.merge(df_sales_val_melt, df_calendar, how = 'left', left_on = ['day'], right_on = ['d'])
-    # merged_df = pd.merge(df_sales_val_melt, df_calendar, how = 'left', left_on = [merge_cols_mapping["left"]], right_on = [merge_cols_mapping["right"]])
-
-    # merged_df = pd.concat([df_sales_val_melt, df_submi_val, df_submi_eval], axis = 0)
-    # selected_cols = [x for x in merged_df.columns.tolist() if x not in [ 'id', 'cat_id', 'dept_id', 'store_id', 'variable', 'day', 'demand', 'state_id']]
-    selected_cols = [x for x in merged_df.columns.tolist() if x not in drop_cols]
-    return merged_df[selected_cols], []
-
-
-
 
 
 
@@ -306,30 +222,33 @@ def custom_get_colsname(colid, coly):
 
 def custom_rawdata_merge( out_path='out/', max_rows=10):
 
-    input_path ="data/input/tseries/tseries_m5/raw"
-    index_cols     = [ 'id', 'cat_id_col', 'dept_id_col', 'store_id_col', 'item_id_col', 'state_id_col']
-    coly = "demand"
-    colraw_merge = ['store_id_col', 'item_id_col', 'wm_yr_wk']
-    merge_cols_mapping = {"left" : "day", "right" : "d"}
-    colnan       = ['event_name_1_col', 'event_type_1_col', 'event_name_2_col', 'event_type_2_col']
-    colcat       = ['dept_id_col', 'cat_id_col', 'store_id_col', 'state_id_col', 'event_name_1_col', 'event_type_1_col', 'event_name_2_col', 'event_type_2_col']
+    input_path ="data/input/tseries/retail/raw"
+    index_cols     = [ 'Store']
+    coly = "Weekly_Sales"
+    colraw_merge = ['Store']
+    colnan       = []
+    colcat       = []
 
 
-    df_sales_train            = pd.read_csv(input_path + "/sales_train_gen.csv")
-    df_calendar               = pd.read_csv(input_path + "/calendar_gen.csv")
-    df_sales_val              = pd.read_csv(input_path + "/sales_train_gen.csv")
-    df_sell_price             = pd.read_csv(input_path + "/sell_prices_gen.csv")
+    df_sales_train            = pd.read_csv(input_path + "/sales-data-set.csv")
+    # df_calendar               = pd.read_csv(input_path + "/calendar_gen.csv")
+    df_sales_val              = pd.read_csv(input_path + "/sales-data-set.csv")
+    df_features               = pd.read_csv(input_path + "/features-data-set.csv")
+    df_stores                 = pd.read_csv(input_path + "/stores-data-set.csv")
+    # df_sell_price             = pd.read_csv(input_path + "/sell_prices_gen.csv")
     # df_submi                  = pd.read_csv("data/sample_submi.csv")
 
     df_sales_val = df_sales_val if max_rows == -1 else df_sales_val.iloc[:,0:max_rows]
 
-    df_merged  = pd.melt(df_sales_val, id_vars = index_cols, var_name = 'day', value_name = coly)
+    # df_merged  = pd.melt(df_sales_val, id_vars = index_cols, var_name = 'Date', value_name = coly)
     # df_merged = pd.concat([df_sales_val_melt, df_submi_val, df_submi_eval], axis = 0)
     # df_merged = df_sales_val_melt
-    df_calendar.drop(['weekday', 'wday', 'month', 'year'], inplace = True, axis = 1)
-    df_merged = pd.merge(df_merged, df_calendar, how = 'left', left_on = [merge_cols_mapping["left"]], right_on = [merge_cols_mapping["right"]])
-    df_merged = df_merged.merge(df_sell_price, on = colraw_merge, how = 'left')
+    # df_calendar.drop(['weekday', 'wday', 'month', 'year'], inplace = True, axis = 1)
+    # df_merged = pd.merge(df_merged, df_calendar, how = 'left', left_on = [merge_cols_mapping["left"]], right_on = [merge_cols_mapping["right"]])
+    # df_merged = df_merged.merge(df_sell_price, on = colraw_merge, how = 'left')
 
+    df_merged = pd.merge(df_sales_val, df_features, on = "Store")
+    df_merged = pd.merge(df_merged, df_stores, on = "Store")
     df_merged = pd_col_tocat(df_merged, nan_cols = colnan, colcat = colcat)
     # df_merged = add_time_features(df_merged)
 
@@ -340,7 +259,7 @@ def custom_rawdata_merge( out_path='out/', max_rows=10):
 
 
 
-data_path = "data/input/tseries/tseries_m5/processed"
+data_path = "data/input/tseries/retail/processed"
 def custom_generate_feature_all(input_path = data_path, out_path=".", input_raw_path =".", auxiliary_csv_path = None,
                                 coldrop = None, colindex = None, merge_cols_mapping = None, coldate = None,
                                 colcat = None, colid = None, coly = None, max_rows = 10):
@@ -348,12 +267,12 @@ def custom_generate_feature_all(input_path = data_path, out_path=".", input_raw_
     featurestore_generate_feature(data_path , input_path , pd_ts_basic    , "basic_time" , colid = colid, coldate = coldate)
     featurestore_generate_feature(data_path , input_path , pd_ts_rolling  , "rolling"    , coly = coly     , colid = colid)
     featurestore_generate_feature(data_path , input_path , pd_ts_lag      , "lag"        , coly = coly     , colid = colid)
-    featurestore_generate_feature(data_path , input_path , pd_ts_tsfresh  , "tsfresh"    , input_raw_path  , auxiliary_csv_path , coldrop , colindex , merge_cols_mapping , max_rows , step_wise_saving = True , colid = colid)
+    # featurestore_generate_feature(data_path , input_path , pd_ts_tsfresh  , "tsfresh"    , input_raw_path  , auxiliary_csv_path , coldrop , colindex , merge_cols_mapping , max_rows , step_wise_saving = True , colid = colid)
     featurestore_generate_feature(data_path , input_path , pd_ts_identity , "identity"   , colcat = colcat , coldrop = ['d'     , 'id'    , 'day'    , 'wm_yr_wk'])
 
 
 
-def run_train(input_path ="data/input/tseries/tseries_m5/raw", out_path=data_path,
+def run_train(input_path ="data/input/tseries/retail/raw", out_path=data_path,
               do_generate_raw=True, do_generate_feature=True, do_train=False,
               max_rows = 10):
 
@@ -362,21 +281,21 @@ def run_train(input_path ="data/input/tseries/tseries_m5/raw", out_path=data_pat
 
 
     if do_generate_feature :
-      custom_generate_feature_all(input_path="data/output", out_path="",
-                                  input_raw_path =input_path + "/sales_train_gen.csv",
+      custom_generate_feature_all(input_path="../../data/output", out_path="",
+                                  input_raw_path =input_path + "/sales-data-set.csv",
                                   auxiliary_csv_path =input_path + "/calendar_gen.csv",
 
-                                  coldrop   = ['id', 'cat_id_col', 'dept_id_col', 'store_id_col', 'variable', 'day', 'demand', 'state_id_col', 'weekday', 'wday', 'month', 'year'],
-                                  colindex  = ['id', 'cat_id_col', 'dept_id_col', 'store_id_col', 'item_id_col', 'state_id_col'],
+                                  coldrop   = [],
+                                  colindex  = ['Store'],
                                   merge_cols_mapping = {"left" : "day", "right" : "d"},
-                                  colcat    = ['item_id_col', 'dept_id_col', 'cat_id_col', 'store_id_col', 'state_id_col', 'event_name_1_col', 'event_type_1_col', 'event_name_2_col', 'event_type_2_col'],
-                                  colid     = ["date", "item_id_col"],
-                                  coly      = "demand",
+                                  colcat    = [],
+                                  colid     = ["Store", "Date"],
+                                  coly      = "Weekly_Sales",
                                   max_rows  = max_rows,
-                                  coldate = "date")
+                                  coldate = "Date")
 
     if do_train :
-        train(input_path="data/output", colid = ["date", "item_id_col"], coly ="demand")
+        train(input_path="../../data/output", colid = ["date", "item_id_col"], coly ="demand")
 
 
 if __name__ == "__main__":
