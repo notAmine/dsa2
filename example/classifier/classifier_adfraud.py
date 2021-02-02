@@ -2,23 +2,19 @@
 # -*- coding: utf-8 -*-
 """
 
-  cd fraud
-  python test_classifier.py  data_profile  --path_data_train data/input/titanic/train/  --path_out zlog/
-  python test_classifier.py  preprocess
-  python test_classifier.py  train
-  python test_classifier.py  check
-  python test_classifier.py  predict
+  python example/classifier/classifier_adfraud.py  data_profile  --path_data_train data/input/adfraud/train/  --path_out zlog/
+  python example/classifier/test_classifier.py  train
+  python example/classifier/test_classifier.py  predict
 
 
-NameError: Module ['test_classifier.py', 'pd_myfun'] notfound, No module named 'test_classifier.py'; 'test_classifier' is not a package, tuple index out of range
 
+https://github.com/arita37/dsa2/tree/main/data/input/adfraud
 
 ip,app,device,os,channel,click_time,attributed_time,is_attributed
 83230,3,1,13,379,11/6/2017 14:32,,0
 17357,3,1,19,379,11/6/2017 14:33,,0
 35810,3,1,13,379,11/6/2017 14:34,,0
 45745,14,1,13,478,11/6/2017 14:34,,0
-
 
 
 """
@@ -262,16 +258,6 @@ from core_run import predict
 
 ###########################################################################################################
 ###########################################################################################################
-"""
-python   classifier_adfraud.py  data_profile
-python   classifier_adfraud.py  preprocess  --nsample 100
-python   classifier_adfraud.py  train       --nsample 200
-python   adfraud_classifier.py  check
-python   adfraud_classifier.py  predict
-python   adfraud_classifier.py  run_all
-
-
-"""
 if __name__ == "__main__":
 
     import fire
