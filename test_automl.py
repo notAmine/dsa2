@@ -8,24 +8,26 @@ https://github.com/mljar/mljar-supervised
   python  test_automl.py  predict  > zlog/log_titanic_predict.txt 2>&1
 
 
-mljar-supervised 0.8.8 requires dtreeviz==1.0, which is not installed.
-mljar-supervised 0.8.8 requires fastparquet==0.4.1, which is not installed.
-mljar-supervised 0.8.8 requires wordcloud==1.7.0, which is not installed.
-
-
-mljar-supervised 0.8.8 requires catboost==0.24.1, but you'll have catboost 0.22 which is incompatible.
-mljar-supervised 0.8.8 requires category-encoders==2.2.2, but you'll have category-encoders 2.1.0 which is incompatible.
-mljar-supervised 0.8.8 requires lightgbm==3.0.0, but you'll have lightgbm 2.3.0 which is incompatible.
-mljar-supervised 0.8.8 requires numpy>=1.18.5, but you'll have numpy 1.18.1 which is incompatible.
-mljar-supervised 0.8.8 requires pandas==1.1.2, but you'll have pandas 0.25.3 which is incompatible.
-mljar-supervised 0.8.8 requires pyarrow==0.17.0, but you'll have pyarrow 2.0.0 which is incompatible.
-mljar-supervised 0.8.8 requires scipy==1.4.1, but you'll have scipy 1.3.1 which is incompatible.
-mljar-supervised 0.8.8 requires seaborn==0.10.1, but you'll have seaborn 0.10.0 which is incompatible.
-mljar-supervised 0.8.8 requires shap==0.36.0, but you'll have shap 0.35.0 which is incompatible.
-mljar-supervised 0.8.8 requires tabulate==0.8.7, but you'll have tabulate 0.8.6 which is incompatible.
-mljar-supervised 0.8.8 requires xgboost==1.2.0, but you'll have xgboost 1.3.3 which is incompatible.
-
 conda install -c conda-forge fastparquet
+
+ dtreeviz==1.0, which is not installed.
+ fastparquet==0.4.1, which is not installed.
+ wordcloud==1.7.0, which is not installed.
+
+
+ catboost==0.24.1, but you'll have catboost 0.22 which is incompatible.
+ category-encoders==2.2.2, but you'll have category-encoders 2.1.0 which is incompatible.
+ lightgbm==3.0.0, but you'll have lightgbm 2.3.0 which is incompatible.
+ numpy>=1.18.5, but you'll have numpy 1.18.1 which is incompatible.
+ pandas==1.1.2, but you'll have pandas 0.25.3 which is incompatible.
+ pyarrow==0.17.0, but you'll have pyarrow 2.0.0 which is incompatible.
+ scipy==1.4.1, but you'll have scipy 1.3.1 which is incompatible.
+ seaborn==0.10.1, but you'll have seaborn 0.10.0 which is incompatible.
+ shap==0.36.0, but you'll have shap 0.35.0 which is incompatible.
+ tabulate==0.8.7, but you'll have tabulate 0.8.6 which is incompatible.
+ xgboost==1.2.0, but you'll have xgboost 1.3.3 which is incompatible.
+
+
 
 
 """
