@@ -41,6 +41,11 @@ from lightgbm import LGBMModel, LGBMRegressor, LGBMClassifier
 
 
 try :
+   from supervised.automl import *
+except:
+    print('cannot import automl')    
+
+try :
     #### All are Un-supervised Model
     from pyod.models.abod  import *
     from pyod.models.auto_encoder import *
