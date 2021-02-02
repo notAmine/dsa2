@@ -90,7 +90,7 @@ def global_pars_update(model_dict,  data_name, config_name):
 config_default   = 'config1'    ### name of function which contains data configuration
 
 
-# data_name    = "titanic"     ### in data/input/
+########
 cols_input_type_1 = {
      "coly"   :   "Survived"
     ,"colid"  :   "PassengerId"
