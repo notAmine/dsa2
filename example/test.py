@@ -19,9 +19,11 @@ dir_data  = os.path.abspath( root + "/data/" ) + "/"
 dir_data  = dir_data.replace("\\", "/")
 print(dir_data)
 
+
 def os_get_function_name():
     import sys
     return sys._getframe(1).f_code.co_name
+
 
 def global_pars_update(model_dict,  data_name, config_name):
     m                      = {}
@@ -42,10 +44,10 @@ def global_pars_update(model_dict,  data_name, config_name):
 
 
     ##### Prediction
-    m['path_pred_data']    = root + f'/data/input/{data_name}/test/'
-    m['path_pred_pipeline']= root + f'/data/output/{data_name}/{config_name}/pipeline/'
-    m['path_pred_model']   = root + f'/data/output/{data_name}/{config_name}/model/'
-    m['path_pred_output']  = root + f'/data/output/{data_name}/pred_{config_name}/'
+    m['path_pred_data']     = root + f'/data/input/{data_name}/test/'
+    m['path_pred_pipeline'] = root + f'/data/output/{data_name}/{config_name}/pipeline/'
+    m['path_pred_model']    = root + f'/data/output/{data_name}/{config_name}/model/'
+    m['path_pred_output']   = root + f'/data/output/{data_name}/pred_{config_name}/'
 
 
     #####  Generic
