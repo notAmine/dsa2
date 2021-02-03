@@ -38,6 +38,11 @@ def run_hyper_optuna(obj_fun, pars_dict_init,  pars_dict_range,  engine_pars, nt
 						 'num_leaves':31 }
       obj_fun(pars_dict) :  Objective function
       engine_pars :    {   }  optuna parameters
+      
+      
+      API interface integration :
+           https://optuna.readthedocs.io/en/stable/reference/generated/optuna.storages.RDBStorage.html
+      
     """
     import os
     print(pars_dict_init)

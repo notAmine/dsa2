@@ -19,9 +19,11 @@ Preprocessors Check
 
 ### Looking for contributors
      Maintain and setup roadmap of this excellent Data Science / ML repo.
-     Goal is to unified Data Science and Machine Learning :
-      REDUCE BOILERPLATE CODE for daily task.
-      
+     Goal is to unified Data Science and Machine Learning .
+     Basic idea is to have one single dictionary/json for
+            model, compute, data definition,
+     --> easy to define, easy to track, easy to modify.
+     
 
 ### Install 
      pip install -r zrequirements.txt
@@ -36,21 +38,18 @@ Preprocessors Check
 
 ### How to train a new dataset ?
     1) Put your data file   in   data/input/mydata/raw/   
-      https://github.com/arita37/dsa2/tree/multi/data/input/mydata
+[link](https://github.com/arita37/dsa2/tree/multi/data/input/mydata)
        
 
     2) Update script        in   data/input/mydata/clean.py
        to load column names, basic profile...
 
-    3) Run  python clean.py profile   and check results
 
-
-    4) run  python clean.py train_test
+    3) run  python clean.py train_test
         which generates train and test data in :   
            data/input/mydata/train/features.parquet   target.parquet  (y label)        
            data/input/mydata/test/features.parquet    target.parquet  (y label)                
                 
-
     4) Copy Paste titanic_classifier.py  into  mydata_classifier.py
     
     5) Modify the script     mydata_classifier.py
@@ -60,18 +59,62 @@ Preprocessors Check
         python  mydata_classifier.py  train
         python  mydata_classifier.py  predict
 
+
         
+### Examples
 
-### Dashboard for hyper-params optimization
-
-![image](https://user-images.githubusercontent.com/18707623/106399211-a1d72d80-645a-11eb-8288-a6e3c9dc66ad.png)
-
-
-![image](https://user-images.githubusercontent.com/18707623/106399223-b287a380-645a-11eb-92a2-475454c83a85.png)
+      In example/
 
 
 
-```
+
+### List of preprocessor
+
+        #### Data Over/Under sampling 
+        prepro_sampler.pd_autoencoder(df,col, pars)
+        prepro_sampler.pd_col_genetic_transform(df,col, pars)
+        prepro_sampler.pd_colcat_encoder_generic(df,col, pars)
+        prepro_sampler.pd_filter_resample(df,col, pars)
+        prepro_sampler.pd_filter_rows(df,col, pars)
+
+        #### Auto-Encoder
+        prepro.pd_autoencoder(df,col, pars)
+        prepro.pd_col_genetic_transform(df,col, pars)
+        prepro.pd_colcat_bin(df,col, pars)
+        prepro.pd_colcat_encoder_generic(df,col, pars)
+        prepro.pd_colcat_minhash(df,col, pars)
+        prepro.pd_colcat_to_onehot(df,col, pars)
+        prepro.pd_colcross(df,col, pars)
+        prepro.pd_coldate(df,col, pars)
+        prepro.pd_colnum(df,col, pars)
+        prepro.pd_colnum_bin(df,col, pars)
+        prepro.pd_colnum_binto_onehot(df,col, pars)
+        prepro.pd_colnum_normalize(df,col, pars)
+        prepro.pd_colnum_quantile_norm(df,col, pars)
+        prepro.pd_coltext(df,col, pars)
+        prepro.pd_coltext_clean(df,col, pars)
+        prepro.pd_coltext_universal_google(df,col, pars)
+        prepro.pd_coltext_wordfreq(df,col, pars)
+        prepro.pd_coly(df,col, pars)
+        prepro.pd_filter_resample(df,col, pars)
+        prepro.pd_filter_rows(df,col, pars)
+        prepro.pd_label_clean(df,col, pars)
+
+        #### Time Series 
+        prepro_tseries.pd_ts_autoregressive(df,col, pars)
+        prepro_tseries.pd_ts_basic(df,col, pars)
+        prepro_tseries.pd_ts_date(df,col, pars)
+        prepro_tseries.pd_ts_detrend(df,col, pars)
+        prepro_tseries.pd_ts_generic(df,col, pars)
+        prepro_tseries.pd_ts_groupby(df,col, pars)
+        prepro_tseries.pd_ts_identity(df,col, pars)
+        prepro_tseries.pd_ts_lag(df,col, pars)
+        prepro_tseries.pd_ts_onehot(df,col, pars)
+        prepro_tseries.pd_ts_rolling(df,col, pars)
+        prepro_tseries.pd_ts_template(df,col, pars)
+
+
+
 
 
 
