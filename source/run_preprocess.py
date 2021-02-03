@@ -182,6 +182,7 @@ def preprocess(path_train_X="", path_train_y="", path_pipeline_export="", cols_g
        pars['path_pipeline_export'] = path_pipeline_export   ### Store pipeline
 
        if col_type == 'cross':
+           log("###################  Adding Cross ###################################################")
            pars['dfnum_hot']       = dfi_all['colnum_onehot']  ### dfnum_hot --> dfcross
            pars['dfcat_hot']       = dfi_all['colcat_onehot']
            pars['colid']           = colid
