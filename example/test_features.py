@@ -1,7 +1,13 @@
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
-Automatic Feature generator
+python  example/test_encoder.py  preprocess  --nsample 100
+python  example/test_encoder.py  train       --nsample 200
+
+
+
+
+
 
 """
 import warnings, copy, os, sys
@@ -57,7 +63,7 @@ def global_pars_update(model_dict,  data_name, config_name):
 
 ####################################################################################
 ##### Params########################################################################
-config_default   = 'titanic1'          ### name of function which contains data configuration
+config_default   = 'config1'          ### name of function which contains data configuration
 
 
 cols_input_type_2 = {
@@ -74,7 +80,71 @@ cols_input_type_2 = {
 
 
 ####################################################################################
-def titanic1(path_model_out="") :
+"""
+
+
+        #### Data Over/Under sampling 
+        prepro_sampler.pd_autoencoder(df,col, pars)
+        
+        prepro_sampler.pd_col_genetic_transform(df,col, pars)        
+        prepro_sampler.pd_colcat_encoder_generic(df,col, pars)
+        
+        prepro_sampler.pd_filter_resample(df,col, pars)
+        prepro_sampler.pd_filter_rows(df,col, pars)
+
+
+        #### Category, Numerical
+        prepro.pd_autoencoder(df,col, pars)
+        prepro.pd_col_genetic_transform(df,col, pars)
+        
+        prepro.pd_colcat_bin(df,col, pars)
+        prepro.pd_colcat_encoder_generic(df,col, pars)
+        prepro.pd_colcat_minhash(df,col, pars)
+        prepro.pd_colcat_to_onehot(df,col, pars)
+        
+        prepro.pd_colcross(df,col, pars)
+        prepro.pd_coldate(df,col, pars)
+        
+        prepro.pd_colnum(df,col, pars)
+        prepro.pd_colnum_bin(df,col, pars)
+        prepro.pd_colnum_binto_onehot(df,col, pars)
+        prepro.pd_colnum_normalize(df,col, pars)
+        prepro.pd_colnum_quantile_norm(df,col, pars)
+
+        
+        #### Text        
+        prepro.pd_coltext(df,col, pars)
+        prepro.pd_coltext_clean(df,col, pars)
+        prepro.pd_coltext_universal_google(df,col, pars)
+        prepro.pd_coltext_wordfreq(df,col, pars)
+        
+        
+        #### Target label encoding
+        prepro.pd_coly(df,col, pars)
+        
+        prepro.pd_filter_resample(df,col, pars)
+        prepro.pd_filter_rows(df,col, pars)
+        prepro.pd_label_clean(df,col, pars)
+
+
+        #### Time Series 
+        prepro_tseries.pd_ts_autoregressive(df,col, pars)
+        prepro_tseries.pd_ts_basic(df,col, pars)
+        prepro_tseries.pd_ts_date(df,col, pars)
+        
+        prepro_tseries.pd_ts_detrend(df,col, pars)
+        prepro_tseries.pd_ts_generic(df,col, pars)
+        prepro_tseries.pd_ts_groupby(df,col, pars)
+        prepro_tseries.pd_ts_identity(df,col, pars)
+        prepro_tseries.pd_ts_lag(df,col, pars)
+        prepro_tseries.pd_ts_onehot(df,col, pars)
+        prepro_tseries.pd_ts_rolling(df,col, pars)
+        prepro_tseries.pd_ts_template(df,col, pars)
+
+"""
+
+
+def config1(path_model_out="") :
     """
        Contains all needed informations for Light GBM Classifier model,
        used for titanic classification task
@@ -119,32 +189,29 @@ def titanic1(path_model_out="") :
 
         {'uri': 'source/prepro.py::pd_col_genetic_transform',
 
-        'pars': {'pars_generic' :{
+         'pars': {'pars_generic' :{
 
-         ### Issue with Binary 1 or 0  : need to pass with Logistic
-        'metric': 'spearman',
-        'generations': 100, 'population_size': 100,  ### Higher than nb_features
-        'tournament_size': 20, 'stopping_criteria': 1.0, 'const_range': (-1., 1.),
-        'p_crossover': 0.9, 'p_subtree_mutation': 0.01, 'p_hoist_mutation': 0.01,
-        'p_point_mutation': 0.01, 'p_point_replace': 0.05,
-        'parsimony_coefficient' : 0.0005,   ####   0.00005 Control Complexity
-        'max_samples' : 0.9, 'verbose' : 1,
-        #'n_components'      ###    'metric': 'spearman', Control number of outtput features  : n_components
-        'random_state' :0, 'n_jobs' : 4,
+                                 ### Issue with Binary 1 or 0  : need to pass with Logistic
+                                'metric': 'spearman',
+                                'generations': 100, 'population_size': 100,  ### Higher than nb_features
+                                'tournament_size': 20, 'stopping_criteria': 1.0, 'const_range': (-1., 1.),
+                                'p_crossover': 0.9, 'p_subtree_mutation': 0.01, 'p_hoist_mutation': 0.01,
+                                'p_point_mutation': 0.01, 'p_point_replace': 0.05,
+                                'parsimony_coefficient' : 0.0005,   ####   0.00005 Control Complexity
+                                'max_samples' : 0.9, 'verbose' : 1,
+                                #'n_components'      ###    'metric': 'spearman', Control number of outtput features  : n_components
+                                'random_state' :0, 'n_jobs' : 4,
 
-                     }
+                               },
 
+                 },
 
-
-                },
-
-                'cols_family': 'colgen',     'cols_out': 'col_genetic',     'type': 'add_coly'             },
-
-
+                  'cols_family': 'colgen',     'cols_out': 'col_genetic',     
+                  'type': 'add_coly'   #### Need to add target coly             
+              },
 
         #{'uri': 'source/prepro.py::pd_colnum_quantile_norm',       'pars': {'colsparse' :  [] },
         # 'cols_family': 'colnum',     'cols_out': 'colnum_quantile_norm',     'type': ''             },
-
 
     ],
            }
@@ -161,9 +228,9 @@ def titanic1(path_model_out="") :
       #  'colcross_single_onehot_select', "colcross_pair_onehot",  'colcross_pair',  #### colcross columns
       #  'coldate',
       #  'coltext',
-      'cols_model_group': [ #'colnum',  ### should be optional 'colcat'
+      'cols_model_group': [ 'colnum',  ### should be optional 'colcat'
 
-                            #'colcat_bin',
+                            'colcat_bin',
                             # 'colcat_bin',
                             # 'colnum_onehot',
 
@@ -174,7 +241,7 @@ def titanic1(path_model_out="") :
 
                             #'colcat_minhash',
 
-                            'col_genetic',
+                            # 'col_genetic',
 
                             #'colnum_quantile_norm'
 
@@ -219,12 +286,6 @@ from core_run import predict
 ###########################################################################################################
 ###########################################################################################################
 """
-python  core_test_encoder.py  data_profile
-python  core_test_encoder.py  preprocess  --nsample 100
-python  core_test_encoder.py  train       --nsample 200
-python  core_test_encoder.py  check
-python  core_test_encoder.py  predict
-python  core_test_encoder.py  run_all
 
 
 """
