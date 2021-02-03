@@ -65,7 +65,7 @@ def map_model(model_name):
 
     """
 
-    #### Custom folder 
+    ##### Custom folder
     if ".py" in model_name :
        path = os.path.parent(model_name)
        sys.path.append(path)
@@ -149,14 +149,14 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     dfX[coly]            = dfX[coly].apply(lambda  x : post_process_fun(x) )
     dfX[coly + '_pred']  = dfX[coly + '_pred'].apply(lambda  x : post_process_fun(x) )
 
-    if ypred_proba is None :
+    if ypred_proba is None :  ### No proba
         ypred_proba_val = None
 
-    elif len(ypred_proba.shape) <= 1  :
+    elif len(ypred_proba.shape) <= 1  :  #### Single dim proba
        ypred_proba_val      = ypred_proba[ival:]
        dfX[coly + '_proba'] = ypred_proba
 
-    elif len(ypred_proba.shape) > 1 :
+    elif len(ypred_proba.shape) > 1 :   ## Muitple proba
         from util_feature import np_conv_to_one_col
         ypred_proba_val      = ypred_proba[ival:,:]
         dfX[coly + '_proba'] = np_conv_to_one_col(ypred_proba, ";")  ### merge into string "p1,p2,p3,p4"
@@ -165,7 +165,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     log("Actual    : ",  dfX[coly ])
     log("Prediction: ",  dfX[coly + '_pred'])
 
-    log("#### Metrics #############################################################")
+    log("#### Metrics ###############################################################")
     from util_feature import  metrics_eval
     metrics_test = metrics_eval(metric_list,
                                 ytrue       = dfX[coly].iloc[ival:],
@@ -175,7 +175,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     log(stats)
 
 
-    log("### Saving model, dfX, columns ###########################################")
+    log("### Saving model, dfX, columns #############################################")
     log(model_path + "/model.pkl")
     os.makedirs(model_path, exist_ok=True)
     save(colsX, model_path + "/colsX.pkl")
@@ -183,7 +183,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     modelx.save(model_path, stats)
 
 
-    log("### Reload model,            ############################################")
+    log("### Reload model,            ###############################################")
     log(modelx.model.model_pars, modelx.model.compute_pars)
     a = load(model_path + "/model.pkl")
     log("Reload model pars", a.model_pars)
@@ -194,7 +194,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 ####################################################################################################
 ############CLI Command ############################################################################
 def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
-              mode="run_preprocess", model_dict=None, return_mode='file'):
+              mode="run_preprocess", model_dict=None, return_mode='file', **kw):
     """
       Configuration of the model is in config_model.py file
     :param config_name:
@@ -202,9 +202,12 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     :param n_sample:
     :return:
     """
-    model_dict = model_dict_load(model_dict, config_path, config_name, verbose=True)
+    model_dict  = model_dict_load(model_dict, config_path, config_name, verbose=True)
 
-    m = model_dict['global_pars']
+    mlflow_pars = model_dict.get('compute_pars', {}).get('mlflow_pars', None)
+
+
+    m           = model_dict['global_pars']
     path_data_train   = m['path_data_train']
     path_train_X      = m.get('path_train_X', path_data_train + "/features.zip") #.zip
     path_train_y      = m.get('path_train_y', path_data_train + "/target.zip")   #.zip
@@ -225,9 +228,7 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     log(cols_group)
 
 
-    log("#### Preprocess  ################################################################")
-    
-        
+    log("#### Preprocess  ################################################################")        
     preprocess_pars = model_dict['model_pars']['pre_process_pars']
      
     if mode == "run_preprocess" :
@@ -253,6 +254,24 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     log(str(model_dict)[:1000])
     post_process_fun      = model_dict['model_pars']['post_process_fun']
     dfXy, dfXytest,stats  = train(model_dict, dfXy, cols, post_process_fun)
+
+    if mlflow_pars is not None:
+        log("#### Using mlflow #########################################################")
+        # def register(run_name, params, metrics, signature, model_class, tracking_uri= "sqlite:///local.db"):
+        from run_mlflow import register
+        from mlflow.models.signature import infer_signature
+
+        train_signature = dfXy[model_dict['data_pars']['cols_model']]
+        y_signature     = dfXy[model_dict['data_pars']['coly']]
+        signature       = infer_signature(train_signature, y_signature)
+
+        register( run_name    = model_dict['global_pars']['config_name'],
+                 params       = model_dict['global_pars'],
+                 metrics      = stats["metrics_test"],
+                 signature    = signature,
+                 model_class  = model_dict['model_pars']["model_class"],
+                 tracking_uri = mlflow_pars.get( 'tracking_db', "sqlite:///mlflow_local.db")
+                )
 
 
     if return_mode == 'dict' :

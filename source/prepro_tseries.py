@@ -18,7 +18,6 @@
 
 """
 import warnings, os, sys, re
-
 warnings.filterwarnings('ignore')
 import pandas as pd, numpy as np, copy
 
@@ -31,7 +30,7 @@ root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
 print(root)
 
 ####################################################################################################
-from util_feature import (load, save_list, load_function_uri, load_function_uri2, save, \
+from util_feature import (load, save_list, load_function_uri, load_function_uri2, save, 
                           save_features, load_features)
 
 
@@ -70,12 +69,11 @@ def get_sampledata():
     return df
 
 
-def pd_ts_date(df, col, pars=None):
+def pd_ts_date2(df, col, pars=None):
     """
         Parse and Split the date.
 
     """
-
     from utils import util_date
     coldate = col
     dfdate = None
@@ -87,46 +85,46 @@ def pd_ts_date(df, col, pars=None):
     return dfdate
 
 
-def pd_ts_date2(df, col):
+def pd_ts_date(df, col, pars=None):
     coldate = col
+    dfdate  =  None
     for coldate_i in coldate:
-        df[coldate_i] = pd.to_datetime(df[coldate_i], errors='coerce')
-        df[coldate_i + '_day'] = df[coldate_i].dt.day
-        df[coldate_i + '_month'] = df[coldate_i].dt.month
-        df[coldate_i + '_year'] = df[coldate_i].dt.year
-        df[coldate_i + '_hour'] = df[coldate_i].dt.hour
-        df[coldate_i + '_minute'] = df[coldate_i].dt.minute
-        df[coldate_i + '_second'] = df[coldate_i].dt.second
-        df[coldate_i + '_weekday'] = df[coldate_i].dt.weekday
-        df[coldate_i + '_day_of_year'] = df[coldate_i].dt.dayofyear
-        df[coldate_i + '_week_of_year'] = df[coldate_i].dt.weekofyear
-        #weekday_mask = {0: 'Sunday', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday',
-        #                6: 'Saturday'}
-        #df[coldate_i + '_weekday_name'] = df[coldate_i + '_weekday'].map(weekday_mask).astype('category')
+        df2[coldate_i]               = pd.to_datetime(df[coldate_i], errors='coerce')
+        df2[coldate_i + '_day']      = df2[coldate_i].dt.day
+        df2[coldate_i + '_month']    = df2[coldate_i].dt.month
+        df2[coldate_i + '_year']     = df2[coldate_i].dt.year
+        df2[coldate_i + '_hour']     = df2[coldate_i].dt.hour
+        df2[coldate_i + '_minute']   = df2[coldate_i].dt.minute
+        df2[coldate_i + '_weekday']  = df2[coldate_i].dt.weekday
+        df2[coldate_i + '_dayyear']  = df2[coldate_i].dt.dayofyear
+        df2[coldate_i + '_weekyear'] = df2[coldate_i].dt.weekofyear
 
+
+        dfdate = pd.concat((dfall, df2 )) if dfate is not None else df2  
         df = df.loc[:, (df != 0).any(axis=0)]
-
-        # dfdate_i = dsa.da.util_date.pd_datestring_split(df[[coldate_i]], coldate_i, fmt="auto", return_val="split")
-        # dfdate_i.columns = [coldate_i + "_" + t for t in coldate]
-        # dfdate = pd.concat((dfdate, dfdate_i), axis=1) if dfdate is not None else dfdate_i
-    return df
+    return dfdate
 
 
 def pd_ts_groupby(df, col, pars):
     """
+        Generates features by groupBy over category
         groupby(shop_id) ---> per each date,  mean, max, min ...
         groupby(zone_id) ---> per each date,  mean, max, min ...
 
         groupby(key_lis).agg( col_stat )
 
     """
-    colgroup = pars.get('colgroup')
-    colstat = pars.get('colstat')
-    dfall = None
-    calc_list = pars.get('calc_list', {'mean'})
+    colgroup = pars.get('colgroup')    #### list of list of columns for aggregation
+    colstat  = pars.get('colstat')     ####  column whwere : sales, amount, 
+    calc_list = pars.get('calc_list', {'mean'})   ### what kind of stats
+    
+    colgroup_merge = [ colj for colgroupi in colgroup for colj in colgroupi ]   #### Flatten 
+    colgroup_merge = list(set(colgroup_merge))
+    dfall          = df[colgroup_merge].drop_duplicates(  colgroup_merge )
+
     for colgroupi in colgroup:
-        df1 = df.groupby(colgroupi).agg({coli: set(calc_list) for coli in colstat})
-        dfall = dfall.join(df1, on=colgroup, how='left') if dfall is not None else df1
+        df1   = df.groupby(colgroupi).agg({coli: set(calc_list) for coli in colstat})
+        dfall = dfall.join(df1, on=colgroupi, how='left') 
 
     return dfall
 
@@ -139,11 +137,9 @@ def pd_ts_onehot(df, col, pars=None):
     :param pars:
     :return:
     """
-    df = pd.read_csv(df)
     dummy_cols = pd.get_dummies(df[col])
     df = pd.concat([df, dummy_cols], axis=1)
 
-    print(df)
     return df
 
 
@@ -156,19 +152,22 @@ def pd_ts_autoregressive(df, col, pars):
     pass
 
 
+
 def pd_ts_rolling(df, col, pars):
-    cat_cols = []
+    cat_cols     = []
     created_cols = []
-    colgroup = 'id'
-    colstat = 'mdi'
+    colgroup     = 'id'
+    colstat      = 'mdi'
 
     len_shift = 28
     for i in [7, 14, 30, 60, 180]:
         print('Rolling period:', i)
         df['rolling_mean_' + str(i)] = df.groupby(colgroup)[colstat].transform(
             lambda x: x.shift(len_shift).rolling(i).mean())
+
         df['rolling_std_' + str(i)] = df.groupby(colgroup)[colstat].transform(
             lambda x: x.shift(len_shift).rolling(i).std())
+
         created_cols.append('rolling_mean_' + str(i))
         created_cols.append('rolling_std_' + str(i))
 
@@ -190,7 +189,7 @@ def pd_ts_rolling(df, col, pars):
 
 def pd_ts_lag(df, col, pars, id_cols=None, dep_col=None):
     created_cols = []
-    cat_cols = []
+    cat_cols     = []
 
     lag_days = [col for col in range(28, 28 + 15)]
     for lag_day in lag_days:
@@ -220,7 +219,7 @@ def pd_ts_generic(df, col=None, pars=None, ):
         dfin = (dfin - dfin.min()) / (dfin.max() - dfin.min())
 
     ##### Transform Data  ############################################################
-    model = load_function_uri(model_name)
+    model  = load_function_uri(model_name)
     df_out = model(dfin, **model_pars)
 
     if 'extract' in model_name:
@@ -228,10 +227,10 @@ def pd_ts_generic(df, col=None, pars=None, ):
         col_out = "0_" + model_name
 
     else:
-        model_name2 = model_name.replace("::", "-")
-        col_out = [coli + "_" + model_name2 for coli in df_out.columns]
+        model_name2    = model_name.replace("::", "-")
+        col_out        = [coli + "_" + model_name2 for coli in df_out.columns]
         df_out.columns = col_out
-        df_out.index = df.index
+        df_out.index   = df.index
 
     return df_out
 
