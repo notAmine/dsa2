@@ -1,7 +1,11 @@
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
-Automatic Feature generator
+python  example/test_encoder.py  preprocess  --nsample 100
+python  example/test_encoder.py  train       --nsample 200
+
+
+
 
 """
 import warnings, copy, os, sys
@@ -57,7 +61,7 @@ def global_pars_update(model_dict,  data_name, config_name):
 
 ####################################################################################
 ##### Params########################################################################
-config_default   = 'titanic1'          ### name of function which contains data configuration
+config_default   = 'config1'          ### name of function which contains data configuration
 
 
 cols_input_type_2 = {
@@ -74,7 +78,7 @@ cols_input_type_2 = {
 
 
 ####################################################################################
-def titanic1(path_model_out="") :
+def config1(path_model_out="") :
     """
        Contains all needed informations for Light GBM Classifier model,
        used for titanic classification task
@@ -219,12 +223,6 @@ from core_run import predict
 ###########################################################################################################
 ###########################################################################################################
 """
-python  core_test_encoder.py  data_profile
-python  core_test_encoder.py  preprocess  --nsample 100
-python  core_test_encoder.py  train       --nsample 200
-python  core_test_encoder.py  check
-python  core_test_encoder.py  predict
-python  core_test_encoder.py  run_all
 
 
 """
