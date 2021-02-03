@@ -189,7 +189,7 @@ def config1(path_model_out="") :
 
         {'uri': 'source/prepro.py::pd_col_genetic_transform',
 
-        'pars': {'pars_generic' :{
+         'pars': {'pars_generic' :{
 
                                  ### Issue with Binary 1 or 0  : need to pass with Logistic
                                 'metric': 'spearman',
@@ -202,17 +202,16 @@ def config1(path_model_out="") :
                                 #'n_components'      ###    'metric': 'spearman', Control number of outtput features  : n_components
                                 'random_state' :0, 'n_jobs' : 4,
 
-                     }
+                               },
 
+                 },
 
-
-                },
-
-                'cols_family': 'colgen',     'cols_out': 'col_genetic',     'type': 'add_coly'             },
+                  'cols_family': 'colgen',     'cols_out': 'col_genetic',     
+                  'type': 'add_coly'   #### Need to add target coly             
+              },
 
         #{'uri': 'source/prepro.py::pd_colnum_quantile_norm',       'pars': {'colsparse' :  [] },
         # 'cols_family': 'colnum',     'cols_out': 'colnum_quantile_norm',     'type': ''             },
-
 
     ],
            }
@@ -229,9 +228,9 @@ def config1(path_model_out="") :
       #  'colcross_single_onehot_select', "colcross_pair_onehot",  'colcross_pair',  #### colcross columns
       #  'coldate',
       #  'coltext',
-      'cols_model_group': [ #'colnum',  ### should be optional 'colcat'
+      'cols_model_group': [ 'colnum',  ### should be optional 'colcat'
 
-                            #'colcat_bin',
+                            'colcat_bin',
                             # 'colcat_bin',
                             # 'colnum_onehot',
 
@@ -242,7 +241,7 @@ def config1(path_model_out="") :
 
                             #'colcat_minhash',
 
-                            'col_genetic',
+                            # 'col_genetic',
 
                             #'colnum_quantile_norm'
 
