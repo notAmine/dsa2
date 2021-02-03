@@ -5,6 +5,7 @@
 python source/models/model_keras_widedeep.py
 
 
+
 """
 import os
 import pandas as pd, numpy as np, scipy as sci
@@ -78,7 +79,7 @@ def Modelcustom(n_wide_cross, n_wide, n_feat=8, m_EMBEDDING=10, loss='mse', metr
 class Model(object):
     def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
         self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
-
+        self.history = None
         if model_pars is None:
             self.model = None
         else:
@@ -102,7 +103,8 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     cpars = compute_pars.get("compute_pars", {})
     assert 'epochs' in cpars, 'epoch'
 
-    model.model.fit((Xtrain_A, Xtrain_B, Xtrain_C), ytrain,  **cpars)
+    hist = model.model.fit((Xtrain_A, Xtrain_B, Xtrain_C), ytrain,  **cpars)
+    model.history = hist
 
 
 def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
