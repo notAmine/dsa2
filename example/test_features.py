@@ -7,6 +7,8 @@ python  example/test_encoder.py  train       --nsample 200
 
 
 
+
+
 """
 import warnings, copy, os, sys
 warnings.filterwarnings('ignore')
@@ -78,6 +80,70 @@ cols_input_type_2 = {
 
 
 ####################################################################################
+"""
+
+
+        #### Data Over/Under sampling 
+        prepro_sampler.pd_autoencoder(df,col, pars)
+        
+        prepro_sampler.pd_col_genetic_transform(df,col, pars)        
+        prepro_sampler.pd_colcat_encoder_generic(df,col, pars)
+        
+        prepro_sampler.pd_filter_resample(df,col, pars)
+        prepro_sampler.pd_filter_rows(df,col, pars)
+
+
+        #### Category, Numerical
+        prepro.pd_autoencoder(df,col, pars)
+        prepro.pd_col_genetic_transform(df,col, pars)
+        
+        prepro.pd_colcat_bin(df,col, pars)
+        prepro.pd_colcat_encoder_generic(df,col, pars)
+        prepro.pd_colcat_minhash(df,col, pars)
+        prepro.pd_colcat_to_onehot(df,col, pars)
+        
+        prepro.pd_colcross(df,col, pars)
+        prepro.pd_coldate(df,col, pars)
+        
+        prepro.pd_colnum(df,col, pars)
+        prepro.pd_colnum_bin(df,col, pars)
+        prepro.pd_colnum_binto_onehot(df,col, pars)
+        prepro.pd_colnum_normalize(df,col, pars)
+        prepro.pd_colnum_quantile_norm(df,col, pars)
+
+        
+        #### Text        
+        prepro.pd_coltext(df,col, pars)
+        prepro.pd_coltext_clean(df,col, pars)
+        prepro.pd_coltext_universal_google(df,col, pars)
+        prepro.pd_coltext_wordfreq(df,col, pars)
+        
+        
+        #### Target label encoding
+        prepro.pd_coly(df,col, pars)
+        
+        prepro.pd_filter_resample(df,col, pars)
+        prepro.pd_filter_rows(df,col, pars)
+        prepro.pd_label_clean(df,col, pars)
+
+
+        #### Time Series 
+        prepro_tseries.pd_ts_autoregressive(df,col, pars)
+        prepro_tseries.pd_ts_basic(df,col, pars)
+        prepro_tseries.pd_ts_date(df,col, pars)
+        
+        prepro_tseries.pd_ts_detrend(df,col, pars)
+        prepro_tseries.pd_ts_generic(df,col, pars)
+        prepro_tseries.pd_ts_groupby(df,col, pars)
+        prepro_tseries.pd_ts_identity(df,col, pars)
+        prepro_tseries.pd_ts_lag(df,col, pars)
+        prepro_tseries.pd_ts_onehot(df,col, pars)
+        prepro_tseries.pd_ts_rolling(df,col, pars)
+        prepro_tseries.pd_ts_template(df,col, pars)
+
+"""
+
+
 def config1(path_model_out="") :
     """
        Contains all needed informations for Light GBM Classifier model,
@@ -125,16 +191,16 @@ def config1(path_model_out="") :
 
         'pars': {'pars_generic' :{
 
-         ### Issue with Binary 1 or 0  : need to pass with Logistic
-        'metric': 'spearman',
-        'generations': 100, 'population_size': 100,  ### Higher than nb_features
-        'tournament_size': 20, 'stopping_criteria': 1.0, 'const_range': (-1., 1.),
-        'p_crossover': 0.9, 'p_subtree_mutation': 0.01, 'p_hoist_mutation': 0.01,
-        'p_point_mutation': 0.01, 'p_point_replace': 0.05,
-        'parsimony_coefficient' : 0.0005,   ####   0.00005 Control Complexity
-        'max_samples' : 0.9, 'verbose' : 1,
-        #'n_components'      ###    'metric': 'spearman', Control number of outtput features  : n_components
-        'random_state' :0, 'n_jobs' : 4,
+                                 ### Issue with Binary 1 or 0  : need to pass with Logistic
+                                'metric': 'spearman',
+                                'generations': 100, 'population_size': 100,  ### Higher than nb_features
+                                'tournament_size': 20, 'stopping_criteria': 1.0, 'const_range': (-1., 1.),
+                                'p_crossover': 0.9, 'p_subtree_mutation': 0.01, 'p_hoist_mutation': 0.01,
+                                'p_point_mutation': 0.01, 'p_point_replace': 0.05,
+                                'parsimony_coefficient' : 0.0005,   ####   0.00005 Control Complexity
+                                'max_samples' : 0.9, 'verbose' : 1,
+                                #'n_components'      ###    'metric': 'spearman', Control number of outtput features  : n_components
+                                'random_state' :0, 'n_jobs' : 4,
 
                      }
 
@@ -143,8 +209,6 @@ def config1(path_model_out="") :
                 },
 
                 'cols_family': 'colgen',     'cols_out': 'col_genetic',     'type': 'add_coly'             },
-
-
 
         #{'uri': 'source/prepro.py::pd_colnum_quantile_norm',       'pars': {'colsparse' :  [] },
         # 'cols_family': 'colnum',     'cols_out': 'colnum_quantile_norm',     'type': ''             },
