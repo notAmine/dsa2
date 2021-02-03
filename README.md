@@ -70,7 +70,7 @@ Preprocessors Check
 
 ### List of preprocessor
 
-        #### Data Over/Under sampling 
+        #### Data Over/Under sampling ##################################
         prepro_sampler.pd_autoencoder(df,col, pars)
         
         prepro_sampler.pd_col_genetic_transform(df,col, pars)        
@@ -80,41 +80,41 @@ Preprocessors Check
         prepro_sampler.pd_filter_rows(df,col, pars)
 
 
-        #### Category, Numerical
-        prepro.pd_autoencoder(df,col, pars)
-        prepro.pd_col_genetic_transform(df,col, pars)
+        #### Category, Numerical  #####################################
+        source/prepro.py::pd_autoencoder(df,col, pars)
+        source/prepro.py::pd_col_genetic_transform(df,col, pars)
         
-        prepro.pd_colcat_bin(df,col, pars)
-        prepro.pd_colcat_encoder_generic(df,col, pars)
-        prepro.pd_colcat_minhash(df,col, pars)
-        prepro.pd_colcat_to_onehot(df,col, pars)
+        source/prepro.py::pd_colcat_bin(df,col, pars)
+        source/prepro.py::pd_colcat_encoder_generic(df,col, pars)
+        source/prepro.py::pd_colcat_minhash(df,col, pars)
+        source/prepro.py::pd_colcat_to_onehot(df,col, pars)
         
-        prepro.pd_colcross(df,col, pars)
-        prepro.pd_coldate(df,col, pars)
+        source/prepro.py::pd_colcross(df,col, pars)
+        source/prepro.py::pd_coldate(df,col, pars)
         
-        prepro.pd_colnum(df,col, pars)
-        prepro.pd_colnum_bin(df,col, pars)
-        prepro.pd_colnum_binto_onehot(df,col, pars)
-        prepro.pd_colnum_normalize(df,col, pars)
-        prepro.pd_colnum_quantile_norm(df,col, pars)
+        source/prepro.py::pd_colnum(df,col, pars)
+        source/prepro.py::pd_colnum_bin(df,col, pars)
+        source/prepro.py::pd_colnum_binto_onehot(df,col, pars)
+        source/prepro.py::pd_colnum_normalize(df,col, pars)
+        source/prepro.py::pd_colnum_quantile_norm(df,col, pars)
 
         
-        #### Text        
-        prepro.pd_coltext(df,col, pars)
-        prepro.pd_coltext_clean(df,col, pars)
-        prepro.pd_coltext_universal_google(df,col, pars)
-        prepro.pd_coltext_wordfreq(df,col, pars)
+        #### Text    ##################################################    
+        source/prepro.py::pd_coltext(df,col, pars)
+        source/prepro.py::pd_coltext_clean(df,col, pars)
+        source/prepro.py::pd_coltext_universal_google(df,col, pars)
+        source/prepro.py::pd_coltext_wordfreq(df,col, pars)
         
         
-        #### Target label encoding
-        prepro.pd_coly(df,col, pars)
+        #### Target label encoding  ##################################
+        source/prepro.py::pd_coly(df,col, pars)
         
-        prepro.pd_filter_resample(df,col, pars)
-        prepro.pd_filter_rows(df,col, pars)
-        prepro.pd_label_clean(df,col, pars)
+        source/prepro.py::pd_filter_resample(df,col, pars)
+        source/prepro.py::pd_filter_rows(df,col, pars)
+        source/prepro.py::pd_label_clean(df,col, pars)
 
 
-        #### Time Series 
+        #### Time Series   ##########################################
         prepro_tseries.pd_ts_autoregressive(df,col, pars)
         prepro_tseries.pd_ts_basic(df,col, pars)
         prepro_tseries.pd_ts_date(df,col, pars)
