@@ -42,6 +42,21 @@ loaded_model = TabularModel.load_from_checkpoint("examples/basic")
 
 
 
+        The core model which orchestrates everything from initializing the datamodule, the model, trainer, etc.
+        Args:
+            config (Optional[Union[DictConfig, str]], optional): Single OmegaConf DictConfig object or
+                the path to the yaml file holding all the config parameters. Defaults to None.
+            data_config (Optional[Union[DataConfig, str]], optional): DataConfig object or path to the yaml file. Defaults to None.
+            model_config (Optional[Union[ModelConfig, str]], optional): A subclass of ModelConfig or path to the yaml file.
+                Determines which model to run from the type of config. Defaults to None.
+            optimizer_config (Optional[Union[OptimizerConfig, str]], optional): OptimizerConfig object or path to the yaml file.
+                Defaults to None.
+            trainer_config (Optional[Union[TrainerConfig, str]], optional): TrainerConfig object or path to the yaml file.
+                Defaults to None.
+            experiment_config (Optional[Union[ExperimentConfig, str]], optional): ExperimentConfig object or path to the yaml file.
+                If Provided configures the experiment tracking. Defaults to None.
+            model_callable (Optional[Callable], optional): If provided, will override the model callable that will be loaded from the config.
+                Typically used when providing Custom Models
 
 """
 import os, numpy as np, pandas as pd, sklearn
@@ -121,22 +136,6 @@ def init(*kw, **kwargs):
 
 
 
-class customModel(PyroModule):
-    def __init__(self, in_features, out_features):
-        super().__init__()
-        self.linear = PyroModule[nn.Linear](in_features, out_features)
-        self.linear.weight = PyroSample(dist.Normal(0., 1.).expand([out_features, in_features]).to_event(2))
-        self.linear.bias = PyroSample(dist.Normal(0., 10.).expand([out_features]).to_event(1))
-
-    def forward(self, x, y=None):
-        sigma = pyro.sample("sigma", dist.Uniform(0., 10.))
-        mean = self.linear(x).squeeze(-1)
-        with pyro.plate("data", x.shape[0]):
-            obs = pyro.sample("obs", dist.Normal(mean, sigma), obs=y)
-        return mean
-
-
-
 class Model(object):
     def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
         self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
@@ -146,42 +145,6 @@ class Model(object):
 
         else:
             ###############################################################
-            """
-            data_config = DataConfig(
-            target=['target'], #target should always be a list. Multi-targets are only supported for regression. Multi-Task Classification is not implemented
-            continuous_cols=num_col_names,
-            categorical_cols=cat_col_names,
-        )
-        trainer_config = TrainerConfig(
-            auto_lr_find=True, # Runs the LRFinder to automatically derive a learning rate
-            batch_size=1024,
-            max_epochs=100,
-            gpus=1, #index of the GPU to use. 0, means CPU
-        )
-        optimizer_config = OptimizerConfig()
-        
-        model_config = CategoryEmbeddingModelConfig(
-            task="classification",
-            layers="1024-512-512",  # Number of nodes in each layer
-            activation="LeakyReLU", # Activation between each layers
-            learning_rate = 1e-3
-        )
-        
-        tabular_model = TabularModel(
-            data_config=data_config,
-            model_config=model_config,
-            optimizer_config=optimizer_config,
-            trainer_config=trainer_config,
-        )
-        tabular_model.fit(train=train, validation=val)
-        result = tabular_model.evaluate(test)
-        pred_df = tabular_model.predict(test)
-        tabular_model.save_model("examples/basic")
-        loaded_model = TabularModel.load_from_checkpoint("examples/basic")
-
-
-
-            """
             dm          = data_pars['cols_model_group_custom']
             data_config = DataConfig(
               target           = dm['coly'], #target should always be a list. Multi-targets are only supported for regression. Multi-Task Classification is not implemented
@@ -212,29 +175,23 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     global model, session
     session = None  # Session type for compute
     Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
+    if VERBOSE: log(Xtrain, model.model)
 
     #Xtrain = torch.tensor(Xtrain.values, dtype=torch.float)
     #Xtest  = torch.tensor(Xtest.values, dtype=torch.float)
     #ytrain = torch.tensor(ytrain.values, dtype=torch.float)
     #ytest  = torch.tensor(ytest.values, dtype=torch.float)
 
-    train = pd.concat((Xtrain,ytest)).values
-    val   = pd.concat((Xtrain,ytest)).values
 
-
-    if VERBOSE: log(Xtrain, model.model)
+    train = pd.concat((Xtrain,ytrain)).values
+    val   = pd.concat((Xtest,ytest)).values
 
     ###############################################################
     compute_pars2 = compute_pars.get('compute_pars', {})
 
-
-    ypred =  model.model.fittrain=train, validation=val)
-
-
-
+    model.model.fit(train=train, validation=val)
 
     #############################################################
-    return ypred
 
 
 def predict(Xpred=None, data_pars={}, compute_pars=None, out_pars={}, **kw):
@@ -250,7 +207,8 @@ def predict(Xpred=None, data_pars={}, compute_pars=None, out_pars={}, **kw):
 
     max_size = compute_pars2.get('max_size', len(Xpred))
     Xpred    = Xpred.iloc[:max_size, :]
-    Xpred_   = torch.tensor(Xpred.values, dtype=torch.float)
+
+    # Xpred_   = torch.tensor(Xpred.values, dtype=torch.float)
 
     ###### Post processing normalization
     post_process_fun = model.model_pars.get('post_process_fun', None)
@@ -260,24 +218,15 @@ def predict(Xpred=None, data_pars={}, compute_pars=None, out_pars={}, **kw):
 
 
     #####################################################################
+    ypred = model.model.predict(Xpred)
 
+    ypred = ypred #### Nornalized
 
-    ypred = model.model.predict
+    ypred_proba = None  ### No proba
+    if compute_pars.get("probability", False):
+         ypred_proba = model.model.predict_proba(Xpred)
+    return ypred, ypred_proba
 
-
-
-
-
-
-
-
-
-    #################################################################
-    model.pred_summary = {'pred_mean': ypred_mean, 'pred_summary': pred_summary, 'pred_samples': pred_samples}
-    print('stored in model.pred_summary')
-    # print(  dd['y_mean'], dd['y_mean'].shape )
-    # import pdb; pdb.set_trace()
-    return dd['y_mean']
 
 
 def reset():
@@ -296,7 +245,12 @@ def save(path=None, info=None):
     os.makedirs(path, exist_ok=True)
 
     filename = "model.pkl"
+    model.model.save_model(f"{path}/filename")
     pickle.dump(model, open(f"{path}/{filename}", mode='wb'))  # , protocol=pickle.HIGHEST_PROTOCOL )
+
+
+    model.model.save_model(f"{path}/torch_checkpoint/")
+
 
     filename = "info.pkl"
     pickle.dump(info, open(f"{path}/{filename}", mode='wb'))  # ,protocol=pickle.HIGHEST_PROTOCOL )
@@ -308,9 +262,11 @@ def load_model(path=""):
     model0 = pickle.load(open(f"{path}/model.pkl", mode='rb'))
 
     model = Model()  # Empty model
-    model.model = model0.model
-    model.model_pars = model0.model_pars
+    model.model_pars   = model0.model_pars
     model.compute_pars = model0.compute_pars
+    model.data_pars    = model0.data_pars
+
+    model.model        = model0.model.load_from_checkpoint(f"{path}/")
     session = None
     return model, session
 
@@ -421,48 +377,34 @@ def test(config=''):
 
     target_name = ["Covertype"]
 
-    cat_col_names = [ "Wilderness_Area1", "Wilderness_Area2", "Wilderness_Area3", "Wilderness_Area4", "Soil_Type1", "Soil_Type2", "Soil_Type3", "Soil_Type4", "Soil_Type5", "Soil_Type6", "Soil_Type7", "Soil_Type8", "Soil_Type9", "Soil_Type10", "Soil_Type11", "Soil_Type12", "Soil_Type13", "Soil_Type14", "Soil_Type15", "Soil_Type16", "Soil_Type17", "Soil_Type18", "Soil_Type19", "Soil_Type20", "Soil_Type21", "Soil_Type22", "Soil_Type23", "Soil_Type24", "Soil_Type25", "Soil_Type26", "Soil_Type27", "Soil_Type28", "Soil_Type29", "Soil_Type30", "Soil_Type31", "Soil_Type32", "Soil_Type33", "Soil_Type34", "Soil_Type35", "Soil_Type36", "Soil_Type37", "Soil_Type38", "Soil_Type39", "Soil_Type40"
+    colcat = [ "Wilderness_Area1", "Wilderness_Area2", "Wilderness_Area3", "Wilderness_Area4", "Soil_Type1", "Soil_Type2", "Soil_Type3", "Soil_Type4", "Soil_Type5", "Soil_Type6", "Soil_Type7", "Soil_Type8", "Soil_Type9", "Soil_Type10", "Soil_Type11", "Soil_Type12", "Soil_Type13", "Soil_Type14", "Soil_Type15", "Soil_Type16", "Soil_Type17", "Soil_Type18", "Soil_Type19", "Soil_Type20", "Soil_Type21", "Soil_Type22", "Soil_Type23", "Soil_Type24", "Soil_Type25", "Soil_Type26", "Soil_Type27", "Soil_Type28", "Soil_Type29", "Soil_Type30", "Soil_Type31", "Soil_Type32", "Soil_Type33", "Soil_Type34", "Soil_Type35", "Soil_Type36", "Soil_Type37", "Soil_Type38", "Soil_Type39", "Soil_Type40"
                       ]
 
-    num_col_names = [ "Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology", "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways", "Hillshade_9am", "Hillshade_Noon", "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"
+    colnum = [ "Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology", "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways", "Hillshade_9am", "Hillshade_Noon", "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"
     ]
 
     feature_columns = (
-        num_col_names + cat_col_names + target_name)
+        colnum + colcat + target_name)
 
     df = pd.read_csv(datafile, header=None, names=feature_columns)
-    # cat_col_names = []
 
-    # num_col_names = [
-    #     "Elevation", "Aspect"
-    # ]
-    # feature_columns = (
-    #     num_col_names + cat_col_names + target_name)
-    # df = df.loc[:,feature_columns]
     df.head()
     train, test = train_test_split(df, random_state=42)
-    train, val = train_test_split(train, random_state=42)
+    train, val  = train_test_split(train, random_state=42)
     num_classes = len(set(train[target_name].values.ravel()))
 
 
     data_config = DataConfig(
         target=target_name,
-        continuous_cols=num_col_names,
-        categorical_cols=cat_col_names,
+        continuous_cols=colnum,
+        categorical_cols=colcat,
         continuous_feature_transform=None,#"quantile_normal",
         normalize_continuous_features=False
     )
     model_config = CategoryEmbeddingModelConfig(task="classification",
                                                 metrics=["f1","accuracy"],
                                                 metrics_params=[{"num_classes":num_classes},{}])
-    # model_config = NodeConfig(
-    #     task="classification",
-    #     depth=4,
-    #     num_trees=1024,
-    #     input_dropout=0.0,
-    #     metrics=["f1", "accuracy"],
-    #     metrics_params=[{"num_classes": num_classes, "average": "macro"}, {}],
-    # )
+
     trainer_config = TrainerConfig(gpus=1, fast_dev_run=True)
     experiment_config = ExperimentConfig(project_name="PyTorch Tabular Example",
                                          run_name="node_forest_cov",
@@ -471,13 +413,6 @@ def test(config=''):
                                          log_logits=True)
     optimizer_config = OptimizerConfig()
 
-    # tabular_model = TabularModel(
-    #     data_config="examples/data_config.yml",
-    #     model_config="examples/model_config.yml",
-    #     optimizer_config="examples/optimizer_config.yml",
-    #     trainer_config="examples/trainer_config.yml",
-    #     # experiment_config=experiment_config,
-    # )
     tabular_model = TabularModel(
         data_config=data_config,
         model_config=model_config,
@@ -485,11 +420,13 @@ def test(config=''):
         trainer_config=trainer_config,
         # experiment_config=experiment_config,
     )
-    tabular_model.fit(
-        train=train, validation=val)
-
+    
+    
+    tabular_model.fit(  train=train, validation=val)
     result = tabular_model.evaluate(test)
     print(result)
+    
+    
     test.drop(columns=target_name, inplace=True)
     pred_df = tabular_model.predict(test)
     pred_df.to_csv("output/temp2.csv")
@@ -498,18 +435,12 @@ def test(config=''):
     # result = new_model.evaluate(test)
 
 
-
-
-
-
-
-
-
+    ####### Using API 
     X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, random_state=2021, stratify=y)
     X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
 
 
-    model_pars = {'model_class': 'WideAndDeep',
+    model_pars = {'model_class': 'model_torch_tabular.py::model',
                   'model_pars': {'n_wide_cross': 10,
                                  'n_wide': 10},
                  }
@@ -521,8 +452,7 @@ def test(config=''):
                           'y': y_valid},
                  'predict': {'X': X_valid},
                 }
-    compute_pars = { 'compute_pars' : { 'epochs': 50,
-                    'callbacks': callbacks} }
+    compute_pars = { 'compute_pars' : {} }
 
 
 
