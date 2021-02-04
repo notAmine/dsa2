@@ -1,11 +1,7 @@
 # pylint: disable=C0321,C0103,C0301,E1305,E1121,C0302,C0330,C0111,W0613,W0611,R1705
 # -*- coding: utf-8 -*-
 """
-
 python source/models/model_keras_widedeep.py
-
-
-
 """
 import os
 import pandas as pd, numpy as np, scipy as sci
@@ -95,8 +91,11 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     session = None  # Session type for compute
     Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
 
-    Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :10], Xtrain[:, :10], Xtrain[:, 10:]
-    Xtest_A, Xtest_B, Xtest_C    = Xtest[:, :10], Xtest[:, :10], Xtest[:, 10:]
+    n_wide_features = data_pars.get('n_wide_features', None)
+    n_deep_features = data_pars.get('n_deep_features', None)
+
+    Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
+    Xtest_A, Xtest_B, Xtest_C = Xtest[:, :n_wide_features], Xtest[:, -n_deep_features:], Xtest[:, -n_deep_features:]
 
     if VERBOSE: log(Xtrain.shape, model.model)
 
@@ -112,11 +111,14 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
        Return metrics of the model when fitted.
     """
     global model, session
-    data_pars['train']     = True
-    Xval, yval             = get_dataset(data_pars, task_type="eval")
+    data_pars['train'] = True
+    Xval, yval = get_dataset(data_pars, task_type="eval")
 
-    Xval_A, Xval_B, Xval_C = Xval[:, :10], Xval[:, :10], Xval[:, 10:]
-    ypred                  = predict((Xval_A, Xval_B, Xval_C), data_pars, compute_pars, out_pars)
+    n_wide_features = data_pars.get('n_wide_features', None)
+    n_deep_features = data_pars.get('n_deep_features', None)
+
+    Xval_A, Xval_B, Xval_C = Xval[:, :n_wide_features], Xval[:, -n_deep_features:], Xval[:, -n_deep_features:]
+    ypred = predict((Xval_A, Xval_B, Xval_C), data_pars, compute_pars, out_pars)
 
     # log(data_pars)
     mpars = compute_pars.get("metrics_pars", {'metric_name': 'mae'})
@@ -139,8 +141,11 @@ def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
 
     if Xpred is None:
         # data_pars['train'] = False
+        n_wide_features = data_pars.get('n_wide_features', None)
+        n_deep_features = data_pars.get('n_deep_features', None)
+
         Xpred = get_dataset(data_pars, task_type="predict")
-        Xpred_A, Xpred_B, Xpred_C = Xpred[:, :10], Xpred[:, :10], Xpred[:, 10:]
+        Xpred_A, Xpred_B, Xpred_C = Xpred[:, :n_wide_features], Xpred[:, -n_deep_features:], Xpred[:, -n_deep_features:]
     else:  # if Xpred is tuple contains Xpred_A, Xpred_B, Xpred_C
         Xpred_A, Xpred_B, Xpred_C = Xpred
 
@@ -267,7 +272,7 @@ def get_params(param_pars={}, **kw):
 def test(config=''):
     global model, session
 
-    X = np.random.rand(10000,20)
+    X = np.random.rand(10000,30)
     y = np.random.binomial(n=1, p=0.5, size=[10000])
 
     X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, random_state=2021, stratify=y)
@@ -277,9 +282,13 @@ def test(config=''):
     model_ckpt = ModelCheckpoint(filepath='', save_best_only=True, monitor='loss')
     callbacks = [early_stopping, model_ckpt]
 
+    n_features = X_train.shape[1]  # number of features
+    n_wide_features = 20
+    n_deep_features = n_features - n_wide_features
+
     model_pars = {'model_class': 'WideAndDeep',
-                  'model_pars': {'n_wide_cross': 10,
-                                 'n_wide': 10},
+                  'model_pars': {'n_wide_cross': n_wide_features,
+                                 'n_wide': n_deep_features},
                  }
     data_pars = {'train': {'Xtrain': X_train,
                            'ytrain': y_train,
@@ -288,6 +297,9 @@ def test(config=''):
                  'eval': {'X': X_valid,
                           'y': y_valid},
                  'predict': {'X': X_valid},
+                 'n_features': n_features,
+                 'n_wide_features': n_wide_features,
+                 'n_deep_features': n_deep_features,
                 }
     compute_pars = { 'compute_pars' : { 'epochs': 50,
                     'callbacks': callbacks} }
