@@ -37,83 +37,85 @@ https://docs.bentoml.org/en/latest/frameworks.html
 
 
 """
-
-
-
-
-
-
-
-
-
-########  Service ##################################################################
-from PIL import Image
-
-import torch
-from torchvision import transforms
+import os, sys, numpy as np
+import pandas as pd
+from bentoml import env, artifacts, api, BentoService
+from bentoml.adapters import DataframeInput
+from bentoml.frameworks.sklearn import SklearnModelArtifact
+from bentoml.artifact import PytorchModelArtifact
 
 import bentoml
-from bentoml.artifact import PytorchModelArtifact
+from bentoml.frameworks.lightgbm import LightGBMModelArtifact
+from bentoml.adapters import DataframeInput
+from bentoml import BentoService, api
+from bentoml.adapters import JsonInput, DataframeInput
+import bentoml
 from bentoml.handlers import ImageHandler
 
 
 
+from run_train import model_dict_load, load_function_uri
+
+########  Service ##################################################################
+# from util_feature import load_model_dsa
+
+def load_model_dsa(dir_model='', model_uri="model_klear.py::LightGBM"):
+    pass
+    model_dict = load_function_uri((model_uri)
+    model      = model_dict_load(model_dict)
+
+    model.load(dir_model)
+    return model
+
+
+path_model       = ""
+service_model_id =""
+model_frameowrk  = 'sklearn'
+dir_bento = "data/output/bento/"
 
 
 if model_frameowrk == 'sklearn' :
-    import pandas as pd
-
-    from bentoml import env, artifacts, api, BentoService
-    from bentoml.adapters import DataframeInput
-    from bentoml.frameworks.sklearn import SklearnModelArtifact
-
-
-    mysklearn_model = load_dsa("mymodel")
-
+    #A minimum prediction service exposing a Scikit-learn model
     @env(infer_pip_packages=True)
-    @artifacts([SklearnModelArtifact('model')])
+    @artifacts([SklearnModelArtifact('model_id')])
     class mybentoClass(BentoService):
-
-        #A minimum prediction service exposing a Scikit-learn model
-
-
         @api(input=DataframeInput(), batch=True)
         def predict(self, df: pd.DataFrame):
-
             #An inference API named `predict` with Dataframe input adapter, which codifies
             #how HTTP requests or CSV files are converted to a pandas Dataframe object as the
             #inference API function input
 
             return self.artifacts.model.predict(df)
 
-    # import the IrisClassifier class defined above
-    # import IrisClassifier
 
-
-    # Create a iris classifier service instance
-
-    _service = mybentoClass()
+    # Create  service instance
+    service = mybentoClass()
 
     # Pack the newly trained model artifact
-    _service.pack('mymodel_id', mysklearn_model)
+    mymodel = load_model_dsa(path_model )
+    service.pack(service_model_id, mymodel)
+
+     #  $BENTOML_HOME  ~/bentoml/repository/{service_name}/{service_version}
+    # saved_path = _service.save()
 
     # Save the prediction service to disk for model serving
-    saved_path = _service.save()
+    saved_path = service.save_to_dir(dir_bento + "/"  )
+
+    #### Serve the model on command line
+    #### bentoml serve IrisClassifier:latest
 
 
     """
-    BentoML stores all packaged model files under the ~/bentoml/repository/{service_name}/{service_version} directory by default. The BentoML packaged model format contains all the code, files, and configs required to run and deploy the model.
+    BentoML stores all packaged model files under the ~/bentoml/repository/{service_name}/{service_version} 
+    directory by default. The BentoML packaged model format contains all the code, files, and configs required to run and deploy the model.
     
     
     #### Serve the model
     bentoml serve IrisClassifier:latest
     
     
-    curl -i \
-      --header "Content-Type: application/json" \
-      --request POST \
-      --data '[[5.1, 3.5, 1.4, 0.2]]' \
-      http://localhost:5000/predict
+    curl -i --header "Content-Type: application/json" --request POST \
+      --data '[[5.1, 3.5, 1.4, 0.2]]'   http://localhost:5000/predict
       
     import requests
     response = requests.post("http://127.0.0.1:5000/predict", json=[[5.1, 3.5, 1.4, 0.2]])
@@ -123,13 +125,21 @@ if model_frameowrk == 'sklearn' :
     """
 
 
+if model_frameowrk == 'sklearn2' :
+    class FraudDetectionAndIdentityService(BentoService):
+        @api(input=JsonInput(), batch=True)
+        def fraud_detect(self, json_list):
+            # user-defined callback function that process inference requests
+            pass
+
+        @api(input=DataframeInput(input_json_orient='records'), batch=True)
+        def identity(self, df):
+            # user-defined callback function that process inference requests
+            pass
+
+
 
 if model_frameowrk == 'lightgbm' :
-    import bentoml
-    from bentoml.frameworks.lightgbm import LightGBMModelArtifact
-    from bentoml.adapters import DataframeInput
-
-
     @bentoml.env(pip_dependencies=['torch', 'torchvision'])
     @bentoml.artifacts([LightGBMModelArtifact('model')])
     @bentoml.env(infer_pip_packages=True)
@@ -144,9 +154,40 @@ if model_frameowrk == 'lightgbm' :
 
 
 
+if model_frameowrk == 'pytorch' :
+    from PIL import Image
+    import torch
+    from torchvision import transforms
+
+    classes = ['ant', 'bee']
+    transform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ])
+    cpu = torch.device('cpu')
+
+
+    @bentoml.env(pip_dependencies=['torch', 'torchvision'])
+    @bentoml.artifacts([PytorchModelArtifact('mymodel_id')])
+    class AntOrBeeClassifier(bentoml.BentoService):
+
+        @bentoml.api(ImageHandler)
+        def predict(self, img):
+            img = Image.fromarray(img)
+            img = transform(img)
+
+            self.artifacts.model.eval()
+            outputs = self.artifacts.model(img.unsqueeze(0))
+            _, idxs = outputs.topk(1)
+            idx = idxs.squeeze().item()
+            return classes[idx]
+
+
+
 
 ################# Save to Bento Space ###################################
-
 def bento_save():
     import argparse
 
@@ -193,33 +234,6 @@ def bento_save():
 """
 
 
-classes = ['ant', 'bee']
-transform = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
-cpu = torch.device('cpu')
-
-
-
-@bentoml.env(pip_dependencies=['torch', 'torchvision'])
-@bentoml.artifacts([PytorchModelArtifact('mymodel_id')])
-class AntOrBeeClassifier(bentoml.BentoService):
-
-    @bentoml.api(ImageHandler)
-    def predict(self, img):
-        img = Image.fromarray(img)
-        img = transform(img)
-
-        self.artifacts.model.eval()
-        outputs = self.artifacts.model(img.unsqueeze(0))
-        _, idxs = outputs.topk(1)
-        idx = idxs.squeeze().item()
-        return classes[idx]
-
-
 
 
 
@@ -245,8 +259,6 @@ class IrisClassifier(BentoService):
         inference API function input
  
         return self.artifacts.model.predict(df)
-
-
 
 
     else:
