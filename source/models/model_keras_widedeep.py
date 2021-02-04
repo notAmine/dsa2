@@ -96,7 +96,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
 
     Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :10], Xtrain[:, :10], Xtrain[:, 10:]
-    Xtest_A, Xtest_B, Xtest_C = Xtest[:, :10], Xtest[:, :10], Xtest[:, 10:]
+    Xtest_A, Xtest_B, Xtest_C    = Xtest[:, :10], Xtest[:, :10], Xtest[:, 10:]
 
     if VERBOSE: log(Xtrain.shape, model.model)
 
@@ -112,11 +112,11 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
        Return metrics of the model when fitted.
     """
     global model, session
-    data_pars['train'] = True
-    Xval, yval = get_dataset(data_pars, task_type="eval")
+    data_pars['train']     = True
+    Xval, yval             = get_dataset(data_pars, task_type="eval")
 
     Xval_A, Xval_B, Xval_C = Xval[:, :10], Xval[:, :10], Xval[:, 10:]
-    ypred = predict((Xval_A, Xval_B, Xval_C), data_pars, compute_pars, out_pars)
+    ypred                  = predict((Xval_A, Xval_B, Xval_C), data_pars, compute_pars, out_pars)
 
     # log(data_pars)
     mpars = compute_pars.get("metrics_pars", {'metric_name': 'mae'})
