@@ -30,49 +30,90 @@ With the model all trained you can now add it to Bento using python saveToBento.
 Now just run bentoml serve {pathtobento_file} and vola! Your service is running. Head over to localhost:5000 to test it out.
 
 
-
-
-
 https://docs.bentoml.org/en/latest/frameworks.html
+
+
+python source/run_bentoml.py
+
+
 
 
 """
 import bentoml
-import pandas as pd, json
+import pandas as pd, json, sys, os
 from bentoml import BentoService, api, artifacts, env
 from bentoml.adapters import DataframeInput, JsonInput
-from bentoml.artifact import PytorchModelArtifact
+from bentoml.frameworks.pytorch import PytorchModelArtifact
 from bentoml.frameworks.lightgbm import LightGBMModelArtifact
 from bentoml.frameworks.sklearn import SklearnModelArtifact
 from bentoml.handlers import ImageHandler
 
 
+#### Add path for python import
+sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
+# import util_feature
+
+
+#### Root folder analysis
+root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
+print(root)
 
 from run_train import load_function_uri, model_dict_load
 
 
+
+
 ########  Service ##################################################################
-# from util_feature import load_model_dsa
+from run_train import map_model, model_dict_load
 
-def load_model_dsa(dir_model='', model_uri="model_klear.py::LightGBM"):
-    pass
-    model_dict = load_function_uri((model_uri)
-    model      = model_dict_load(model_dict)
+def log(*s):
+    print(s)
 
-    model.load(dir_model)
-    return model
+
+def load_model_dsa(dir_model='', model_uri="source/models/model_sklearn.py::LightGBM"):
+    """
+       Return the model loaded from disk
+    :param dir_model:
+    :param model_uri:
+    :return:
+    """
+    sys.path.append( root)    #### Needed due to import source error
+
+    model_dict  = None
+    model_dict  = model_dict_load(model_dict, config_path= model_uri.split("::")[0],
+                                  config_name= model_uri.split("::")[1], verbose=True)
+
+    log(model_dict)
+
+    model_pars, compute_pars = model_dict['model_pars'], model_dict['compute_pars']
+    data_pars                = model_dict['data_pars']
+    model_name, model_path   = model_pars['model_class'], model_dict['global_pars']['path_train_model']
+    metric_list              = compute_pars['metric_list']
+
+    modelx = map_model(model_name)
+    modelx.reset()
+    modelx.init(model_pars, compute_pars=compute_pars)
+    modelx.load_model(dir_model)
+    log(modelx)
+
+    return modelx
+
+
+
 
 
 path_model       = ""
-service_model_id =""
+service_model_id = "myid1"
 model_frameowrk  = 'sklearn'
-dir_bento = "data/output/bento/"
+dir_bento        = root + "data/output/bento/"
+dir_model        = root + "/data/output/titanic/titanic_lightgbm/model/"
+model_uri        = root + "/titanic_classifier.py::titanic_lightgbm"
 
 
 if model_frameowrk == 'sklearn' :
     #A minimum prediction service exposing a Scikit-learn model
-    @env(infer_pip_packages=True)
-    @artifacts([SklearnModelArtifact('model_id')])
+    @env(infer_pip_packages=False)
+    @artifacts([SklearnModelArtifact(service_model_id)])
     class mybentoClass(BentoService):
         @api(input=DataframeInput(), batch=True)
         def predict(self, df: pd.DataFrame):
@@ -87,14 +128,22 @@ if model_frameowrk == 'sklearn' :
     service = mybentoClass()
 
     # Pack the newly trained model artifact
-    mymodel = load_model_dsa(path_model )
-    service.pack(service_model_id, mymodel)
+    mymodel = load_model_dsa(dir_model, model_uri )
+    service.pack(service_model_id, mymodel.model )
 
      #  $BENTOML_HOME  ~/bentoml/repository/{service_name}/{service_version}
-    # saved_path = _service.save()
+    saved_path = service.save()
 
     # Save the prediction service to disk for model serving
-    saved_path = service.save_to_dir(dir_bento + "/"  )
+    #os.makedirs(dir_bento, exist_ok=True)
+    #saved_path = service.save_to_dir(dir_bento + "/"  )
+
+    """
+       https://github.com/bentoml/BentoML/issues/1433
+       cannot pickle
+    
+    
+    """
 
     #### Serve the model on command line
     #### bentoml serve IrisClassifier:latest
@@ -120,6 +169,8 @@ if model_frameowrk == 'sklearn' :
     """
 
 
+#############################################################################################################
+#############################################################################################################
 if model_frameowrk == 'sklearn2' :
     class FraudDetectionAndIdentityService(BentoService):
         @api(input=JsonInput(), batch=True)
