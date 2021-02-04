@@ -282,7 +282,7 @@ def get_params(param_pars={}, **kw):
 
 def test(config=''):
     """
-       python model_torch_tabular.py test
+       python source/models/model_torch_tabular.py test
 
     """
     global model, session
