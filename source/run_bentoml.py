@@ -67,9 +67,12 @@ if model_frameowrk == 'sklearn' :
     from bentoml.adapters import DataframeInput
     from bentoml.frameworks.sklearn import SklearnModelArtifact
 
+
+    mysklearn_model = load_dsa("mymodel")
+
     @env(infer_pip_packages=True)
     @artifacts([SklearnModelArtifact('model')])
-    class IrisClassifier(BentoService):
+    class mybentoClass(BentoService):
 
         #A minimum prediction service exposing a Scikit-learn model
 
@@ -84,13 +87,15 @@ if model_frameowrk == 'sklearn' :
             return self.artifacts.model.predict(df)
 
     # import the IrisClassifier class defined above
-    from iris_classifier import IrisClassifier
+    # import IrisClassifier
+
 
     # Create a iris classifier service instance
-    _service = IrisClassifier()
+
+    _service = mybentoClass()
 
     # Pack the newly trained model artifact
-    _service.pack('mymodel_id', clf)
+    _service.pack('mymodel_id', mysklearn_model)
 
     # Save the prediction service to disk for model serving
     saved_path = _service.save()
