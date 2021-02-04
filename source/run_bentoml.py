@@ -31,6 +31,11 @@ Now just run bentoml serve {pathtobento_file} and vola! Your service is running.
 
 
 
+
+
+https://docs.bentoml.org/en/latest/frameworks.html
+
+
 """
 
 
@@ -54,35 +59,82 @@ from bentoml.handlers import ImageHandler
 
 
 
-classes = ['ant', 'bee']
-transform = transforms.Compose([
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
-cpu = torch.device('cpu')
+
+if model_frameowrk == 'sklearn' :
+    import pandas as pd
+
+    from bentoml import env, artifacts, api, BentoService
+    from bentoml.adapters import DataframeInput
+    from bentoml.frameworks.sklearn import SklearnModelArtifact
+
+    @env(infer_pip_packages=True)
+    @artifacts([SklearnModelArtifact('model')])
+    class IrisClassifier(BentoService):
+
+        #A minimum prediction service exposing a Scikit-learn model
+
+
+        @api(input=DataframeInput(), batch=True)
+        def predict(self, df: pd.DataFrame):
+
+            #An inference API named `predict` with Dataframe input adapter, which codifies
+            #how HTTP requests or CSV files are converted to a pandas Dataframe object as the
+            #inference API function input
+
+            return self.artifacts.model.predict(df)
+
+    # import the IrisClassifier class defined above
+    from iris_classifier import IrisClassifier
+
+    # Create a iris classifier service instance
+    _service = IrisClassifier()
+
+    # Pack the newly trained model artifact
+    _service.pack('mymodel_id', clf)
+
+    # Save the prediction service to disk for model serving
+    saved_path = _service.save()
+
+
+    """
+    BentoML stores all packaged model files under the ~/bentoml/repository/{service_name}/{service_version} directory by default. The BentoML packaged model format contains all the code, files, and configs required to run and deploy the model.
+    
+    
+    #### Serve the model
+    bentoml serve IrisClassifier:latest
+    
+    
+    curl -i \
+      --header "Content-Type: application/json" \
+      --request POST \
+      --data '[[5.1, 3.5, 1.4, 0.2]]' \
+      http://localhost:5000/predict
+      
+    import requests
+    response = requests.post("http://127.0.0.1:5000/predict", json=[[5.1, 3.5, 1.4, 0.2]])
+    print(response.text)
+    
+    
+    """
 
 
 
-@bentoml.env(pip_dependencies=['torch', 'torchvision'])
-@bentoml.artifacts([PytorchModelArtifact('mymodel_id')])
-class AntOrBeeClassifier(bentoml.BentoService):
-
-    @bentoml.api(ImageHandler)
-    def predict(self, img):
-        img = Image.fromarray(img)
-        img = transform(img)
-
-        self.artifacts.model.eval()
-        outputs = self.artifacts.model(img.unsqueeze(0))
-        _, idxs = outputs.topk(1)
-        idx = idxs.squeeze().item()
-        return classes[idx]
+if model_frameowrk == 'lightgbm' :
+    import bentoml
+    from bentoml.frameworks.lightgbm import LightGBMModelArtifact
+    from bentoml.adapters import DataframeInput
 
 
+    @bentoml.env(pip_dependencies=['torch', 'torchvision'])
+    @bentoml.artifacts([LightGBMModelArtifact('model')])
+    @bentoml.env(infer_pip_packages=True)
+    class LgbModelService(bentoml.BentoService):
+        @bentoml.api(input=DataframeInput(), batch=True)
+        def predict(self, df):
+            return self.artifacts.model.predict(df)
 
-
+    svc = LgbModelService()
+    svc.pack('model', model)
 
 
 
@@ -134,6 +186,37 @@ def bento_save():
 
 
 """
+
+
+classes = ['ant', 'bee']
+transform = transforms.Compose([
+    transforms.Resize(256),
+    transforms.CenterCrop(224),
+    transforms.ToTensor(),
+    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ])
+cpu = torch.device('cpu')
+
+
+
+@bentoml.env(pip_dependencies=['torch', 'torchvision'])
+@bentoml.artifacts([PytorchModelArtifact('mymodel_id')])
+class AntOrBeeClassifier(bentoml.BentoService):
+
+    @bentoml.api(ImageHandler)
+    def predict(self, img):
+        img = Image.fromarray(img)
+        img = transform(img)
+
+        self.artifacts.model.eval()
+        outputs = self.artifacts.model(img.unsqueeze(0))
+        _, idxs = outputs.topk(1)
+        idx = idxs.squeeze().item()
+        return classes[idx]
+
+
+
+
 
 # iris_classifier.py
 import pandas as pd
