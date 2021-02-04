@@ -140,7 +140,13 @@ if model_frameowrk == 'sklearn' :
 
     """
        https://github.com/bentoml/BentoML/issues/1433
-       cannot pickle
+       cannot pickle module,
+       cannot pickle DSA module file !!!!!!!!!!!!!!!!!!!!!!!!!!
+       
+       Need a Custom wrapper
+       
+       Or need a flask API
+       
     
     
     """
