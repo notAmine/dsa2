@@ -37,24 +37,19 @@ https://docs.bentoml.org/en/latest/frameworks.html
 
 
 """
-import os, sys, numpy as np
-import pandas as pd
-from bentoml import env, artifacts, api, BentoService
-from bentoml.adapters import DataframeInput
-from bentoml.frameworks.sklearn import SklearnModelArtifact
+import bentoml
+import pandas as pd, json
+from bentoml import BentoService, api, artifacts, env
+from bentoml.adapters import DataframeInput, JsonInput
 from bentoml.artifact import PytorchModelArtifact
-
-import bentoml
 from bentoml.frameworks.lightgbm import LightGBMModelArtifact
-from bentoml.adapters import DataframeInput
-from bentoml import BentoService, api
-from bentoml.adapters import JsonInput, DataframeInput
-import bentoml
+from bentoml.frameworks.sklearn import SklearnModelArtifact
 from bentoml.handlers import ImageHandler
 
 
 
-from run_train import model_dict_load, load_function_uri
+from run_train import load_function_uri, model_dict_load
+
 
 ########  Service ##################################################################
 # from util_feature import load_model_dsa

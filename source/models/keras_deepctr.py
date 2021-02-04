@@ -162,82 +162,192 @@ class Model:
 
 
 
-def get_dataset(data_pars=None, **kw):
-    ##check whether dataset is of kind train or test
-    data_path = data_pars.get("train_data_path", "")
-    data_type = data_pars['dataset_type']
-    test_size = data_pars['test_size']
 
 
-    #### To test all models
-    if data_type == "synthesis":
-        if data_pars["dataset_name"] == "DIEN":
-            x, y, feature_columns, behavior_feature_list = get_xy_fd_dien(hash_flag=True)
-        elif data_pars["dataset_name"] == "DIN":
-            x, y, feature_columns, behavior_feature_list = get_xy_fd_din(hash_flag=True)
-        elif data_pars["dataset_name"] == "DSIN":
-            x, y, feature_columns, behavior_feature_list = get_xy_fd_dsin(hash_flag=True)
-        else:
-            x, y, feature_columns = get_test_data(**DATA_PARAMS[data_pars["dataset_name"]])
-            behavior_feature_list = None
 
-        return x, y, feature_columns, behavior_feature_list
-  
-    #### read from csv file
-    if data_pars.get("uri_type") == "pickle":
-        df = pd.read_pickle(data_path)
+def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
+    """
+    """
+    global model, session
+    session = None  # Session type for compute
+    Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
+
+    n_wide_features = data_pars.get('n_wide_features', None)
+    n_deep_features = data_pars.get('n_deep_features', None)
+
+    Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
+    Xtest_A, Xtest_B, Xtest_C = Xtest[:, :n_wide_features], Xtest[:, -n_deep_features:], Xtest[:, -n_deep_features:]
+
+    if VERBOSE: log(Xtrain.shape, model.model)
+
+    cpars = compute_pars.get("compute_pars", {})
+    assert 'epochs' in cpars, 'epoch'
+
+    hist = model.model.fit((Xtrain_A, Xtrain_B, Xtrain_C), ytrain,  **cpars)
+    model.history = hist
+
+
+def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
+    """
+       Return metrics of the model when fitted.
+    """
+    global model, session
+    data_pars['train'] = True
+    Xval, yval = get_dataset(data_pars, task_type="eval")
+
+    n_wide_features = data_pars.get('n_wide_features', None)
+    n_deep_features = data_pars.get('n_deep_features', None)
+
+    Xval_A, Xval_B, Xval_C = Xval[:, :n_wide_features], Xval[:, -n_deep_features:], Xval[:, -n_deep_features:]
+    ypred = predict((Xval_A, Xval_B, Xval_C), data_pars, compute_pars, out_pars)
+
+    # log(data_pars)
+    mpars = compute_pars.get("metrics_pars", {'metric_name': 'mae'})
+
+    scorer = {
+        "rmse": sklearn.metrics.mean_squared_error,
+        "mae": sklearn.metrics.mean_absolute_error
+    }[mpars['metric_name']]
+
+    mpars2 = mpars.get("metrics_pars", {})  ##Specific to score
+    score_val = scorer(yval, ypred[0], **mpars2)
+
+    ddict = [{"metric_val": score_val, 'metric_name': mpars['metric_name']}]
+
+    return ddict
+
+
+def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
+    global model, session
+
+    if Xpred is None:
+        # data_pars['train'] = False
+        n_wide_features = data_pars.get('n_wide_features', None)
+        n_deep_features = data_pars.get('n_deep_features', None)
+
+        Xpred = get_dataset(data_pars, task_type="predict")
+        Xpred_A, Xpred_B, Xpred_C = Xpred[:, :n_wide_features], Xpred[:, -n_deep_features:], Xpred[:, -n_deep_features:]
+    else:  # if Xpred is tuple contains Xpred_A, Xpred_B, Xpred_C
+        Xpred_A, Xpred_B, Xpred_C = Xpred
+
+    ypred = model.model.predict((Xpred_A, Xpred_B, Xpred_C))
+
+    ypred_proba = None  ### No proba
+    if compute_pars.get("probability", False):
+         ypred_proba = model.model.predict_proba((Xpred_A, Xpred_B, Xpred_C))
+    return ypred, ypred_proba
+
+
+def reset():
+    global model, session
+    model, session = None, None
+
+
+def save(path=None):
+    global model, session
+    os.makedirs(path, exist_ok=True)
+
+    filename = "model.h5"
+    filepath = path + filename
+    model.model.save(filepath)
+
+
+def load_model(path=""):
+    global model, session
+
+    filepath = path + 'model.h5'
+    model = keras.models.load_model(filepath)
+    session = None
+    return model, session
+
+
+def load_info(path=""):
+    import cloudpickle as pickle, glob
+    dd = {}
+    for fp in glob.glob(f"{path}/*.pkl"):
+        if not "model.pkl" in fp:
+            obj = pickle.load(open(fp, mode='rb'))
+            key = fp.split("/")[-1]
+            dd[key] = obj
+    return dd
+
+
+def preprocess(prepro_pars):
+    if prepro_pars['type'] == 'test':
+        from sklearn.datasets import make_classification
+        from sklearn.model_selection import train_test_split
+
+        X, y = make_classification(n_features=10, n_redundant=0, n_informative=2,
+                                   random_state=1, n_clusters_per_class=1)
+
+        # log(X,y)
+        Xtrain, Xtest, ytrain, ytest = train_test_split(X, y)
+        return Xtrain, ytrain, Xtest, ytest
+
+    if prepro_pars['type'] == 'train':
+        from sklearn.model_selection import train_test_split
+        df = pd.read_csv(prepro_pars['path'])
+        dfX = df[prepro_pars['colX']]
+        dfy = df[prepro_pars['coly']]
+        Xtrain, Xtest, ytrain, ytest = train_test_split(dfX.values, dfy.values,
+                                                        stratify=dfy.values,test_size=0.1)
+        return Xtrain, ytrain, Xtest, ytest
+
     else:
-        df = pd.read_csv(data_path)
+        df = pd.read_csv(prepro_pars['path'])
+        dfX = df[prepro_pars['colX']]
 
-    if data_type == "criteo":
-        df, linear_cols, dnn_cols, train, test, target, ytrue = _preprocess_criteo(df, **data_pars)
-    
-    elif data_type == "movie_len":
-        df, linear_cols, dnn_cols, train, test, target, ytrue = _preprocess_movielens(df, **data_pars)
-
-    else:  ## Already define
-        linear_cols = data_pars['linear_cols']
-        dnn_cols    = data_pars['dnn_cols']
-        train, test = train_test_split(df, test_size=data_pars['test_size'])
-        target      = data_pars['target_col']
-        ytrue       = data_pars['target_col']
-
-    return df, linear_cols, dnn_cols, train, test, target, ytrue
+        Xtest, ytest = dfX, None
+        return None, None, Xtest, ytest
 
 
-
-def fit(model, session=None, compute_pars=None, data_pars=None, out_pars=None,
-        **kwargs):
-    ##loading dataset
+####################################################################################################
+############ Do not change #########################################################################
+def get_dataset(data_pars=None, task_type="train", **kw):
     """
-          Classe Model --> model,   model.model contains thte sub-model
+      "ram"  :
+      "file" :
     """
-    x, y, feature_columns, behavior_feature_list = kwargs["dataset"]
+    # log(data_pars)
+    data_type = data_pars.get('type', 'ram')
+    if data_type == "ram":
+        if task_type == "predict":
+            d = data_pars[task_type]
+            return d["X"]
 
-    model.model.fit(x, y,
-                    batch_size=compute_pars["batch_size"],
-                    epochs=compute_pars["epochs"],
-                    validation_split=compute_pars["validation_split"])
+        if task_type == "eval":
+            d = data_pars[task_type]
+            return d["X"], d["y"]
 
-    return model
+        if task_type == "train":
+            d = data_pars[task_type]
+            return d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
 
+    elif data_type == "file":
+        raise Exception(f' {data_type} data_type Not implemented ')
 
-# Model p redict
-def predict(model, session=None, compute_pars=None, data_pars=None, out_pars=None, **kwargs):
-    x, y, feature_columns, behavior_feature_list = kwargs["dataset"]
-    pred_ans = model.model.predict(x, batch_size=compute_pars['batch_size'])
-
-    return pred_ans
-
-
-def metrics(ypred, ytrue=None, session=None, compute_pars=None, data_pars=None, out_pars=None, **kwargs):
-    metrics_dict = {"MSE": mean_squared_error(ytrue, ypred)}
-    return metrics_dict
+    raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
-def reset_model():
-    pass
+def get_params_sklearn(deep=False):
+    return model.model.get_params(deep=deep)
 
+
+def get_params(param_pars={}, **kw):
+    import json
+    # from jsoncomment import JsonComment ; json = JsonComment()
+    pp = param_pars
+    choice = pp['choice']
+    config_mode = pp['config_mode']
+    data_path = pp['data_path']
+
+    if choice == "json":
+        cf = json.load(open(data_path, mode='r'))
+        cf = cf[config_mode]
+        return cf['model_pars'], cf['data_pars'], cf['compute_pars'], cf['out_pars']
+
+    else:
+        raise Exception(f"Not support choice {choice} yet")
 
 ########################################################################################################################
 
@@ -309,10 +419,6 @@ def test(config=''):
 
 
 
-########################################################################################################################
-########################################################################################################################
-
-
 if __name__ == '__main__':
     import fire
     fire.Fire()
@@ -322,6 +428,10 @@ if __name__ == '__main__':
 
 
 
+
+
+########################################################################################################################
+########################################################################################################################
 
 
 
@@ -361,6 +471,86 @@ if __name__ == '__main__':
 
 
 
+
+def get_dataset_old(data_pars=None, **kw):
+    ##check whether dataset is of kind train or test
+    data_path = data_pars.get("train_data_path", "")
+    data_type = data_pars['dataset_type']
+    test_size = data_pars['test_size']
+
+
+    #### To test all models
+    if data_type == "synthesis":
+        if data_pars["dataset_name"] == "DIEN":
+            x, y, feature_columns, behavior_feature_list = get_xy_fd_dien(hash_flag=True)
+        elif data_pars["dataset_name"] == "DIN":
+            x, y, feature_columns, behavior_feature_list = get_xy_fd_din(hash_flag=True)
+        elif data_pars["dataset_name"] == "DSIN":
+            x, y, feature_columns, behavior_feature_list = get_xy_fd_dsin(hash_flag=True)
+        else:
+            x, y, feature_columns = get_test_data(**DATA_PARAMS[data_pars["dataset_name"]])
+            behavior_feature_list = None
+
+        return x, y, feature_columns, behavior_feature_list
+
+    #### read from csv file
+    if data_pars.get("uri_type") == "pickle":
+        df = pd.read_pickle(data_path)
+    else:
+        df = pd.read_csv(data_path)
+
+    if data_type == "criteo":
+        df, linear_cols, dnn_cols, train, test, target, ytrue = _preprocess_criteo(df, **data_pars)
+
+    elif data_type == "movie_len":
+        df, linear_cols, dnn_cols, train, test, target, ytrue = _preprocess_movielens(df, **data_pars)
+
+    else:  ## Already define
+        linear_cols = data_pars['linear_cols']
+        dnn_cols    = data_pars['dnn_cols']
+        train, test = train_test_split(df, test_size=data_pars['test_size'])
+        target      = data_pars['target_col']
+        ytrue       = data_pars['target_col']
+
+    return df, linear_cols, dnn_cols, train, test, target, ytrue
+
+
+
+def fit_old(model, session=None, compute_pars=None, data_pars=None, out_pars=None,
+        **kwargs):
+    ##loading dataset
+    """
+          Classe Model --> model,   model.model contains thte sub-model
+    """
+    x, y, feature_columns, behavior_feature_list = kwargs["dataset"]
+
+    model.model.fit(x, y,
+                    batch_size=compute_pars["batch_size"],
+                    epochs=compute_pars["epochs"],
+                    validation_split=compute_pars["validation_split"])
+
+    return model
+
+
+# Model p redict
+def predict_old(model, session=None, compute_pars=None, data_pars=None, out_pars=None, **kwargs):
+    x, y, feature_columns, behavior_feature_list = kwargs["dataset"]
+    pred_ans = model.model.predict(x, batch_size=compute_pars['batch_size'])
+
+    return pred_ans
+
+
+def metrics(ypred, ytrue=None, session=None, compute_pars=None, data_pars=None, out_pars=None, **kwargs):
+    metrics_dict = {"MSE": mean_squared_error(ytrue, ypred)}
+    return metrics_dict
+
+
+def reset_model():
+    pass
+
+
+
+
 def path_setup(out_folder="", sublevel=0, data_path="dataset/"):
     #### Relative path
     data_path = os_package_root_path(__file__, sublevel=sublevel, path_add=data_path)
@@ -390,135 +580,6 @@ def config_load(data_path, file_default, config_mode):
 
 
 
-
-
-        
-##################################################################################################
-def _preprocess_criteo(df, **kw):
-    hash_feature = kw.get('hash_feature')
-    sparse_col = ['C' + str(i) for i in range(1, 27)]
-    dense_col = ['I' + str(i) for i in range(1, 14)]
-    df[sparse_col] = df[sparse_col].fillna('-1', )
-    df[dense_col] = df[dense_col].fillna(0, )
-    target = ["label"]
-
-    # set hashing space for each sparse field,and record dense feature field name
-    if hash_feature:
-        # Transformation for dense features
-        mms = MinMaxScaler(feature_range=(0, 1))
-        df[dense_col] = mms.fit_transform(df[dense_col])
-        sparse_col = ['C' + str(i) for i in range(1, 27)]
-        dense_col = ['I' + str(i) for i in range(1, 14)]
-
-        fixlen_cols = [SparseFeat(feat, vocabulary_size=1000, embedding_dim=4, use_hash=True, dtype='string')
-                       # since the input is string
-                       for feat in sparse_col] + [DenseFeat(feat, 1, ) for feat in dense_col]
-
-    else:
-        for feat in sparse_col:
-            lbe = LabelEncoder()
-            df[feat] = lbe.fit_transform(df[feat])
-        mms = MinMaxScaler(feature_range=(0, 1))
-        df[dense_col] = mms.fit_transform(df[dense_col])
-        fixlen_cols = [SparseFeat(feat, vocabulary_size=df[feat].nunique(), embedding_dim=4)
-                       for i, feat in enumerate(sparse_col)] + [DenseFeat(feat, 1, ) for feat in dense_col]
-
-    linear_cols = fixlen_cols
-    dnn_cols = fixlen_cols
-    train, test = train_test_split(df, test_size=kw['test_size'])
-
-    return df, linear_cols, dnn_cols, train, test, target, test[target].values
-
-
-def _preprocess_movielens(df, **kw):
-    multiple_value = kw.get('multiple_value')
-    sparse_col = ["movie_id", "user_id", "gender", "age", "occupation", "zip"]
-    target = ['rating']
-
-    # 1.Label Encoding for sparse features,and do simple Transformation for dense features
-    for feat in sparse_col:
-        lbe = LabelEncoder()
-        df[feat] = lbe.fit_transform(df[feat])
-
-    if not multiple_value:
-        # 2.count #unique features for each sparse field
-        fixlen_cols = [SparseFeat(feat, df[feat].nunique(), embedding_dim=4) for feat in sparse_col]
-        linear_cols = fixlen_cols
-        dnn_cols = fixlen_cols
-        train, test = train_test_split(df, test_size=0.2)
-        ytrue = test[target].values
-    else:
-        ytrue = df[target].values
-        hash_feature = kw.get('hash_feature', False)
-        if not hash_feature:
-            def split(x):
-                key_ans = x.split('|')
-                for key in key_ans:
-                    if key not in key2index:
-                        # Notice : input value 0 is a special "padding",so we do not use 0 to encode valid feature for sequence input
-                        key2index[key] = len(key2index) + 1
-                return list(map(lambda x: key2index[x], key_ans))
-
-            # preprocess the sequence feature
-            key2index = {}
-            genres_list = list(map(split, df['genres'].values))
-            genres_length = np.array(list(map(len, genres_list)))
-            max_len = max(genres_length)
-            # Notice : padding=`post`
-            genres_list = pad_sequences(genres_list, maxlen=max_len, padding='post', )
-            fixlen_cols = [SparseFeat(feat, df[feat].nunique(), embedding_dim=4) for feat in sparse_col]
-
-            use_weighted_sequence = False
-            if use_weighted_sequence:
-                varlen_cols = [VarLenSparseFeat(SparseFeat('genres', vocabulary_size=len(
-                    key2index) + 1, embedding_dim=4), maxlen=max_len, combiner='mean',
-                                                weight_name='genres_weight')]  # Notice : value 0 is for padding for sequence input feature
-            else:
-                varlen_cols = [VarLenSparseFeat(SparseFeat('genres', vocabulary_size=len(
-                    key2index) + 1, embedding_dim=4), maxlen=max_len, combiner='mean',
-                                                weight_name=None)]  # Notice : value 0 is for padding for sequence input feature
-
-            linear_cols = fixlen_cols + varlen_cols
-            dnn_cols = fixlen_cols + varlen_cols
-
-            # generate input data for model
-            model_input = {name: df[name] for name in sparse_col}  #
-            model_input["genres"] = genres_list
-            model_input["genres_weight"] = np.random.randn(df.shape[0], max_len, 1)
-
-
-        else:
-            df[sparse_col] = df[sparse_col].astype(str)
-
-            # 1.Use hashing encoding on the fly for sparse features,and process sequence features
-            genres_list = list(map(lambda x: x.split('|'), df['genres'].values))
-            genres_length = np.array(list(map(len, genres_list)))
-            max_len = max(genres_length)
-
-            # Notice : padding=`post`
-            genres_list = pad_sequences(genres_list, maxlen=max_len, padding='post', dtype=str, value=0)
-
-            # 2.set hashing space for each sparse field and generate feature config for sequence feature
-            fixlen_cols = [
-                SparseFeat(feat, df[feat].nunique() * 5, embedding_dim=4, use_hash=True, dtype='string')
-                for feat in sparse_col]
-            varlen_cols = [
-                VarLenSparseFeat(
-                    SparseFeat('genres', vocabulary_size=100, embedding_dim=4, use_hash=True, dtype="string"),
-                    maxlen=max_len, combiner='mean',
-                )]  # Notice : value 0 is for padding for sequence input feature
-
-            linear_cols = fixlen_cols + varlen_cols
-            dnn_cols = fixlen_cols + varlen_cols
-            feature_names = get_feature_names(linear_cols + dnn_cols)
-
-            # 3.generate input data for model
-            model_input = {name: df[name] for name in feature_names}
-            model_input['genres'] = genres_list
-
-        train, test = model_input, model_input
-
-    return df, linear_cols, dnn_cols, train, test, target, ytrue
 
 
 
