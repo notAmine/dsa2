@@ -186,3 +186,9 @@ mlruns/
 
 mlflow_local.db
 *.db
+/data/input/adfraud/raw/train_200m.zip
+/data/input/adfraud/train_200m
+/data/input/adfraud/test
+/data/input/adfraud/train_100k/target.csv
+/data/input/adfraud/train_100k/features.csv
+/data/input/adfraud/train_10m

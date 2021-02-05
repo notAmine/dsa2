@@ -15,7 +15,7 @@ def generate_train(df, col=None, pars=None):
 
    df["hour"]         = df["click_time"].dt.hour.astype("uint8")
    df["minute"]       = df["click_time"].dt.minute.astype("uint8")
-   df["second"]       = df["click_time"].dt.second.astype("uint8")
+   # df["second"]       = df["click_time"].dt.second.astype("uint8")
    df["day"]          = df["click_time"].dt.day.astype("uint8")
    df["day_of_week"]  = df["click_time"].dt.dayofweek.astype("uint8")
 
@@ -26,7 +26,7 @@ def generate_train(df, col=None, pars=None):
               df.loc[(df['hour'] >= start_time) & (df['hour'] < end_time), 'day_section'] = day_section
               day_section += 1
 
-   print( "Let's see new clicks count features")
+   print( "clicks count features")
    df["n_ip_clicks"]  = df[['ip', 'channel']].groupby(by=["ip"])[["channel"]].transform("count").astype("uint8")
 
 
@@ -46,7 +46,7 @@ def generate_train(df, col=None, pars=None):
 
    ##Computing the number of channels associated with ')
    df['ip_app_count']       = df[['ip', 'app', 'channel']].groupby(by=['ip', 'app'])[['channel']].transform("count").astype("uint8")
-   print( "Let's see new clicks count features")
+   print( "new clicks count features")
    df["n_ip_clicks"]        = df[['ip', 'channel']].groupby(by=["ip"])[["channel"]].transform("count").astype("uint8")
 
    ##Computing the number of channels associated with ')
@@ -162,6 +162,84 @@ def generate_train(df, col=None, pars=None):
 
 
 
+########################################################################################################
+def generate_train2(df, col=None, pars=None):
+   """
+     By IP Apress
+
+   """
+   df = copy.deepcopy(df)
+
+   df = df.drop(columns=["attributed_time"])
+   print(df.columns)
+
+   ## Let's see on which hour the click was happend
+   df["click_time"]   = pd.to_datetime(df["click_time"])
+   df["hour"]         = df["click_time"].dt.hour.astype("uint8")
+   df["minute"]       = df["click_time"].dt.minute.astype("uint8")
+   df["day"]          = df["click_time"].dt.day.astype("uint8")
+   df["day_of_week"]  = df["click_time"].dt.dayofweek.astype("uint8")
+
+   #### By IP Address
+   df1 = df.groupby(['ip', 'app', 'os', 'device', 'channel']).agg( {  'is_attributed' : 'max' }).reset_index()     #   'hour' : {'min', 'max'} } )
+   # print(df1.head(3).T )
+
+   GROUPBY_AGGREGATIONS = [
+        {'groupby': ['ip', 'app'],       'select': 'channel', 'agg': 'count'},
+        {'groupby': ['ip', 'app', 'os'], 'select': 'channel', 'agg': 'count'},
+        {'groupby': ['ip','app','channel'],    'select': 'hour', 'agg': 'mean'},
+
+        ################### V2 - GroupBy Features #
+        # Average clicks on app by distinct users; is it an app they return to?
+        {'groupby': ['app'], 'select': 'ip', 'agg': lambda x: float(len(x)) / len(x.unique()), 'agg_name': 'AvgViewPerDistinct'
+        },
+
+        # How popular is the app or channel?
+        {'groupby': ['app'], 'select': 'channel', 'agg': 'count'},
+        {'groupby': ['channel'], 'select': 'app', 'agg': 'count'},
+        {'groupby': ['ip'],          'select': 'channel', 'agg': 'nunique'},
+        {'groupby': ['ip'],          'select': 'app', 'agg': 'nunique'},
+        {'groupby': ['ip'],          'select': 'device', 'agg': 'nunique'},
+        {'groupby': ['app'],         'select': 'channel', 'agg': 'nunique'},
+
+        {'groupby': ['ip',   'app'], 'select': 'os', 'agg': 'nunique'},
+        {'groupby': ['ip',  'device', 'os'], 'select': 'app', 'agg': 'nunique'},
+
+        # {'groupby': ['ip',  'device','os'],  'select': 'app', 'agg': 'cumcount'},
+        # {'groupby': ['ip'], 'select': 'app', 'agg': 'cumcount'},
+        # {'groupby': ['ip'], 'select': 'os',  'agg': 'cumcount'}
+  ]
+
+   # Apply all the groupby transformations
+   for spec in GROUPBY_AGGREGATIONS:
+      agg_name    = spec['agg_name'] if 'agg_name' in spec else spec['agg']
+      new_feature = '{}_{}_{}'.format('_'.join(spec['groupby']), agg_name, spec['select'])
+
+      print("Grouping by {}, and aggregating {} with {}".format( spec['groupby'], spec['select'], agg_name ))
+
+      # Unique list of features to select
+      all_features = list(set(spec['groupby'] + [spec['select']]))
+
+      # Perform the groupby
+      gp = df[all_features].groupby(spec['groupby'])[spec['select']]. \
+          agg(spec['agg']).reset_index(). \
+          rename(index=str, columns={spec['select']: new_feature})
+      
+      if 'cumcount' == spec['agg']:
+          df1[new_feature] = gp[0].values
+      else:
+          df1 = df1.merge(gp, on=spec['groupby'], how='left')
+          # print( df1.head(3).T )
+   del gp
+
+
+   dfnew    = df1
+   col_pars = {}
+   return dfnew, col_pars
+
+
+
+
 def generateAggregateFeatures(df):
     ### New Agg features
     df2 = pd.DataFrame([], index= df.index)
@@ -205,9 +283,80 @@ def generatePastClickFeatures(df):
 
 
 
+#################################################################################
+##### Train sample data #########################################################
+coly = "is_attributed"
+
+
+def a10m():
+  ##### Test Data  #############################################
+  df = pd.read_csv("raw/raw_10m.zip")
+  df, col_pars = generate_train(df)
+  df_X = df.drop(coly, axis=1)
+  df_y = df[[coly]]
+
+
+  path = "train_10m/"
+  os.makedirs(path, exist_ok=True)
+  df_X.to_parquet( f"{path}/features.parquet")
+  df_y.to_parquet( f"{path}/target.parquet")
+
+
+
+def a100k():
+  df   = pd.read_csv("raw/train_100k.csv")
+
+  df, col_pars = generate_train2(df)
+  df_X         = df.drop(coly, axis=1)
+  df_y         = df[[coly]]
+  print( np.sum(df_y))
+  print( df_X.shape )
+  print(df_X.columns)
+
+  path = "train_100k/"
+  os.makedirs(path, exist_ok=True)
+  df_X.to_parquet( f"{path}features.parquet")
+  df_y.to_parquet( f"{path}/target.parquet")
+
+  df_X.to_csv( f"{path}features.csv")
+  df_y.to_csv( f"{path}/target.csv")
+
+
+
+
+def a200m():
+  ##### Train data  ############################################
+  df           = pd.read_csv("raw/train_200m.zip")
+  df, col_pars = generate_train(df)
+  df_X         = df.drop(coly, axis=1)
+  df_y         = df[[coly]]
+
+
+  path = "train_200m/"
+  os.makedirs(path, exist_ok=True)
+  df_X.to_parquet( f"{path}/features.parquet")
+  df_y.to_parquet( f"{path}/target.parquet")
+
+
+
+
+###########################################################################################################
+###########################################################################################################
+if __name__ == "__main__":
+
+    import fire
+    fire.Fire()
+    
+
+
+
+
+
+
 
 
 ###### Load data  #############################################################
+"""
 dtypes = {'ip': np.uint32, 'app': np.uint16, 'device': np.uint8, 'os': np.uint8, 'channel': np.uint8, 'is_attributed': np.bool}
 df     = pd.read_csv('raw/train_100k.csv', sep=',', dtype=dtypes, parse_dates=['click_time', 'attributed_time'])
 
@@ -220,55 +369,4 @@ df  = df.join(  df2, how='left' )
 df  = df.join(  df3, how='left' )
 
 
-#################################################################################
-##### Train sample data #########################################################
-coly = "is_attributed"
-df   = pd.read_csv("raw/train_100k.csv")
-
-df, col_pars = generate_train(df)
-df_X         = df.drop(coly, axis=1)
-df_y         = df[[coly]]
-
-
-path = "train_100k/"
-os.makedirs(path, exist_ok=True)
-df_X.to_parquet( f"{path}features.parquet")
-df_y.to_parquet( f"{path}/target.parquet")
-
-sys.exit()
-
-
-##### Train data  ############################################
-df           = pd.read_csv("raw/train_200m.zip")
-df, col_pars = generate_train(df)
-df_X         = df.drop(coly, axis=1)
-df_y         = df[[coly]]
-
-
-path = "train/"
-os.makedirs(path, exist_ok=True)
-df_X.to_parquet( f"{path}features.parquet")
-df_y.to_parquet( f"{path}/target.parquet")
-
-
-
-
-##### Test Data  #############################################
-df = pd.read_csv("raw/raw_10m.zip")
-df, col_pars = generate_train(df)
-df_X = df.drop(coly, axis=1)
-df_y = df[[coly]]
-
-
-path = "test/"
-os.makedirs(path, exist_ok=True)
-df_X.to_parquet( f"{path}features.parquet")
-df_y.to_parquet( f"{path}/target.parquet")
-
-
-
-
-
-
-
-
+"""
