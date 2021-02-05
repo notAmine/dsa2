@@ -166,6 +166,30 @@ def generate_train(df, col=None, pars=None):
 def generate_train2(df, col=None, pars=None):
    """
      By IP Apress
+     channel                                  1011
+os                                        544
+hour                                      472
+app                                       468
+ip_app_os_device_day_click_time_next_1     320
+app_channel_os_mean_is_attributed         189
+ip_app_mean_is_attributed                 124
+ip_app_os_device_day_click_time_next_2     120
+ip_os_device_count_click_id               113
+ip_var_hour                                94
+ip_day_hour_count_click_id                 91
+ip_mean_is_attributed                      74
+ip_count_click_id                          73
+ip_app_os_device_day_click_time_lag1       67
+app_mean_is_attributed                     67
+ip_nunique_os_device                       65
+ip_nunique_app                             63
+ip_nunique_os                              51
+ip_nunique_app_channel                     49
+ip_os_device_mean_is_attributed            46
+device                                     41
+app_channel_os_count_click_id              37
+ip_hour_mean_is_attributed                 21
+
 
    """
    df = copy.deepcopy(df)
