@@ -176,34 +176,59 @@ def generate_train2(df, col=None, pars=None):
    ## Let's see on which hour the click was happend
    df["click_time"]   = pd.to_datetime(df["click_time"])
    df["hour"]         = df["click_time"].dt.hour.astype("uint8")
-   df["minute"]       = df["click_time"].dt.minute.astype("uint8")
+   #df["minute"]       = df["click_time"].dt.minute.astype("uint8")
    df["day"]          = df["click_time"].dt.day.astype("uint8")
-   df["day_of_week"]  = df["click_time"].dt.dayofweek.astype("uint8")
+   df["dayweek"]  = df["click_time"].dt.dayofweek.astype("uint8")
+
 
    #### By IP Address
    df1 = df.groupby(['ip', 'app', 'os', 'device', 'channel']).agg( {  'is_attributed' : 'max' }).reset_index()     #   'hour' : {'min', 'max'} } )
    # print(df1.head(3).T )
 
    GROUPBY_AGGREGATIONS = [
-        {'groupby': ['ip', 'app'],       'select': 'channel', 'agg': 'count'},
-        {'groupby': ['ip', 'app', 'os'], 'select': 'channel', 'agg': 'count'},
-        {'groupby': ['ip','app','channel'],    'select': 'hour', 'agg': 'mean'},
+        {'groupby': ['ip', 'app'],             'select': 'channel', 'agg': 'count'},
+        {'groupby': ['ip', 'app', 'os'],       'select': 'channel', 'agg': 'count'},
 
-        ################### V2 - GroupBy Features #
-        # Average clicks on app by distinct users; is it an app they return to?
-        {'groupby': ['app'], 'select': 'ip', 'agg': lambda x: float(len(x)) / len(x.unique()), 'agg_name': 'AvgViewPerDistinct'
-        },
 
-        # How popular is the app or channel?
-        {'groupby': ['app'], 'select': 'channel', 'agg': 'count'},
-        {'groupby': ['channel'], 'select': 'app', 'agg': 'count'},
+        ##### Time Related
+        {'groupby': ['ip'],    'select': 'hour', 'agg': 'max'},
+        {'groupby': ['ip'],    'select': 'hour', 'agg': 'min'},
+
+        {'groupby': ['ip'],    'select': 'dayweek', 'agg': 'max'},
+        {'groupby': ['ip'],    'select': 'dayweek', 'agg': 'min'},
+
+        {'groupby': ['ip'], 'select': 'hour', 'agg': lambda x: float(len(x)) / len(x.unique()), 'agg_name': 'AvgViewPerDistinct'},
+        {'groupby': ['ip'], 'select': 'dayweek', 'agg': lambda x: float(len(x)) / len(x.unique()), 'agg_name': 'AvgViewPerDistinct'},
+
+
+        {'groupby': ['ip','channel'],    'select': 'hour', 'agg': 'max'},
+        {'groupby': ['ip','channel'],    'select': 'hour', 'agg': 'min'},
+
+        {'groupby': ['ip','channel'],    'select': 'dayweek', 'agg': 'max'},
+        {'groupby': ['ip','channel'],    'select': 'dayweek', 'agg': 'min'},
+
+
         {'groupby': ['ip'],          'select': 'channel', 'agg': 'nunique'},
-        {'groupby': ['ip'],          'select': 'app', 'agg': 'nunique'},
-        {'groupby': ['ip'],          'select': 'device', 'agg': 'nunique'},
-        {'groupby': ['app'],         'select': 'channel', 'agg': 'nunique'},
+        {'groupby': ['ip'],          'select': 'app',     'agg': 'nunique'},
+        {'groupby': ['ip'],          'select': 'device',  'agg': 'nunique'},
+
+        {'groupby': ['ip'], 'select': 'app',     'agg': lambda x: float(len(x)) / len(x.unique()), 'agg_name': 'AvgViewPerDistinct'},
+        {'groupby': ['ip'], 'select': 'channel', 'agg': lambda x: float(len(x)) / len(x.unique()), 'agg_name': 'AvgViewPerDistinct'},
+
 
         {'groupby': ['ip',   'app'], 'select': 'os', 'agg': 'nunique'},
         {'groupby': ['ip',  'device', 'os'], 'select': 'app', 'agg': 'nunique'},
+
+
+        ################### V2 - GroupBy Features #
+        # Average clicks on app by distinct users; is it an app they return to?
+        {'groupby': ['app'], 'select': 'ip', 'agg': lambda x: float(len(x)) / len(x.unique()), 'agg_name': 'AvgViewPerDistinct'},
+        {'groupby': ['app'],         'select': 'channel', 'agg': 'count'},
+        {'groupby': ['app'],         'select': 'channel', 'agg': 'nunique'},
+
+
+        {'groupby': ['channel'],     'select': 'app',     'agg': 'count'},
+
 
         # {'groupby': ['ip',  'device','os'],  'select': 'app', 'agg': 'cumcount'},
         # {'groupby': ['ip'], 'select': 'app', 'agg': 'cumcount'},
@@ -217,7 +242,6 @@ def generate_train2(df, col=None, pars=None):
 
       print("Grouping by {}, and aggregating {} with {}".format( spec['groupby'], spec['select'], agg_name ))
 
-      # Unique list of features to select
       all_features = list(set(spec['groupby'] + [spec['select']]))
 
       # Perform the groupby
@@ -233,6 +257,7 @@ def generate_train2(df, col=None, pars=None):
    del gp
 
 
+
    dfnew    = df1
    col_pars = {}
    return dfnew, col_pars
@@ -240,30 +265,7 @@ def generate_train2(df, col=None, pars=None):
 
 
 
-def generateAggregateFeatures(df):
-    ### New Agg features
-    df2 = pd.DataFrame([], index= df.index)
-    aggregateFeatures = [
-        # How popular is the app in channel?
-        {'name': 'app-popularity', 'groupBy': ['app'], 'select': 'channel', 'agg': 'count'},
-        # How popular is the channel in app?
-        {'name': 'channel-popularity', 'groupBy': ['channel'], 'select': 'app', 'agg': 'count'},
-        # Average clicks on app by distinct users; is it an app they return to?
-        {'name': 'avg-clicks-on-app', 'groupBy': ['app'], 'select': 'ip', 'agg': lambda x: float(len(x)) / len(x.unique())}
-    ]
 
-    for spec in aggregateFeatures:
-        print("Generating aggregate feature {} group by {}, and aggregating {} with {}".format(spec['name'], spec['groupBy'], spec['select'], spec['agg']))
-        gp = df[spec['groupBy'] + [spec['select']]] \
-            .groupby(by=spec['groupBy'])[spec['select']] \
-            .agg(spec['agg']) \
-            .reset_index() \
-            .rename(index=str, columns={spec['select']: spec['name']})
-        df2 = df2.merge(gp, on=spec['groupBy'], how='left')
-        del gp
-        gc.collect()
-
-    return df2
 
 
 
@@ -370,3 +372,30 @@ df  = df.join(  df3, how='left' )
 
 
 """
+
+
+
+def generateAggregateFeatures(df):
+    ### New Agg features
+    df2 = pd.DataFrame([], index= df.index)
+    aggregateFeatures = [
+        # How popular is the app in channel?
+        {'name': 'app-popularity', 'groupBy': ['app'], 'select': 'channel', 'agg': 'count'},
+        # How popular is the channel in app?
+        {'name': 'channel-popularity', 'groupBy': ['channel'], 'select': 'app', 'agg': 'count'},
+        # Average clicks on app by distinct users; is it an app they return to?
+        {'name': 'avg-clicks-on-app', 'groupBy': ['app'], 'select': 'ip', 'agg': lambda x: float(len(x)) / len(x.unique())}
+    ]
+
+    for spec in aggregateFeatures:
+        print("Generating aggregate feature {} group by {}, and aggregating {} with {}".format(spec['name'], spec['groupBy'], spec['select'], spec['agg']))
+        gp = df[spec['groupBy'] + [spec['select']]] \
+            .groupby(by=spec['groupBy'])[spec['select']] \
+            .agg(spec['agg']) \
+            .reset_index() \
+            .rename(index=str, columns={spec['select']: spec['name']})
+        df2 = df2.merge(gp, on=spec['groupBy'], how='left')
+        del gp
+        gc.collect()
+
+    return df2

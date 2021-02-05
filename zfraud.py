@@ -83,12 +83,19 @@ config_default  = 'adfraud_lightgbm'   ### name of function which contains data 
 ##### Params########################################################################
 """
 
+Index(['ip', 'app', 'os', 'device', 'channel', 'ip_app_count_channel', 
+       'ip_app_os_count_channel', 'ip_max_hour', 'ip_min_hour',        
+       'ip_max_dayweek', 'ip_min_dayweek', 'ip_AvgViewPerDistinct_hour'
+,                                                                      
+       'ip_AvgViewPerDistinct_dayweek', 'ip_channel_max_hour',         
+       'ip_channel_min_hour', 'ip_channel_max_dayweek',                
+       'ip_channel_min_dayweek', 'ip_nunique_channel', 'ip_nunique_app'
+,                                                                      
+       'ip_nunique_device', 'ip_AvgViewPerDistinct_app',               
+       'ip_AvgViewPerDistinct_channel', 'ip_app_nunique_os',           
+       'ip_device_os_nunique_app', 'app_AvgViewPerDistinct_ip',        
+       'app_count_channel', 'app_nunique_channel', 'channel_count_app']
 
-Index(['ip', 'app', 'os', 'device', 'channel', 'ip_app_count_channel',             
-       'ip_app_os_count_channel', 'ip_app_channel_mean_hour',                      
-       'app_AvgViewPerDistinct_ip', 'app_count_channel', 'channel_count_app',      
-       'ip_nunique_channel', 'ip_nunique_app', 'ip_nunique_device',                
-       'app_nunique_channel', 'ip_app_nunique_os', 'ip_device_os_nunique_app'],
 
 
 """
@@ -96,11 +103,22 @@ cols_input_type_1 = {
      "coly"   :   "is_attributed"     ### 
     ,"colid"  :   "ip"
     ,"colcat" :   [  "app", "device", "os", "channel",   ]
-    ,"colnum" :   [ 'ip_app_count_channel',             
-       'ip_app_os_count_channel', 'ip_app_channel_mean_hour',                      
-       'app_AvgViewPerDistinct_ip', 'app_count_channel', 'channel_count_app',      
-       'ip_nunique_channel', 'ip_nunique_app', 'ip_nunique_device',                
-       'app_nunique_channel', 'ip_app_nunique_os', 'ip_device_os_nunique_app'  ]
+    ,"colnum" :   [ 'ip_app_count_channel', 
+       'ip_app_os_count_channel', 'ip_max_hour', 'ip_min_hour',        
+       'ip_max_dayweek', 'ip_min_dayweek', 'ip_AvgViewPerDistinct_hour'
+,                                                                      
+       'ip_AvgViewPerDistinct_dayweek', 'ip_channel_max_hour',         
+       'ip_channel_min_hour', 'ip_channel_max_dayweek',                
+       'ip_channel_min_dayweek', 'ip_nunique_channel', 'ip_nunique_app'
+,                                                                      
+       'ip_nunique_device', 'ip_AvgViewPerDistinct_app',               
+       'ip_AvgViewPerDistinct_channel', 'ip_app_nunique_os',           
+       'ip_device_os_nunique_app', 'app_AvgViewPerDistinct_ip',        
+       'app_count_channel', 'app_nunique_channel', 'channel_count_app' 
+
+
+
+        ]
     ,"coltext" :  []
     ,"coldate" :  []
     ,"colcross" : []
@@ -156,7 +174,7 @@ def  adfraud_lightgbm(path_model_out="") :
             'is_unbalance' : True,
             'learning_rate'     : 0.001,
             'num_leaves'        : 31,      # we should let it be smaller than 2^(max_depth)
-            'max_depth'         : 100,      # -1 means no limit
+            'max_depth'         : -1,      # -1 means no limit
             'min_child_samples' : 20,      # Minimum number of df need in a child(min_data_in_leaf)
             'max_bin'           : 255,     # Number of bucketed bin for feature values
             'subsample'         : 0.6,     # Subsample ratio of the training instance.
