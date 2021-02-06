@@ -194,3 +194,7 @@ mlflow_local.db
 /data/input/adfraud/train_10m
 /source/models/saved_models
 /source/models/.tmp
+/source/models/data/output/torch_tabular/model/filename
+/source/models/model_dir
+/source/models/data/output/torch_tabular/model
+/source/models/ztmp

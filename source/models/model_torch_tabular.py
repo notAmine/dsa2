@@ -25,7 +25,7 @@ python model_torch_tabular.py test
                 Typically used when providing Custom Models
 
 """
-import os
+import os, sys,  numpy as np,  pandas as pd
 
 try :
     from pytorch_tabular import TabularModel
@@ -34,13 +34,10 @@ try :
 except :
     os.system("pip install pytorch_tabular[all]")
 
-import numpy as np
 # torch.manual_seed(0)
 # np.random.seed(0)
 # torch.set_deterministic(True)
 # from torch.utils import data
-
-import pandas as pd
 from sklearn.model_selection import train_test_split
 from pathlib import Path
 import wget
@@ -78,8 +75,6 @@ class Model(object):
               categorical_cols = dm['colcat'],
             )
 
-
-
             model_config     = CategoryEmbeddingModelConfig( **model_pars['model_pars'],   )
             trainer_config   = TrainerConfig( **compute_pars.get('compute_pars', {} ) )
             optimizer_config = OptimizerConfig()
@@ -102,17 +97,19 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
     global model, session
     session = None  # Session type for compute
-    Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
-    if VERBOSE: log(Xtrain, model.model)
 
+    # if data_pars is not None :
+    Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
+    
+    if VERBOSE: log(Xtrain, model.model)
+    
     #Xtrain = torch.tensor(Xtrain.values, dtype=torch.float)
     #Xtest  = torch.tensor(Xtest.values, dtype=torch.float)
     #ytrain = torch.tensor(ytrain.values, dtype=torch.float)
     #ytest  = torch.tensor(ytest.values, dtype=torch.float)
 
-
-    train = pd.concat((Xtrain,ytrain)).values
-    val   = pd.concat((Xtest,ytest)).values
+    train = pd.concat((Xtrain,ytrain))
+    val   = pd.concat((Xtest,ytest))
 
     ###############################################################
     compute_pars2 = compute_pars.get('compute_pars', {})
@@ -187,8 +184,9 @@ def save(path=None, info=None):
 def load_model(path=""):
     global model, session
     import cloudpickle as pickle
-    model0 = pickle.load(open(f"{path}/model.pkl", mode='rb'))
-
+    #model0 = pickle.load(open(f"{path}/model.pkl", mode='rb'))
+     
+    
     model = Model()  # Empty model
     model.model_pars   = model0.model_pars
     model.compute_pars = model0.compute_pars
@@ -371,8 +369,10 @@ def test(nrows=1000):
 
     #X = np.random.rand(10000,20)
     #y = np.random.binomial(n=1, p=0.5, size=[10000])
+    root = os.getcwd()  +"/ztmp/"
 
-    BASE_DIR = Path.home().joinpath('data/input/covtype/')
+
+    BASE_DIR = Path.home().joinpath( root + 'data/input/covtype/')
     datafile = BASE_DIR.joinpath('covtype.data.gz')
     datafile.parent.mkdir(parents=True, exist_ok=True)
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/covtype/covtype.data.gz"
@@ -400,33 +400,16 @@ def test(nrows=1000):
     X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, stratify=y)
     X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
     num_classes = len(set(y_train_full[target_name].values.ravel()))
-
-
-    data_pars = {'train': {'Xtrain': X_train,
-                           'ytrain': y_train,
-                           'Xtest': X_valid,
-                           'ytest': y_valid},
-                 'eval': {'X': X_valid,
-                          'y': y_valid},
-                 'predict': {'X': X_valid},
-                }
-    compute_pars = { 'compute_pars' : {} }
+    log(X_train)
 
 
     cols_input_type_1 = []
-    n_sample = 1000
+    n_sample = 100
     def post_process_fun(y):
         return int(y)
 
     def pre_process_fun(y):
         return int(y)
-
-
-    model_config = CategoryEmbeddingModelConfig(task="classification",
-                                                metrics=["f1","accuracy"],
-                                                metrics_params=[{"num_classes":num_classes},{}])
-
-
 
     m = {'model_pars': {
         ### LightGBM API model   #######################################
@@ -442,8 +425,7 @@ def test(nrows=1000):
 
 
         ### Pipeline for data processing ##############################
-        'pipe_list': [
-        #### coly target prorcessing
+        'pipe_list': [  #### coly target prorcessing
         {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
 
         {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
@@ -494,28 +476,26 @@ def test(nrows=1000):
 
 
 
-
-
  
 
     log('Setup model..')
     model = Model(model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
 
     log('\n\nTraining the model..')
-    fit(data_pars=data_pars, compute_pars=compute_pars, out_pars=None)
+    fit(data_pars=m['data_pars'], compute_pars= m['compute_pars'], out_pars=None)
     log('Training completed!\n\n')
 
     log('Predict data..')
-    ypred, ypred_proba = predict(Xpred=None, data_pars=data_pars, compute_pars=compute_pars)
+    ypred, ypred_proba = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
     log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
 
 
     log('Evaluating the model..')
-    log(eval(data_pars=data_pars, compute_pars=compute_pars))
+    # log(eval(data_pars= m['data_pars'], compute_pars= m['compute_pars']))
 
 
     log('Saving model..')
-    save(path='model_dir/')
+    save(path= root + 'data/output/torch_tabular/model/')
 
 
     log('Load model..')
