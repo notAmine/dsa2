@@ -14,6 +14,8 @@ import numpy as np
 import pandas as pd
 
 from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import CondensedNearestNeighbour
+
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from matplotlib import pyplot as plt
@@ -139,6 +141,7 @@ def train_lgb_class_imbalance():
 # ## 2) Synthetic Minority Oversampling Technique (SMOTE) for Over-Sampling
 
 def train_model_with_smote_oversampling():
+    from imblearn.under_sampling import CondensedNearestNeighbour
     X_SMOTE_resampled, y_SMOTE_resampled = SMOTE().fit_resample(train_X, train_y)
 
     dtrain = lgb.Dataset(X_SMOTE_resampled, y_SMOTE_resampled)
