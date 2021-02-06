@@ -73,7 +73,6 @@ def global_pars_update(model_dict,  data_name, config_name):
 
 
 
-
 ####################################################################################
 config_default  = 'adfraud_lightgbm'   ### name of function which contains data configuration
 
@@ -216,7 +215,7 @@ def  adfraud_lightgbm(path_model_out="") :
 
       'data_pars': { 'n_sample' : n_sample,
           'cols_input_type' : cols_input_type_1,
-          ### family of columns for MODEL  #########################################################
+          ### family of columns for MODEL  ######################################################################
           #  "colnum", "colnum_bin", "colnum_onehot", "colnum_binmap",  #### Colnum columns
           #  "colcat", "colcat_bin", "colcat_onehot", "colcat_bin_map",  #### colcat columns
           #  'colcross_single_onehot_select', "colcross_pair_onehot",  'colcross_pair',  #### colcross columns
@@ -268,14 +267,6 @@ from core_run import train
 
 
 
-###################################################################################
-######### Check data ##############################################################
-def check():
-   pass
-
-
-
-
 ####################################################################################
 ####### Inference ##################################################################
 # def  predict(config='', nsample=10000)
@@ -288,7 +279,6 @@ from core_run import predict
 ###########################################################################################################
 ###########################################################################################################
 if __name__ == "__main__":
-
     import fire
     fire.Fire()
     
