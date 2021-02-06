@@ -7,7 +7,7 @@ https://github.com/shenweichen/DeepCTR
 https://deepctr-doc.readthedocs.io/en/latest/Examples.html#classification-criteo
 
 
-DeepCTR is a **Easy-to-use**,**Modular** and **Extendible** package of deep-learning based CTR models 
+DeepCTR is a **Easy-to-use**,**Modular** and **Extendible** package of deep-learning based CTR models
 along with lots of core components layers which can be used to easily build custom models.It is compatible with **tensorflow 1.4+ and 2.0+**.You can use any complex model with `model.fit()`and `model.predict()` .
 
 
@@ -64,13 +64,16 @@ import importlib
 
 import numpy as np
 import pandas as pd
+import keras
 from keras.preprocessing.sequence import pad_sequences
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+import sklearn
 from sklearn.metrics import log_loss, mean_squared_error, roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 
-from deepctr.inputs import (DenseFeat, SparseFeat, VarLenSparseFeat,
-                            get_feature_names)
+import deepctr
+from deepctr.feature_column import DenseFeat, SparseFeat, VarLenSparseFeat, get_feature_names
 from deepctr.models import DeepFM
 
 # from preprocess import _preprocess_criteo, _preprocess_movielens
@@ -88,75 +91,99 @@ if tf.__version__ >= '2.0.0':
 #from mlmodels.preprocess.tabular_keras  import get_test_data, get_xy_fd_dien, get_xy_fd_din, get_xy_fd_dsin
 
 
+def log(*s):
+    print(s, flush=True)
+
 
 ####################################################################################################
 DATA_PARAMS = {
-    "AFM": {"sparse_feature_num": 3, "dense_feature_num": 0},
-    "AutoInt":{"sparse_feature_num": 1, "dense_feature_num": 1},
-    "CCPM": {"sparse_feature_num": 3, "dense_feature_num":0},
-    "DCN": {"sparse_feature_num": 3, "dense_feature_num": 3},
-    "DeepFM": {"sparse_feature_num": 1, "dense_feature_num": 1},
-    "DIEN": {},
-    "DIN": {},
-    "DSIN": {},
-    "FGCNN": {"embedding_size": 8, "sparse_feature_num": 1, "dense_feature_num": 1},
-    "FiBiNET": {"sparse_feature_num": 2, "dense_feature_num": 2},
-    "FLEN": {"embedding_size": 2, "sparse_feature_num": 6, "dense_feature_num": 6, "use_group": True},
-    "FNN": {"sparse_feature_num": 1, "dense_feature_num": 1},
-    "MLR": {"sparse_feature_num": 0, "dense_feature_num": 2, "prefix": "region"},
-    "NFM": {"sparse_feature_num": 1, "dense_feature_num": 1},
-    "ONN": {"sparse_feature_num": 2, "dense_feature_num": 2, "sequence_feature":('sum', 'mean', 'max',), "hash_flag":True},
-    "PNN": {"sparse_feature_num": 1, "dense_feature_num": 1},
-    "WDL": {"sparse_feature_num": 2, "dense_feature_num": 0},
-    "xDeepFM": {"sparse_feature_num": 1, "dense_feature_num": 1}
+    "AFM"     : {"sparse_feature_num": 3, "dense_feature_num": 0},
+    "AutoInt" : {"sparse_feature_num": 1, "dense_feature_num": 1},
+    "CCPM"    : {"sparse_feature_num": 3, "dense_feature_num":0},
+    "DCN"     : {"sparse_feature_num": 3, "dense_feature_num": 3},
+    "DeepFM"  : {"sparse_feature_num": 1, "dense_feature_num": 1},
+    "DIEN"    : {},
+    "DIN"     : {},
+    "DSIN"    : {},
+    "FGCNN"   : {"embedding_size": 8, "sparse_feature_num": 1, "dense_feature_num": 1},
+    "FiBiNET" : {"sparse_feature_num": 2, "dense_feature_num": 2},
+    "FLEN"    : {"embedding_size": 2, "sparse_feature_num": 6, "dense_feature_num": 6, "use_group": True},
+    "FNN"     : {"sparse_feature_num": 1, "dense_feature_num": 1},
+    "MLR"     : {"sparse_feature_num": 0, "dense_feature_num": 2, "prefix": "region"},
+    "NFM"     : {"sparse_feature_num": 1, "dense_feature_num": 1},
+    "ONN"     : {"sparse_feature_num": 2, "dense_feature_num": 2, "sequence_feature":('sum', 'mean', 'max',), "hash_flag":True},
+    "PNN"     : {"sparse_feature_num": 1, "dense_feature_num": 1},
+    "WDL"     : {"sparse_feature_num": 2, "dense_feature_num": 0},
+    "xDeepFM" : {"sparse_feature_num": 1, "dense_feature_num": 1}
 }
 
 MODEL_PARAMS = {
-    "AFM": {"use_attention": True, "afm_dropout": 0.5},
-    "AutoInt":{"att_layer_num": 1, "dnn_hidden_units": (), "dnn_dropout": 0.5},
-    "CCPM": {"conv_kernel_width": (3, 2), "conv_filters": (2, 1), "dnn_hidden_units": [32,], "dnn_dropout": 0.5},
-    "DCN": {"cross_num": 0, "dnn_hidden_units": (8,), "dnn_dropout": 0.5},
-    "DeepFM": {"dnn_hidden_units": (2,), "dnn_dropout": 0.5},
-    "DIEN": {"dnn_hidden_units": [4, 4, 4], "dnn_dropout": 0.5, "gru_type": "GRU"},
-    "DIN": {"dnn_hidden_units":[4, 4, 4], "dnn_dropout":0.5},
-    "DSIN": {"sess_max_count":2, "dnn_hidden_units":[4, 4, 4], "dnn_dropout":0.5},
-    "FGCNN": {"conv_kernel_width":(3,2), "conv_filters":(2, 1), "new_maps":(2, 2), "pooling_width":(2, 2), "dnn_hidden_units": (32, ), "dnn_dropout":0.5},
-    "FiBiNET":{"bilinear_type": "all", "dnn_hidden_units":[4,], "dnn_dropout":0.5},
-    "FLEN": {"dnn_hidden_units": (3,), "dnn_dropout":0.5},
-    "FNN": {"dnn_hidden_units":[32, 32], "dnn_dropout":0.5},
-    "MLR": {},
-    "NFM": {"dnn_hidden_units":[32, 32], "dnn_dropout":0.5},
-    "ONN": {"dnn_hidden_units": [32, 32], "embedding_size":4, "dnn_dropout":0.5},
-    "PNN": {"embedding_size":4, "dnn_hidden_units":[4, 4], "dnn_dropout":0.5, "use_inner": True, "use_outter": True},
-    "WDL": {"dnn_hidden_units":[32, 32], "dnn_dropout":0.5},
-    "xDeepFM": {"dnn_dropout": 0.5, "dnn_hidden_units": (8,), "cin_layer_size": (), "cin_split_half": True, "cin_activation": 'linear'}
+    "AFM"     : {"use_attention": True, "afm_dropout": 0.5},
+    "AutoInt" : {"att_layer_num": 1, "dnn_hidden_units": (), "dnn_dropout": 0.5},
+    "CCPM"    : {"conv_kernel_width": (3, 2), "conv_filters": (2, 1), "dnn_hidden_units": [32,], "dnn_dropout": 0.5},
+    "DCN"     : {"cross_num": 0, "dnn_hidden_units": (8,), "dnn_dropout": 0.5},
+    "DeepFM"  : {"dnn_hidden_units": (2,), "dnn_dropout": 0.5},
+    "DIEN"    : {"dnn_hidden_units": [4, 4, 4], "dnn_dropout": 0.5, "gru_type": "GRU"},
+    "DIN"     : {"dnn_hidden_units":[4, 4, 4], "dnn_dropout":0.5},
+    "DSIN"    : {"sess_max_count":2, "dnn_hidden_units":[4, 4, 4], "dnn_dropout":0.5},
+    "FGCNN"   : {"conv_kernel_width":(3,2), "conv_filters":(2, 1), "new_maps":(2, 2), "pooling_width":(2, 2), "dnn_hidden_units": (32, ), "dnn_dropout":0.5},
+    "FiBiNET" : {"bilinear_type": "all", "dnn_hidden_units":[4,], "dnn_dropout":0.5},
+    "FLEN"    : {"dnn_hidden_units": (3,), "dnn_dropout":0.5},
+    "FNN"     : {"dnn_hidden_units":[32, 32], "dnn_dropout":0.5},
+    "MLR"     : {},
+    "NFM"     : {"dnn_hidden_units":[32, 32], "dnn_dropout":0.5},
+    "ONN"     : {"dnn_hidden_units": [32, 32], "embedding_size":4, "dnn_dropout":0.5},
+    "PNN"     : {"embedding_size":4, "dnn_hidden_units":[4, 4], "dnn_dropout":0.5, "use_inner": True, "use_outter": True},
+    "WDL"     : {"dnn_hidden_units":[32, 32], "dnn_dropout":0.5},
+    "xDeepFM" : {"dnn_dropout": 0.5, "dnn_hidden_units": (8,), "cin_layer_size": (), "cin_split_half": True, "cin_activation": 'linear'}
 }
 
 class Model:
     def __init__(self, model_pars=None, data_pars=None, compute_pars=None, **kwargs):
         if model_pars is None :
           return self
-       
-        model_name = model_pars.get("model_name", "DeepFM")   
+
+        model_name = model_pars.get("model_name", "DeepFM")
         model_list = list(MODEL_PARAMS.keys())
-        
+
         if not model_name in model_list :
           raise ValueError('Not existing model', model_name)
           return self
 
-        modeli = getattr(importlib.import_module("deepctr.models"), model_name)
-        # 4.Define Model
-        x, y, feature_columns, behavior_feature_list = kwargs["dataset"]
-        if model_name in ["DIEN", "DIN", "DSIN"]:
-            self.model = modeli(feature_columns, behavior_feature_list, **MODEL_PARAMS[model_name])
-        elif model_name == "MLR":
-            self.model = modeli(feature_columns)
-        elif model_name == "PNN":
-            self.model = modeli(feature_columns, **MODEL_PARAMS[model_name])
-        else:
-            self.model = modeli(feature_columns, feature_columns, **MODEL_PARAMS[model_name])
+        modeli              = getattr(importlib.import_module("deepctr.models"), model_name)
 
-        self.model.compile(model_pars['optimization'], model_pars['cost'],
+
+
+        # 4.Define Model #################################################
+        if model_name in ["DIEN", "DIN", "DSIN"]:
+
+             feature_cols = None
+             behavior_feature_list = [] 
+
+             self.model = modeli(feature_cols, behavior_feature_list, **MODEL_PARAMS[model_name])
+
+        elif model_name == "MLR":
+
+
+             self.model = modeli(feature_cols)
+
+        elif model_name == "PNN":
+
+
+             self.model = modeli(feature_cols, **MODEL_PARAMS[model_name])
+        
+        else:  # ['WDL' ] :
+             linear_cols = model_pars.get('linear_feature_cols', None)
+             dnn_cols    = model_pars.get('dnn_feature_cols', None)
+             self.model = modeli(linear_cols, dnn_cols, **MODEL_PARAMS[model_name])
+
+        #if model_name in ['WDL' ] : 
+        #    self.model = modeli(linear_feature_cols, dnn_feature_cols, **MODEL_PARAMS[model_name])
+
+
+        #################################################################################
+        self.model.compile(optimizer=model_pars['optimization'],
+                           loss=model_pars['loss'],
                            metrics=compute_pars.get("metrics", ['binary_crossentropy']), )
         self.model.summary()
 
@@ -172,18 +199,12 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     session = None  # Session type for compute
     Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
 
-    n_wide_features = data_pars.get('n_wide_features', None)
-    n_deep_features = data_pars.get('n_deep_features', None)
-
-    Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
-    Xtest_A, Xtest_B, Xtest_C = Xtest[:, :n_wide_features], Xtest[:, -n_deep_features:], Xtest[:, -n_deep_features:]
-
-    if VERBOSE: log(Xtrain.shape, model.model)
+    # if VERBOSE: log(Xtrain.shape, model.model)
 
     cpars = compute_pars.get("compute_pars", {})
     assert 'epochs' in cpars, 'epoch'
 
-    hist = model.model.fit((Xtrain_A, Xtrain_B, Xtrain_C), ytrain,  **cpars)
+    hist = model.model.fit(Xtrain, ytrain, **cpars)
     model.history = hist
 
 
@@ -194,12 +215,7 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
     global model, session
     data_pars['train'] = True
     Xval, yval = get_dataset(data_pars, task_type="eval")
-
-    n_wide_features = data_pars.get('n_wide_features', None)
-    n_deep_features = data_pars.get('n_deep_features', None)
-
-    Xval_A, Xval_B, Xval_C = Xval[:, :n_wide_features], Xval[:, -n_deep_features:], Xval[:, -n_deep_features:]
-    ypred = predict((Xval_A, Xval_B, Xval_C), data_pars, compute_pars, out_pars)
+    ypred = predict(Xval, data_pars, compute_pars, out_pars)
 
     # log(data_pars)
     mpars = compute_pars.get("metrics_pars", {'metric_name': 'mae'})
@@ -220,21 +236,12 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
 def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     global model, session
 
-    if Xpred is None:
-        # data_pars['train'] = False
-        n_wide_features = data_pars.get('n_wide_features', None)
-        n_deep_features = data_pars.get('n_deep_features', None)
-
-        Xpred = get_dataset(data_pars, task_type="predict")
-        Xpred_A, Xpred_B, Xpred_C = Xpred[:, :n_wide_features], Xpred[:, -n_deep_features:], Xpred[:, -n_deep_features:]
-    else:  # if Xpred is tuple contains Xpred_A, Xpred_B, Xpred_C
-        Xpred_A, Xpred_B, Xpred_C = Xpred
-
-    ypred = model.model.predict((Xpred_A, Xpred_B, Xpred_C))
+    Xpred = get_dataset(data_pars, task_type="predict")
+    ypred = model.model.predict(Xpred)
 
     ypred_proba = None  ### No proba
     if compute_pars.get("probability", False):
-         ypred_proba = model.model.predict_proba((Xpred_A, Xpred_B, Xpred_C))
+         ypred_proba = model.model.predict_proba(Xpred)
     return ypred, ypred_proba
 
 
@@ -249,14 +256,15 @@ def save(path=None):
 
     filename = "model.h5"
     filepath = path + filename
-    model.model.save(filepath)
+    keras.models.save_model(model.model, filepath)
+    # model.model.save(filepath)
 
 
 def load_model(path=""):
     global model, session
 
     filepath = path + 'model.h5'
-    model = keras.models.load_model(filepath)
+    model = keras.models.load_model(filepath, deepctr.layers.custom_objects)
     session = None
     return model, session
 
@@ -277,7 +285,7 @@ def preprocess(prepro_pars):
         from sklearn.datasets import make_classification
         from sklearn.model_selection import train_test_split
 
-        X, y = make_classification(n_features=10, n_redundant=0, n_informative=2,
+        X, y = make_classification(n=10, n_redundant=0, n_informative=2,
                                    random_state=1, n_clusters_per_class=1)
 
         # log(X,y)
@@ -352,70 +360,121 @@ def get_params(param_pars={}, **kw):
 ########################################################################################################################
 
 
+
+
 ########################################################################################################################
-
-
-
 def test(config=''):
+    """
+
+     colcat  ---. Sparse Features
+
+     colnum --> Dense features
+
+    """
     global model, session
 
-    X = np.random.rand(10000,30)
-    y = np.random.binomial(n=1, p=0.5, size=[10000])
+    X = np.random.rand(100,30)
+    y = np.random.binomial(n=1, p=0.5, size=[100])
 
-    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, random_state=2021, stratify=y)
-    X_train, X_valid, y_train, y_valid = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
+    ## PREPROCESSING STEPS
+    # change into dataframe
+    cols                   = [str(i) for i in range(X.shape[1])]  # define column pd dataframe, need to be string type
+    data                   = pd.DataFrame(X, columns=cols)  # need to convert into df, following the step from documentation
+    data['y']              = y
 
+    # define which feature columns sparse or dense type
+    # since our data categorize as Dense Features, we define the sparse features as empty list
+    cols_sparse   = []
+    cols_dense    = [str(i) for i in range(X.shape[1])]
+
+    # convert feature type into SparseFeat or DenseFeat type, adjusting from DeepCTR library
+    sparse_feat_l          = [SparseFeat(feat, vocabulary_size=data[feat].nunique(), embedding_dim=4)
+    for i,feat in enumerate(cols_sparse)]
+       dense_feat_l           = [DenseFeat(feat, dimension=1) for feat in cols_dense]
+
+    feature_cols        = sparse_feat_l + dense_feat_l
+
+
+    linear_feature_cols    = feature_cols  # containing all the features used by linear part of the model
+    dnn_feature_cols       = feature_cols  # containing all the features used by deep part of the model
+    feature_names          = get_feature_names(linear_feature_cols + dnn_feature_cols)
+
+    train_full, test       = train_test_split(data, random_state=2021, stratify=data['y'])
+    train, val             = train_test_split(train_full, random_state=2021, stratify=train_full['y'])
+
+    train_model_input      = {name:train[name] for name in feature_names}
+    val_model_input        = {name:val[name]   for name in feature_names}
+    test_model_input       = {name:test[name]  for name in feature_names}
+    target                 = 'y'
+    #### END OF PREPROCESSING STEPS
+
+    #### initalize model_pars
+    opt = keras.optimizers.Adam()
+    loss = 'binary_crossentropy'
+
+
+    # initialize compute_pars
     early_stopping = EarlyStopping(monitor='loss', patience=3)
-    model_ckpt = ModelCheckpoint(filepath='', save_best_only=True, monitor='loss')
-    callbacks = [early_stopping, model_ckpt]
+    # Note: ModelCheckpoint error when used
+    # model_ckpt = ModelCheckpoint(filepath='', save_best_only=True, monitor='loss')
+    callbacks = [early_stopping]
 
-    n_features = X_train.shape[1]  # number of features
-    n_wide_features = 20
-    n_deep_features = n_features - n_wide_features
 
-    model_pars = {'model_class': '',
-                  'model_pars': {'n_wide_cross': n_wide_features,
-                                 'n_wide': n_deep_features},
-                 }
-    data_pars = {'train': {'Xtrain': X_train,
-                           'ytrain': y_train,
-                           'Xtest': X_test,
-                           'ytest': y_test},
-                 'eval': {'X': X_valid,
-                          'y': y_valid},
-                 'predict': {'X': X_valid},
-                 'n_features': n_features,
-                 'n_wide_features': n_wide_features,
-                 'n_deep_features': n_deep_features,
-                }
-    compute_pars = { 'compute_pars' : { 'epochs': 50,
-                    'callbacks': callbacks} }
+    for model_name in  ['WDL'] :
+        ######## Model Dict  ########################################################
+        model_pars = {'model_name': model_name,
+                      'linear_feature_cols'    : linear_feature_cols,
+                      'dnn_feature_cols'       : dnn_feature_cols,
+
+                      'optimization'           : opt,
+                      'loss'                   : loss}
+
+        data_pars = {'train': {'Xtrain': train_model_input,
+                               'ytrain': train[target].values,
+                               'Xtest':  test_model_input,
+                               'ytest':  test[target].values},
+
+                     'eval': {'X': val_model_input,
+                              'y': val[target].values},
+                     'predict': {'X': val_model_input},
+                    }
+
+        # compute_pars = {}
+        compute_pars = {'compute_pars': {'epochs': 50,
+                        'callbacks': callbacks} }
+
+        test_helper(model_pars, data_pars, compute_pars)
+
+
+
+
+def test_helper(model_pars, data_pars, compute_pars):
 
     model = Model(model_pars=model_pars, data_pars=data_pars, compute_pars=compute_pars)
 
-    print('\n\nTraining the model..')
+    log('\n\nTraining the model..')
     fit(data_pars=data_pars, compute_pars=compute_pars, out_pars=None)
-    print('Training completed!\n\n')
+    log('Training completed!\n\n')
 
-    print('Predict data..')
+    log('Predict data..')
     ypred, ypred_proba = predict(Xpred=None, data_pars=data_pars, compute_pars=compute_pars)
-    print(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
-    print('Data successfully predicted!\n\n')
+    log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
+    log('Data successfully predicted!\n\n')
 
-    print('Evaluating the model..')
-    print(eval(data_pars=data_pars, compute_pars=compute_pars))
-    print('Evaluating completed!\n\n')
-
-    print('Saving model..')
+    log('Evaluating the model..')
+    log(eval(data_pars=data_pars, compute_pars=compute_pars))
+    log('Evaluating completed!\n\n')
+    #
+    log('Saving model..')
     save(path='model_dir/')
-    print('Model successfully saved!\n\n')
+    log('Model successfully saved!\n\n')
 
-    print('Load model..')
+    log('Load model..')
     model, session = load_model(path="model_dir/")
-    print('Model successfully loaded!\n\n')
+    log('Model successfully loaded!\n\n')
 
-    print('Model architecture:')
-    print(model.summary())
+    log('Model architecture:')
+    log(model.summary())
 
 
 
@@ -482,16 +541,16 @@ def get_dataset_old(data_pars=None, **kw):
     #### To test all models
     if data_type == "synthesis":
         if data_pars["dataset_name"] == "DIEN":
-            x, y, feature_columns, behavior_feature_list = get_xy_fd_dien(hash_flag=True)
+            x, y, feature_cols, behavior_feature_list = get_xy_fd_dien(hash_flag=True)
         elif data_pars["dataset_name"] == "DIN":
-            x, y, feature_columns, behavior_feature_list = get_xy_fd_din(hash_flag=True)
+            x, y, feature_cols, behavior_feature_list = get_xy_fd_din(hash_flag=True)
         elif data_pars["dataset_name"] == "DSIN":
-            x, y, feature_columns, behavior_feature_list = get_xy_fd_dsin(hash_flag=True)
+            x, y, feature_cols, behavior_feature_list = get_xy_fd_dsin(hash_flag=True)
         else:
-            x, y, feature_columns = get_test_data(**DATA_PARAMS[data_pars["dataset_name"]])
+            x, y, feature_cols = get_test_data(**DATA_PARAMS[data_pars["dataset_name"]])
             behavior_feature_list = None
 
-        return x, y, feature_columns, behavior_feature_list
+        return x, y, feature_cols, behavior_feature_list
 
     #### read from csv file
     if data_pars.get("uri_type") == "pickle":
@@ -522,7 +581,7 @@ def fit_old(model, session=None, compute_pars=None, data_pars=None, out_pars=Non
     """
           Classe Model --> model,   model.model contains thte sub-model
     """
-    x, y, feature_columns, behavior_feature_list = kwargs["dataset"]
+    x, y, feature_cols, behavior_feature_list = kwargs["dataset"]
 
     model.model.fit(x, y,
                     batch_size=compute_pars["batch_size"],
@@ -534,7 +593,7 @@ def fit_old(model, session=None, compute_pars=None, data_pars=None, out_pars=Non
 
 # Model p redict
 def predict_old(model, session=None, compute_pars=None, data_pars=None, out_pars=None, **kwargs):
-    x, y, feature_columns, behavior_feature_list = kwargs["dataset"]
+    x, y, feature_cols, behavior_feature_list = kwargs["dataset"]
     pred_ans = model.model.predict(x, batch_size=compute_pars['batch_size'])
 
     return pred_ans
@@ -589,7 +648,7 @@ def test_old(data_path="dataset/", pars_choice=0, **kwargs):
     log("#### Loading params   ##############################################")
     model_pars, data_pars, compute_pars, out_pars = get_params(choice=pars_choice,
                                                                data_path=data_path, **kwargs)
-    print(model_pars, data_pars, compute_pars, out_pars)
+    log(model_pars, data_pars, compute_pars, out_pars)
 
     log("#### Loading dataset   #############################################")
     dataset = get_dataset(data_pars)
@@ -604,7 +663,7 @@ def test_old(data_path="dataset/", pars_choice=0, **kwargs):
 
     log("#### metrics   ####################################################")
     metrics_val = metrics(ypred, dataset[1], compute_pars=compute_pars, data_pars=data_pars, out_pars=out_pars)
-    print(metrics_val)
+    log(metrics_val)
 
     log("#### Plot   #######################################################")
 
@@ -714,4 +773,3 @@ def get_params_old(choice="", data_path="dataset/", config_mode="test", **kwargs
         out_pars = {"path": out_path}
 
     return model_pars, data_pars, compute_pars, out_pars
-
