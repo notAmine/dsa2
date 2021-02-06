@@ -22,64 +22,64 @@ from models import LightGBM, Model
 from utils import dump_json_log, simple_timer
 
 parallelizable_feature_map = {
-    'ip': Ip,
-    'ip_for_filtering': IpForFiltering,
-    'app': App,
-    'os': Os,
-    'device': Device,
-    'channel': Channel,
-    'hour': ClickHour,
-    'click_time': ClickTime,
-    'minute': ClickSecond,
-    'second': ClickMinute,
-    'count': BasicCount,
-    'is_attributed': IsAttributed,
-    'zero-minute': ZeroMinute,
-    'future_click_count_1': features.time_series_click.generate_future_click_count(60),
-    'future_click_count_10': features.time_series_click.generate_future_click_count(600),
-    'past_click_count_10': features.time_series_click.generate_past_click_count(600),
-    'future_click_count_80': features.time_series_click.generate_future_click_count(4800),
-    'past_click_count_80': features.time_series_click.generate_past_click_count(4800),
-    'future_click_ratio_10': features.time_series_click.generate_future_click_ratio(600),
-    'past_click_ratio_10': features.time_series_click.generate_future_click_ratio(600),
-    'future_click_ratio_80': features.time_series_click.generate_future_click_ratio(4800),
-    'past_click_ratio_80': features.time_series_click.generate_future_click_ratio(4800),
-    'next_click_time_delta': features.time_series_click.NextClickTimeDelta,
-    'prev_click_time_delta': features.time_series_click.PrevClickTimeDelta,
-    'exact_same_click': features.time_series_click.ExactSameClick,  # It will be duplicated with all id counts
-    'exact_same_click_id': features.time_series_click.ExactSameClickId,
-    'all_click_count': features.time_series_click.AllClickCount,
-    'hourly_click_count': features.time_series_click.HourlyClickCount,
-    'average_attributed_ratio': features.time_series_click.AverageAttributedRatio,
-    'cumulative_click_count': features.time_series_click.CumulativeClickCount,
-    'cumulative_click_count_future': features.time_series_click.CumulativeClickCountFuture,
-    'median_attribute_time': features.time_series_click.MedianAttributeTime,
-    'median_attribute_time_past': features.time_series_click.MedianAttributeTimePast,
-    'median_attribute_time_past_v2': features.time_series_click.MedianAttributeTimePastV2,
-    'duplicated_row_index_diff': DuplicatedRowIndexDiff
+    'ip'                            : Ip,
+    'ip_for_filtering'              : IpForFiltering,
+    'app'                           : App,
+    'os'                            : Os,
+    'device'                        : Device,
+    'channel'                       : Channel,
+    'hour'                          : ClickHour,
+    'click_time'                    : ClickTime,
+    'minute'                        : ClickSecond,
+    'second'                        : ClickMinute,
+    'count'                         : BasicCount,
+    'is_attributed'                 : IsAttributed,
+    'zero-minute'                   : ZeroMinute,
+    'future_click_count_1'          : features.time_series_click.generate_future_click_count(60),
+    'future_click_count_10'         : features.time_series_click.generate_future_click_count(600),
+    'past_click_count_10'           : features.time_series_click.generate_past_click_count(600),
+    'future_click_count_80'         : features.time_series_click.generate_future_click_count(4800),
+    'past_click_count_80'           : features.time_series_click.generate_past_click_count(4800),
+    'future_click_ratio_10'         : features.time_series_click.generate_future_click_ratio(600),
+    'past_click_ratio_10'           : features.time_series_click.generate_future_click_ratio(600),
+    'future_click_ratio_80'         : features.time_series_click.generate_future_click_ratio(4800),
+    'past_click_ratio_80'           : features.time_series_click.generate_future_click_ratio(4800),
+    'next_click_time_delta'         : features.time_series_click.NextClickTimeDelta,
+    'prev_click_time_delta'         : features.time_series_click.PrevClickTimeDelta,
+    'exact_same_click'              : features.time_series_click.ExactSameClick,  # It will be duplicated with all id counts
+    'exact_same_click_id'           : features.time_series_click.ExactSameClickId,
+    'all_click_count'               : features.time_series_click.AllClickCount,
+    'hourly_click_count'            : features.time_series_click.HourlyClickCount,
+    'average_attributed_ratio'      : features.time_series_click.AverageAttributedRatio,
+    'cumulative_click_count'        : features.time_series_click.CumulativeClickCount,
+    'cumulative_click_count_future' : features.time_series_click.CumulativeClickCountFuture,
+    'median_attribute_time'         : features.time_series_click.MedianAttributeTime,
+    'median_attribute_time_past'    : features.time_series_click.MedianAttributeTimePast,
+    'median_attribute_time_past_v2' : features.time_series_click.MedianAttributeTimePastV2,
+    'duplicated_row_index_diff'     : DuplicatedRowIndexDiff
 }
 
 unparallelizable_feature_map = {
-    'komaki_lda_5': features.category_vector.KomakiLDA5,
-    'komaki_lda_10_ip': features.category_vector.KomakiLDA10_Ip,
-    'komaki_lda_5_no_device': features.category_vector.KomakiLDA5NoDevice,
-    'komaki_lda_10_no_device_1': features.category_vector.KomakiLDA10NoDevice_1,
-    'komaki_lda_10_no_device_2': features.category_vector.KomakiLDA10NoDevice_2,
-    'komaki_lda_20_ip': features.category_vector.KomakiLDA20_Ip,
-    'komaki_lda_20_no_device_ip': features.category_vector.KomakiLDA20NoDevice_Ip,
-    'komaki_lda_20_no_device_os': features.category_vector.KomakiLDA20NoDevice_Os,
-    'komaki_lda_20_no_device_channel': features.category_vector.KomakiLDA20NoDevice_Channel,
-    'komaki_lda_20_no_device_app': features.category_vector.KomakiLDA20NoDevice_App,
-    'komaki_lda_30_ip': features.category_vector.KomakiLDA30_Ip,
-    'komaki_pca_5': features.category_vector.KomakiPCA5,
-    'komaki_pca_5_no_device': features.category_vector.KomakiPCA5NoDevice,
-    'komaki_nmf_5': features.category_vector.KomakiNMF5,
-    'komaki_nmf_5_no_device': features.category_vector.KomakiNMF5NoDevice,
-    'single_pca_count': features.category_vector.SinglePCACount,
-    'single_pca_tfidf': features.category_vector.SinglePCATfIdf,
-    'komaki_lda_5_mindf_1': features.category_vector.KomakiLDA5MinDF1,
-    "user_item_lda_30": features.category_vector.UserItemLDA,
-    "item_user_lda_30": features.category_vector.ItemUserLDA,
+    'komaki_lda_5'                    : features.category_vector.KomakiLDA5,
+    'komaki_lda_10_ip'                : features.category_vector.KomakiLDA10_Ip,
+    'komaki_lda_5_no_device'          : features.category_vector.KomakiLDA5NoDevice,
+    'komaki_lda_10_no_device_1'       : features.category_vector.KomakiLDA10NoDevice_1,
+    'komaki_lda_10_no_device_2'       : features.category_vector.KomakiLDA10NoDevice_2,
+    'komaki_lda_20_ip'                : features.category_vector.KomakiLDA20_Ip,
+    'komaki_lda_20_no_device_ip'      : features.category_vector.KomakiLDA20NoDevice_Ip,
+    'komaki_lda_20_no_device_os'      : features.category_vector.KomakiLDA20NoDevice_Os,
+    'komaki_lda_20_no_device_channel' : features.category_vector.KomakiLDA20NoDevice_Channel,
+    'komaki_lda_20_no_device_app'     : features.category_vector.KomakiLDA20NoDevice_App,
+    'komaki_lda_30_ip'                : features.category_vector.KomakiLDA30_Ip,
+    'komaki_pca_5'                    : features.category_vector.KomakiPCA5,
+    'komaki_pca_5_no_device'          : features.category_vector.KomakiPCA5NoDevice,
+    'komaki_nmf_5'                    : features.category_vector.KomakiNMF5,
+    'komaki_nmf_5_no_device'          : features.category_vector.KomakiNMF5NoDevice,
+    'single_pca_count'                : features.category_vector.SinglePCACount,
+    'single_pca_tfidf'                : features.category_vector.SinglePCATfIdf,
+    'komaki_lda_5_mindf_1'            : features.category_vector.KomakiLDA5MinDF1,
+    "user_item_lda_30"                : features.category_vector.UserItemLDA,
+    "item_user_lda_30"                : features.category_vector.ItemUserLDA,
 }
 
 # These features are used only for filtering data and not used for training models
@@ -277,6 +277,7 @@ def main():
 
         sampled_train_data = \
             sampled_all_train[sampled_all_train.click_time < threshold].drop(filtering_features, axis=1)
+            
         sampled_valid_data = \
             sampled_all_train[sampled_all_train.click_time >= threshold].drop(filtering_features, axis=1)
 
@@ -286,11 +287,11 @@ def main():
             assert 'hour' in sampled_valid_data.columns, "This script now assumes we include 'hour' in features. " \
                                                          "Sorry for bad implementation:) "
 
-            weight = config.get('test_hours').get("train_weight", 1.0)
-            sampled_valid_data = sampled_valid_data[sampled_valid_data.hour.isin(in_test_hours)]
-            sampled_train_data_weight = np.ones(len(sampled_train_data))
-            sampled_train_data_weight[sampled_train_data.hour.isin(in_test_hours)] = weight
-            sampled_train_data_all_weight = np.ones(len(sampled_all_train))
+            weight                                                                    = config.get('test_hours').get("train_weight", 1.0)
+            sampled_valid_data                                                        = sampled_valid_data[sampled_valid_data.hour.isin(in_test_hours)]
+            sampled_train_data_weight                                                 = np.ones(len(sampled_train_data))
+            sampled_train_data_weight[sampled_train_data.hour.isin(in_test_hours)]    = weight
+            sampled_train_data_all_weight                                             = np.ones(len(sampled_all_train))
             sampled_train_data_all_weight[sampled_all_train.hour.isin(in_test_hours)] = weight
 
         predictors = sampled_train_data.columns.drop(target_variable)

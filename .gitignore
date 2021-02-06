@@ -192,3 +192,5 @@ mlflow_local.db
 /data/input/adfraud/train_100k/target.csv
 /data/input/adfraud/train_100k/features.csv
 /data/input/adfraud/train_10m
+/source/models/saved_models
+/source/models/.tmp
