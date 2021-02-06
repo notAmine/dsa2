@@ -4,25 +4,25 @@
 https://github.com/arita37/pytorch_tabular
 
 
-python model_torch_tabular.py test  
+python torch_tabular.py test
 
 
 
-        The core model which orchestrates everything from initializing the datamodule, the model, trainer, etc.
-        Args:
-            config (Optional[Union[DictConfig, str]], optional): Single OmegaConf DictConfig object or
-                the path to the yaml file holding all the config parameters. Defaults to None.
-            data_config (Optional[Union[DataConfig, str]], optional): DataConfig object or path to the yaml file. Defaults to None.
-            model_config (Optional[Union[ModelConfig, str]], optional): A subclass of ModelConfig or path to the yaml file.
-                Determines which model to run from the type of config. Defaults to None.
-            optimizer_config (Optional[Union[OptimizerConfig, str]], optional): OptimizerConfig object or path to the yaml file.
-                Defaults to None.
-            trainer_config (Optional[Union[TrainerConfig, str]], optional): TrainerConfig object or path to the yaml file.
-                Defaults to None.
-            experiment_config (Optional[Union[ExperimentConfig, str]], optional): ExperimentConfig object or path to the yaml file.
-                If Provided configures the experiment tracking. Defaults to None.
-            model_callable (Optional[Callable], optional): If provided, will override the model callable that will be loaded from the config.
-                Typically used when providing Custom Models
+The core model which orchestrates everything from initializing the datamodule, the model, trainer, etc.
+Args:
+    config (Optional[Union[DictConfig, str]], optional): Single OmegaConf DictConfig object or
+        the path to the yaml file holding all the config parameters. Defaults to None.
+    data_config (Optional[Union[DataConfig, str]], optional): DataConfig object or path to the yaml file. Defaults to None.
+    model_config (Optional[Union[ModelConfig, str]], optional): A subclass of ModelConfig or path to the yaml file.
+        Determines which model to run from the type of config. Defaults to None.
+    optimizer_config (Optional[Union[OptimizerConfig, str]], optional): OptimizerConfig object or path to the yaml file.
+        Defaults to None.
+    trainer_config (Optional[Union[TrainerConfig, str]], optional): TrainerConfig object or path to the yaml file.
+        Defaults to None.
+    experiment_config (Optional[Union[ExperimentConfig, str]], optional): ExperimentConfig object or path to the yaml file.
+        If Provided configures the experiment tracking. Defaults to None.
+    model_callable (Optional[Callable], optional): If provided, will override the model callable that will be loaded from the config.
+        Typically used when providing Custom Models
 
 """
 import os, sys,  numpy as np,  pandas as pd
@@ -286,7 +286,7 @@ def get_params(param_pars={}, **kw):
 
 def test2(nrow=10000):
     """
-       python source/models/model_torch_tabular.py test
+       python source/models/torch_tabular.py test
 
     """
     global model, session
@@ -413,7 +413,7 @@ def test(nrows=1000):
 
     m = {'model_pars': {
         ### LightGBM API model   #######################################
-         'model_class':  'model_torch_tabular.py::model'
+         'model_class':  'torch_tabular.py::model'
         ,'model_pars' : { 'task': "classification",
                           'metrics' : ["f1","accuracy"],
                           'metrics_params' : [{"num_classes":num_classes},{}]
