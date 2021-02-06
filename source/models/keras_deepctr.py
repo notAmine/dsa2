@@ -140,32 +140,32 @@ MODEL_PARAMS = {
 
 class Model:
     def __init__(self, model_pars=None, data_pars=None, compute_pars=None, **kwargs):
+        self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
+        self.history = None        
         if model_pars is None :
           return self
 
         model_name = model_pars.get("model_name", "DeepFM")
         model_list = list(MODEL_PARAMS.keys())
-
-        if not model_name in model_list :
-          raise ValueError('Not existing model', model_name)
-          return self
-
-        modeli              = getattr(importlib.import_module("deepctr.models"), model_name)
-
-
+      
+        assert model_name in model_list, raise ValueError('Not existing model', model_name)
+        modeli     = getattr(importlib.import_module("deepctr.models"), model_name)
 
         # 4.Define Model #################################################
+        model_params = model_pars.get('model_pars', MODEL_PARAMS[model_name] )
+
         if model_name in ["DIEN", "DIN", "DSIN"]:
 
              feature_cols = None
              behavior_feature_list = [] 
 
-             self.model = modeli(feature_cols, behavior_feature_list, **MODEL_PARAMS[model_name])
+             self.model = modeli(feature_cols, behavior_feature_list, **model_params )
 
         elif model_name == "MLR":
 
 
              self.model = modeli(feature_cols)
+
 
         elif model_name == "PNN":
 
@@ -175,7 +175,7 @@ class Model:
         else:  # ['WDL' ] :
              linear_cols = model_pars.get('linear_feature_cols', None)
              dnn_cols    = model_pars.get('dnn_feature_cols', None)
-             self.model = modeli(linear_cols, dnn_cols, **MODEL_PARAMS[model_name])
+             self.model = modeli(linear_cols, dnn_cols, **model_params )
 
         #if model_name in ['WDL' ] : 
         #    self.model = modeli(linear_feature_cols, dnn_feature_cols, **MODEL_PARAMS[model_name])

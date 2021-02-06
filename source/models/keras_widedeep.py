@@ -1,7 +1,7 @@
 # pylint: disable=C0321,C0103,C0301,E1305,E1121,C0302,C0330,C0111,W0613,W0611,R1705
 # -*- coding: utf-8 -*-
 """
-python source/models/model_keras_widedeep.py
+python source/models/keras_widedeep.py
 
 
 pip install Keras==2.4.3
@@ -36,7 +36,6 @@ def init(*kw, **kwargs):
     global model, session
     model = Model(*kw, **kwargs)
     session = None
-
 
 
 def Modelcustom(n_wide_cross, n_wide, n_feat=8, m_EMBEDDING=10, loss='mse', metric = 'mean_squared_error'):
@@ -87,6 +86,7 @@ class Model(object):
             model_class = model_pars['model_class']  # globals() removed
             self.model  = Modelcustom(**model_pars['model_pars'])
             if VERBOSE: log(model_class, self.model)
+            aelf.model.summary()
 
 
 def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
@@ -94,20 +94,31 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
     global model, session
     session = None  # Session type for compute
-    Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
 
+
+    """
+    Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
+    if VERBOSE: log(Xtrain.shape, model.model)
+    
     n_wide_features = data_pars.get('n_wide_features', None)
     n_deep_features = data_pars.get('n_deep_features', None)
 
     Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
-    Xtest_A, Xtest_B, Xtest_C = Xtest[:, :n_wide_features], Xtest[:, -n_deep_features:], Xtest[:, -n_deep_features:]
-
-    if VERBOSE: log(Xtrain.shape, model.model)
-
+    Xtest_A, Xtest_B, Xtest_C    = Xtest[:, :n_wide_features], Xtest[:, -n_deep_features:], Xtest[:, -n_deep_features:]
     cpars = compute_pars.get("compute_pars", {})
     assert 'epochs' in cpars, 'epoch'
 
     hist = model.model.fit((Xtrain_A, Xtrain_B, Xtrain_C), ytrain,  **cpars)
+    model.history = hist
+
+    """
+
+    Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train")
+
+    cpars = compute_pars.get("compute_pars", {})
+    assert 'epochs' in cpars, 'epoch'
+
+    hist = model.model.fit( Xtrain_tuple, ytrain,  **cpars)
     model.history = hist
 
 
@@ -116,14 +127,13 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
        Return metrics of the model when fitted.
     """
     global model, session
-    data_pars['train'] = True
+    # data_pars['train'] = True
     Xval, yval = get_dataset(data_pars, task_type="eval")
 
-    n_wide_features = data_pars.get('n_wide_features', None)
-    n_deep_features = data_pars.get('n_deep_features', None)
+    # n_wide_features = data_pars.get('n_wide_features', None)
+    # n_deep_features = data_pars.get('n_deep_features', None)
 
-    Xval_A, Xval_B, Xval_C = Xval[:, :n_wide_features], Xval[:, -n_deep_features:], Xval[:, -n_deep_features:]
-    ypred = predict((Xval_A, Xval_B, Xval_C), data_pars, compute_pars, out_pars)
+    ypred = predict(Xval, data_pars, compute_pars, out_pars)
 
     # log(data_pars)
     mpars = compute_pars.get("metrics_pars", {'metric_name': 'mae'})
@@ -133,17 +143,16 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
         "mae": sklearn.metrics.mean_absolute_error
     }[mpars['metric_name']]
 
-    mpars2 = mpars.get("metrics_pars", {})  ##Specific to score
+    mpars2    = mpars.get("metrics_pars", {})  ##Specific to score
     score_val = scorer(yval, ypred[0], **mpars2)
 
     ddict = [{"metric_val": score_val, 'metric_name': mpars['metric_name']}]
-
     return ddict
 
 
 def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     global model, session
-
+    """
     if Xpred is None:
         # data_pars['train'] = False
         n_wide_features = data_pars.get('n_wide_features', None)
@@ -153,12 +162,17 @@ def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
         Xpred_A, Xpred_B, Xpred_C = Xpred[:, :n_wide_features], Xpred[:, -n_deep_features:], Xpred[:, -n_deep_features:]
     else:  # if Xpred is tuple contains Xpred_A, Xpred_B, Xpred_C
         Xpred_A, Xpred_B, Xpred_C = Xpred
-
     ypred = model.model.predict((Xpred_A, Xpred_B, Xpred_C))
+    """
+    if Xpred is None:
+        # data_pars['train'] = False
+        Xpred = get_dataset(data_pars, task_type="predict")
+
+    ypred = model.model.predict(Xpred )
 
     ypred_proba = None  ### No proba
     if compute_pars.get("probability", False):
-         ypred_proba = model.model.predict_proba((Xpred_A, Xpred_B, Xpred_C))
+         ypred_proba = model.model.predict_proba(Xpred)
     return ypred, ypred_proba
 
 
@@ -210,7 +224,7 @@ def preprocess(prepro_pars):
 
     if prepro_pars['type'] == 'train':
         from sklearn.model_selection import train_test_split
-        df = pd.read_csv(prepro_pars['path'])
+        df  = pd.read_csv(prepro_pars['path'])
         dfX = df[prepro_pars['colX']]
         dfy = df[prepro_pars['coly']]
         Xtrain, Xtest, ytrain, ytest = train_test_split(dfX.values, dfy.values,
@@ -231,21 +245,56 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     """
       "ram"  :
       "file" :
+
+    n_wide_features = data_pars.get('n_wide_features', None)
+    n_deep_features = data_pars.get('n_deep_features', None)
+
+    Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
+    Xtest_A, Xtest_B, Xtest_C    = Xtest[:, :n_wide_features], Xtest[:, -n_deep_features:], Xtest[:, -n_deep_features:]
+
+
     """
     # log(data_pars)
     data_type = data_pars.get('type', 'ram')
     if data_type == "ram":
+        n_wide_features = data_pars.get('n_wide_features', None)
+        n_deep_features = data_pars.get('n_deep_features', None)
+
         if task_type == "predict":
             d = data_pars[task_type]
-            return d["X"]
+
+            Xtrain = d["X"]
+            Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
+            Xtuple_train = (Xtrain_A, Xtrain_B, Xtrain_C)
+            return Xtuple_train
+            # return d["X"]
 
         if task_type == "eval":
             d = data_pars[task_type]
-            return d["X"], d["y"]
+
+
+            Xtrain, ytrain  = d["Xtrain"], d["ytrain"]
+            Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
+            Xtuple_train = (Xtrain_A, Xtrain_B, Xtrain_C)
+
+            return Xtuple_train, ytrain
+            #return d["X"], d["y"]
+
 
         if task_type == "train":
             d = data_pars[task_type]
-            return d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
+
+            Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
+
+            Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
+            Xtest_A, Xtest_B, Xtest_C    = Xtest[:, :n_wide_features], Xtest[:, -n_deep_features:], Xtest[:, -n_deep_features:]
+
+            Xtuple_train = (Xtrain_A, Xtrain_B, Xtrain_C)
+            Xtuple_test  = (Xtest_A, Xtest_B, Xtrain_C)
+
+            return Xtuple_train, ytrain, Xtuple_test, ytest
+            # return d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
+
 
     elif data_type == "file":
         raise Exception(f' {data_type} data_type Not implemented ')
@@ -274,6 +323,38 @@ def get_params(param_pars={}, **kw):
         raise Exception(f"Not support choice {choice} yet")
 
 
+def test_helper(model_pars, data_pars, compute_pars):
+    global model, session
+
+    root  = "ztmp/"
+    model = Model(model_pars=model_pars, data_pars=data_pars, compute_pars=compute_pars)
+
+    log('\n\nTraining the model..')
+    fit(data_pars=data_pars, compute_pars=compute_pars, out_pars=None)
+    log('Training completed!\n\n')
+
+    log('Predict data..')
+    ypred, ypred_proba = predict(Xpred=None, data_pars=data_pars, compute_pars=compute_pars)
+    log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
+    log('Data successfully predicted!\n\n')
+
+    log('Evaluating the model..')
+    log(eval(data_pars=data_pars, compute_pars=compute_pars))
+    log('Evaluating completed!\n\n')
+    #
+    log('Saving model..')
+    save(path= root + '/model_dir/')
+    log('Model successfully saved!\n\n')
+
+    log('Load model..')
+    model, session = load_model(path= root + "/model_dir/")
+    log('Model successfully loaded!\n\n')
+
+    log('Model architecture:')
+    log(model.summary())
+
+
+#######################################################################################
 def test(config=''):
     global model, session
 
@@ -309,31 +390,10 @@ def test(config=''):
     compute_pars = { 'compute_pars' : { 'epochs': 2,
                     'callbacks': callbacks} }
 
-    model = Model(model_pars=model_pars, data_pars=data_pars, compute_pars=compute_pars)
 
-    print('\n\nTraining the model..')
-    fit(data_pars=data_pars, compute_pars=compute_pars, out_pars=None)
-    print('Training completed!\n\n')
+    test_helper(model_pars, data_pars, compute_pars)
+    
 
-    print('Predict data..')
-    ypred, ypred_proba = predict(Xpred=None, data_pars=data_pars, compute_pars=compute_pars)
-    print(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
-    print('Data successfully predicted!\n\n')
-
-    print('Evaluating the model..')
-    print(eval(data_pars=data_pars, compute_pars=compute_pars))
-    print('Evaluating completed!\n\n')
-
-    print('Saving model..')
-    save(path='model_dir/')
-    print('Model successfully saved!\n\n')
-
-    print('Load model..')
-    model, session = load_model(path="model_dir/")
-    print('Model successfully loaded!\n\n')
-
-    print('Model architecture:')
-    print(model.summary())
 
 
 if __name__ == "__main__":

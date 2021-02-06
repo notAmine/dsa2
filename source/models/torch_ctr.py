@@ -298,7 +298,7 @@ def get_params(param_pars={}, **kw):
 
 def test(config=''):
     """
-       python model_torch_tabular.py test
+       python torch_tabular.py test
 
     """
     global model, session
@@ -358,7 +358,7 @@ def test(config=''):
 
 def test2(config=''):
     """
-       python model_torch_tabular.py test
+       python torch_tabular.py test
 
     """
     global model, session
