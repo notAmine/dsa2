@@ -362,13 +362,13 @@ def test(config=''):
     y = np.random.binomial(n=1, p=0.5, size=[100])
 
     X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, random_state=2021, stratify=y)
-    X_train, X_valid, y_train, y_valid = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
+    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
 
     early_stopping = EarlyStopping(monitor='loss', patience=3)
-    model_ckpt = ModelCheckpoint(filepath='', save_best_only=True, monitor='loss')
-    callbacks = [early_stopping, model_ckpt]
+    model_ckpt     = ModelCheckpoint(filepath='', save_best_only=True, monitor='loss')
+    callbacks      =     [early_stopping, model_ckpt]
 
-    n_features = X_train.shape[1]  # number of features
+    n_features      = X_train.shape[1]  # number of features
     n_wide_features = 20
     n_deep_features = n_features - n_wide_features
 
