@@ -86,7 +86,7 @@ class Model(object):
             model_class = model_pars['model_class']  # globals() removed
             self.model  = Modelcustom(**model_pars['model_pars'])
             if VERBOSE: log(model_class, self.model)
-            aelf.model.summary()
+            self.model.summary()
 
 
 def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
