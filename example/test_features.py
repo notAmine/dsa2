@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 
-python  example/test_encoder.py  preprocess  --nsample 100
+python  example/test_features.py  preprocess  --nsample 100
 
-python  example/test_encoder.py  train       --nsample 200
+python  example/test_features.py  train       --nsample 200
 
 
 
@@ -19,7 +19,6 @@ warnings.filterwarnings('ignore')
 ###### Path ########################################################################
 root_repo      =  os.path.abspath(os.getcwd()).replace("\\", "/") + "/"     ; print(root_repo)
 THIS_FILEPATH  =  os.path.abspath(__file__) 
-
 
 sys.path.append(root_repo)
 from source.util_feature import save,os_get_function_name
@@ -172,13 +171,12 @@ def config1(path_model_out="") :
     , 'post_process_fun' : post_process_fun
     , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,
 
-
     ### Pipeline for data processing ##############################
     'pipe_list': [
         {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
         {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
         # {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
-        # {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+        {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
         # {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
         # {'uri': 'source/prepro.py::pd_colcross',             'pars': {}, 'cols_family': 'colcross',   'cols_out': 'colcross_pair_onehot',  'type': 'cross'},
 
@@ -190,9 +188,7 @@ def config1(path_model_out="") :
 
 
         {'uri': 'source/prepro.py::pd_col_genetic_transform',
-
          'pars': {'pars_generic' :{
-
                                  ### Issue with Binary 1 or 0  : need to pass with Logistic
                                 'metric': 'spearman',
                                 'generations': 100, 'population_size': 100,  ### Higher than nb_features
@@ -203,11 +199,8 @@ def config1(path_model_out="") :
                                 'max_samples' : 0.9, 'verbose' : 1,
                                 #'n_components'      ###    'metric': 'spearman', Control number of outtput features  : n_components
                                 'random_state' :0, 'n_jobs' : 4,
-
                                },
-
                  },
-
                   'cols_family': 'colgen',     'cols_out': 'col_genetic',     
                   'type': 'add_coly'   #### Need to add target coly             
               },
