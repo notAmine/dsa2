@@ -622,30 +622,6 @@ def test(config=''):
                         'callbacks': callbacks} }
         }
 
-
-        model_pars = {'model_name': model_name,
-                      'linear_feat_col'    : linear_feat_col,
-                      'dnn_feat_col'       : dnn_feat_col,
-                      'behavior_feat_list' : behavior_feat_list,
-                      'region_feat_col'    : region_feat_col,
-                      'base_feat_col'      : base_feat_col,
-                      'task'                  : task,
-                      'model_pars': {'optimizer': opt,
-                                     'loss': loss,
-                                     'metrics': metrics}
-                     }
-        data_pars = {'train': {'Xtrain': X_train,
-                               'ytrain' : y_train,
-                               'Xval'   : X_val,
-                               'yval'   : y_val},
-                     'eval': {'X': X_test,
-                              'y': y_test},
-                     'predict': {'X': X_test},
-                    }
-        # compute_pars = {}
-        compute_pars = {'compute_pars': {'epochs': 1,
-                        'callbacks': callbacks} }
-
         test_helper(model_name, m['model_pars'], m['data_pars'], m['compute_pars'])
         # log('Model architecture:')
         # log(model.summary())
