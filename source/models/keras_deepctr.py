@@ -376,11 +376,11 @@ def get_xy_fd(use_neg=False, hash_flag=False, use_session=False):
                        DenseFeat('pay_score' , 1)]
 
     behavior_feat_list = ["item_id", "cate_id"]
-    uid = np.array([0, 1, 2])
-    ugender = np.array([0, 1, 0])
-    iid = np.array([1, 2, 3])  # 0 is mask value
-    cate_id = np.array([1, 2, 2])  # 0 is mask value
-    score = np.array([0.1, 0.2, 0.3])
+    uid                = np.array([0, 1, 2])
+    ugender            = np.array([0, 1, 0])
+    iid                = np.array([1, 2, 3])  # 0 is mask value
+    cate_id            = np.array([1, 2, 2])  # 0 is mask value
+    score              = np.array([0.1, 0.2, 0.3])
 
     if use_session:
         feature_col += [
@@ -388,20 +388,21 @@ def get_xy_fd(use_neg=False, hash_flag=False, use_session=False):
                              maxlen=4), VarLenSparseFeat(
                 SparseFeat('sess_0_cate_id', 2 + 1, embedding_dim=4, use_hash=hash_flag, embedding_name='cate_id'),
                 maxlen=4)]
+
         feature_col += [
             VarLenSparseFeat(SparseFeat('sess_1_item_id', 3 + 1, embedding_dim=4, use_hash=hash_flag, embedding_name='item_id'),
                              maxlen=4), VarLenSparseFeat(
                 SparseFeat('sess_1_cate_id', 2 + 1, embedding_dim=4, use_hash=hash_flag, embedding_name='cate_id'),
                 maxlen=4)]
-        sess1_iid = np.array([[1, 2, 3, 0], [3, 2, 1, 0], [0, 0, 0, 0]])
+        sess1_iid     = np.array([[1, 2, 3, 0], [3, 2, 1, 0], [0, 0, 0, 0]])
         sess1_cate_id = np.array([[1, 2, 2, 0], [2, 2, 1, 0], [0, 0, 0, 0]])
 
-        sess2_iid = np.array([[1, 2, 3, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+        sess2_iid     = np.array([[1, 2, 3, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
         sess2_cate_id = np.array([[1, 2, 2, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
 
-        sess_number = np.array([2, 1, 0])
+        sess_number   = np.array([2, 1, 0])
 
-        feature_dict = {'user': uid, 'gender': ugender, 'item_id': iid, 'cate_id': cate_id,
+        feature_dict  = {'user': uid, 'gender': ugender, 'item_id': iid, 'cate_id': cate_id,
                         'sess_0_item_id': sess1_iid, 'sess_0_cate_id': sess1_cate_id, 'pay_score': score,
                         'sess_1_item_id': sess2_iid, 'sess_1_cate_id': sess2_cate_id, }
     else:
@@ -436,9 +437,9 @@ def get_xy_fd(use_neg=False, hash_flag=False, use_session=False):
 
 def get_xy_dataset(data_sample=None):
     if data_sample == "avazu":
-        data = pd.read_csv('https://raw.githubusercontent.com/shenweichen/DeepCTR/master/examples/avazu_sample.txt')
-        data['day'] = data['hour'].apply(lambda x: str(x)[4:6])
-        data['hour'] = data['hour'].apply(lambda x: str(x)[6:])
+        df         = pd.read_csv('https://raw.githubusercontent.com/shenweichen/DeepCTR/master/examples/avazu_sample.txt')
+        df['day']  = df['hour'].apply(lambda x: str(x)[4:6])
+        df['hour'] = df['hour'].apply(lambda x: str(x)[6:])
 
         sparse_features = ['hour', 'C1', 'banner_pos', 'site_id', 'site_domain',
                            'site_category', 'app_id', 'app_domain', 'app_category', 'device_id',
@@ -446,13 +447,13 @@ def get_xy_dataset(data_sample=None):
                            'C14',
                            'C15', 'C16', 'C17', 'C18', 'C19', 'C20', 'C21', ]
 
-        data[sparse_features] = data[sparse_features].fillna('-1', )
+        df[sparse_features] = df[sparse_features].fillna('-1', )
         target = ['click']
 
         # 1.Label Encoding for sparse features,and do simple Transformation for dense features
         for feat in sparse_features:
-            lbe = LabelEncoder()
-            data[feat] = lbe.fit_transform(data[feat])
+            lbe      = LabelEncoder()
+            df[feat] = lbe.fit_transform(df[feat])
 
         # 2.count #unique features for each sparse field,and record dense feature field name
         field_info = dict(C14              = 'user',    C15='user', C16='user', C17='user',
@@ -466,7 +467,7 @@ def get_xy_dataset(data_sample=None):
                           )
 
         fixlen_feat_col = [
-            SparseFeat(name, vocabulary_size=data[name].nunique(), embedding_dim=16, use_hash=False, dtype='int32',
+            SparseFeat(name, vocabulary_size=df[name].nunique(), embedding_dim=16, use_hash=False, dtype='int32',
                        group_name=field_info[name]) for name in sparse_features]
 
         dnn_feat_col    = fixlen_feat_col
@@ -474,24 +475,23 @@ def get_xy_dataset(data_sample=None):
         feature_names          = get_feature_names(linear_feat_col + dnn_feat_col)
 
     elif data_sample == "criteo":
-        data = pd.read_csv('https://raw.githubusercontent.com/shenweichen/DeepCTR/master/examples/criteo_sample.txt')
-
+        df = pd.read_csv('https://raw.githubusercontent.com/shenweichen/DeepCTR/master/examples/criteo_sample.txt')
         sparse_features       = ['C' + str(i) for i in range(1, 27)]
         dense_features        = ['I' + str(i) for i in range(1, 14)]
 
-        data[sparse_features] = data[sparse_features].fillna('-1', )
-        data[dense_features]  = data[dense_features].fillna(0, )
+        df[sparse_features] = df[sparse_features].fillna('-1', )
+        df[dense_features]  = df[dense_features].fillna(0, )
         target                = ['label']
 
         # 1.Label Encoding for sparse features,and do simple Transformation for dense features
         for feat in sparse_features:
             lbe        = LabelEncoder()
-            data[feat] = lbe.fit_transform(data[feat])
+            df[feat] = lbe.fit_transform(df[feat])
         mms = MinMaxScaler(feature_range=(0, 1))
-        data[dense_features] = mms.fit_transform(data[dense_features])
+        df[dense_features] = mms.fit_transform(df[dense_features])
 
         # 2.count #unique features for each sparse field,and record dense feature field name
-        fixlen_feat_col = [SparseFeat(feat, vocabulary_size=data[feat].nunique(),embedding_dim=4)
+        fixlen_feat_col = [SparseFeat(feat, vocabulary_size=df[feat].nunique(),embedding_dim=4)
                                 for i,feat in enumerate(sparse_features)] + [DenseFeat(feat, 1,)
                                 for feat in dense_features]
 
@@ -500,24 +500,23 @@ def get_xy_dataset(data_sample=None):
         feature_names   = get_feature_names(linear_feat_col + dnn_feat_col)
 
     elif data_sample == "movielens":
-        data = pd.read_csv("https://raw.githubusercontent.com/shenweichen/DeepCTR/master/examples/movielens_sample.txt")
-        sparse_features = ["movie_id", "user_id",
-                            "gender", "age", "occupation", "zip"]
+        df = pd.read_csv("https://raw.githubusercontent.com/shenweichen/DeepCTR/master/examples/movielens_sample.txt")
+        sparse_features = ["movie_id", "user_id",   "gender", "age", "occupation", "zip"]
         target = ['rating']
 
         # 1.Label Encoding for sparse features,and do simple Transformation for dense features
         for feat in sparse_features:
             lbe = LabelEncoder()
-            data[feat] = lbe.fit_transform(data[feat])
+            df[feat] = lbe.fit_transform(df[feat])
 
         # 2.count #unique features for each sparse field
-        fixlen_feat_col = [SparseFeat(feat, data[feat].nunique(),embedding_dim=4)  for feat in sparse_features]
+        fixlen_feat_col = [SparseFeat(feat, df[feat].nunique(),embedding_dim=4)  for feat in sparse_features]
         linear_feat_col = fixlen_feat_col
-        dnn_feat_col = fixlen_feat_col
-        feature_names = get_feature_names(linear_feat_col + dnn_feat_col)
+        dnn_feat_col    = fixlen_feat_col
+        feature_names   = get_feature_names(linear_feat_col + dnn_feat_col)
 
     # 3.generate input data for model
-    train_full, test  = train_test_split(data, random_state=2021, stratify=data[target])
+    train_full, test  = train_test_split(df, random_state=2021, stratify=df[target])
     train, val        = train_test_split(train_full, random_state=2021, stratify=train_full[target])
 
     train_model_input = {name:train[name] for name in feature_names}
@@ -538,7 +537,7 @@ def test(config=''):
                'FNN', 'ONN', 'NFM', 'AFM', 'FiBiNET', 'PNN', 'FGCNN']
 
     # iterate to test each model on the list model
-    for model_name in model_l:
+    for name in model_l:
 
         # get dataset for testing
         linear_feat_col, dnn_feat_col  = None, None
@@ -552,32 +551,32 @@ def test(config=''):
         metrics = ['binary_crossentropy']
 
 
-        if model_name in ['WDL', 'FNN', 'DCN', 'DCNMix', 'MLR']:
-            if model_name=='MLR':
+        if name in ['WDL', 'FNN', 'DCN', 'DCNMix', 'MLR']:
+            if name=='MLR':
                 X_train, X_val, X_test, y_train, y_val, y_test, region_feat_col, base_feat_col = get_xy_random()
             else:
                 X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col = get_xy_random()
             # setting up model_pars for dataset task
             metrics = ['accuracy']
 
-        elif model_name in ['DIN', 'DIEN', 'DSIN']:
-            if model_name=="DIN" : x, y, dnn_feat_col, behavior_feat_list = get_xy_fd()
-            if model_name=="DIEN": x, y, dnn_feat_col, behavior_feat_list = get_xy_fd(use_neg=True)
-            if model_name=="DSIN": x, y, dnn_feat_col, behavior_feat_list = get_xy_fd(hash_flag=True, use_session=True)
+        elif name in ['DIN', 'DIEN', 'DSIN']:
+            if name=="DIN" : x, y, dnn_feat_col, behavior_feat_list = get_xy_fd()
+            if name=="DIEN": x, y, dnn_feat_col, behavior_feat_list = get_xy_fd(use_neg=True)
+            if name=="DSIN": x, y, dnn_feat_col, behavior_feat_list = get_xy_fd(hash_flag=True, use_session=True)
             # since the example data very small, we don't split the data
             X_train, X_val, X_test, y_train, y_val, y_test = x, x, x, y, y, y
 
 
         else:                
-            if model_name == 'FLEN':
+            if name == 'FLEN':
                 # classification dataset
                 X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col = get_xy_dataset("avazu")
 
-            elif model_name in ['DeepFM', 'xDeepFM', 'AutoInt', 'FNN', 'ONN', 'NFM', 'FiBiNET', 'FGCNN']:
+            elif name in ['DeepFM', 'xDeepFM', 'AutoInt', 'FNN', 'ONN', 'NFM', 'FiBiNET', 'FGCNN']:
                 # classification dataset
                 X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col = get_xy_dataset("criteo")
 
-            elif model_name in ['AFM', 'CCPM', 'PNN']:
+            elif name in ['AFM', 'CCPM', 'PNN']:
                 # regression dataset
                 X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col = get_xy_dataset("movielens")
                 # setting up model_pars for dataset task
@@ -595,7 +594,7 @@ def test(config=''):
         callbacks = [early_stopping]
 
         m = {
-          'model_pars' : {'model_name': model_name,
+          'model_pars' : {'model_name': name,
                       'linear_feat_col'    : linear_feat_col,
                       'dnn_feat_col'       : dnn_feat_col,
                       'behavior_feat_list' : behavior_feat_list,
@@ -621,7 +620,7 @@ def test(config=''):
                         'callbacks': callbacks} }
         }
 
-        test_helper(model_name, m['model_pars'], m['data_pars'], m['compute_pars'])
+        test_helper(name, m['model_pars'], m['data_pars'], m['compute_pars'])
         # log('Model architecture:')
         # log(model.summary())
 
