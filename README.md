@@ -26,6 +26,8 @@ Preprocessors Check
      
 
 ### Install 
+     git clone 
+     cd dsa2
      pip install -r zrequirements.txt
 
 
