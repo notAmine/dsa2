@@ -370,10 +370,10 @@ def get_xy_random():
 
 def get_xy_fd(use_neg=False, hash_flag=False, use_session=False):
     feature_col = [SparseFeat('user', 3, embedding_dim=10, use_hash=hash_flag),
-                       SparseFeat('gender', 2, embedding_dim=4, use_hash=hash_flag),
-                       SparseFeat('item_id', 3 + 1, embedding_dim=4, use_hash=hash_flag),
-                       SparseFeat('cate_id', 2 + 1, embedding_dim=4, use_hash=hash_flag),
-                       DenseFeat('pay_score', 1)]
+                       SparseFeat('gender'   , 2     , embedding_dim=4 , use_hash=hash_flag) ,
+                       SparseFeat('item_id'  , 3 + 1 , embedding_dim=4 , use_hash=hash_flag) ,
+                       SparseFeat('cate_id'  , 2 + 1 , embedding_dim=4 , use_hash=hash_flag) ,
+                       DenseFeat('pay_score' , 1)]
 
     behavior_feat_list = ["item_id", "cate_id"]
     uid = np.array([0, 1, 2])
@@ -455,12 +455,12 @@ def get_xy_dataset(data_sample=None):
             data[feat] = lbe.fit_transform(data[feat])
 
         # 2.count #unique features for each sparse field,and record dense feature field name
-        field_info = dict(C14              = 'user', C15='user', C16='user', C17='user',
-                          C18              = 'user', C19='user', C20='user', C21='user', C1='user',
+        field_info = dict(C14              = 'user',    C15='user', C16='user', C17='user',
+                          C18              = 'user',    C19='user', C20='user', C21='user', C1='user',
                           banner_pos       = 'context', site_id='context',
                           site_domain      = 'context', site_category='context',
-                          app_id           = 'item', app_domain='item', app_category='item',
-                          device_model     = 'user', device_type='user',
+                          app_id           = 'item',    app_domain='item', app_category='item',
+                          device_model     = 'user',    device_type='user',
                           device_conn_type = 'context', hour='context',
                           device_id        = 'user'
                           )
@@ -476,12 +476,12 @@ def get_xy_dataset(data_sample=None):
     elif data_sample == "criteo":
         data = pd.read_csv('https://raw.githubusercontent.com/shenweichen/DeepCTR/master/examples/criteo_sample.txt')
 
-        sparse_features = ['C' + str(i) for i in range(1, 27)]
-        dense_features = ['I' + str(i) for i in range(1, 14)]
+        sparse_features       = ['C' + str(i) for i in range(1, 27)]
+        dense_features        = ['I' + str(i) for i in range(1, 14)]
 
         data[sparse_features] = data[sparse_features].fillna('-1', )
-        data[dense_features] = data[dense_features].fillna(0, )
-        target = ['label']
+        data[dense_features]  = data[dense_features].fillna(0, )
+        target                = ['label']
 
         # 1.Label Encoding for sparse features,and do simple Transformation for dense features
         for feat in sparse_features:
@@ -495,9 +495,9 @@ def get_xy_dataset(data_sample=None):
                                 for i,feat in enumerate(sparse_features)] + [DenseFeat(feat, 1,)
                                 for feat in dense_features]
 
-        dnn_feat_col = fixlen_feat_col
+        dnn_feat_col    = fixlen_feat_col
         linear_feat_col = fixlen_feat_col
-        feature_names = get_feature_names(linear_feat_col + dnn_feat_col)
+        feature_names   = get_feature_names(linear_feat_col + dnn_feat_col)
 
     elif data_sample == "movielens":
         data = pd.read_csv("https://raw.githubusercontent.com/shenweichen/DeepCTR/master/examples/movielens_sample.txt")
@@ -511,23 +511,22 @@ def get_xy_dataset(data_sample=None):
             data[feat] = lbe.fit_transform(data[feat])
 
         # 2.count #unique features for each sparse field
-        fixlen_feat_col = [SparseFeat(feat, data[feat].nunique(),embedding_dim=4)
-                                    for feat in sparse_features]
+        fixlen_feat_col = [SparseFeat(feat, data[feat].nunique(),embedding_dim=4)  for feat in sparse_features]
         linear_feat_col = fixlen_feat_col
         dnn_feat_col = fixlen_feat_col
         feature_names = get_feature_names(linear_feat_col + dnn_feat_col)
 
     # 3.generate input data for model
-    train_full, test = train_test_split(data, random_state=2021, stratify=data[target])
-    train, val = train_test_split(train_full, random_state=2021, stratify=train_full[target])
+    train_full, test  = train_test_split(data, random_state=2021, stratify=data[target])
+    train, val        = train_test_split(train_full, random_state=2021, stratify=train_full[target])
 
     train_model_input = {name:train[name] for name in feature_names}
-    val_model_input = {name:val[name] for name in feature_names}
-    test_model_input = {name:test[name] for name in feature_names}
+    val_model_input   = {name:val[name]   for name in feature_names}
+    test_model_input  = {name:test[name]  for name in feature_names}
 
-    X_train, y_train = train_model_input, train[target].values
-    X_val, y_val = val_model_input, val[target].values
-    X_test, y_test = test_model_input, test[target].values
+    X_train, y_train  = train_model_input, train[target].values
+    X_val, y_val      = val_model_input,   val[target].values
+    X_test, y_test    = test_model_input,  test[target].values
     return X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col
 
 
