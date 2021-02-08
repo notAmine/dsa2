@@ -1,7 +1,9 @@
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
+
 python  example/test_encoder.py  preprocess  --nsample 100
+
 python  example/test_encoder.py  train       --nsample 200
 
 
@@ -181,7 +183,7 @@ def config1(path_model_out="") :
         # {'uri': 'source/prepro.py::pd_colcross',             'pars': {}, 'cols_family': 'colcross',   'cols_out': 'colcross_pair_onehot',  'type': 'cross'},
 
 
-        # {'uri': 'source/prepro.py::pd_colcat_minhash',       'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_minhash',     'type': ''             },
+        {'uri': 'source/prepro.py::pd_colcat_minhash',       'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_minhash',     'type': ''             },
 
 
         # {'uri': 'source/prepro.py::pd_coltext_universal_google',   'pars': {}, 'cols_family': 'coltext',     'cols_out': 'coltext_universal_google',     'type': ''    },
@@ -226,8 +228,7 @@ def config1(path_model_out="") :
       #  "colnum", "colnum_bin", "colnum_onehot", "colnum_binmap",  #### Colnum columns
       #  "colcat", "colcat_bin", "colcat_onehot", "colcat_bin_map",  #### colcat columns
       #  'colcross_single_onehot_select', "colcross_pair_onehot",  'colcross_pair',  #### colcross columns
-      #  'coldate',
-      #  'coltext',
+      #  'coldate','coltext',
       'cols_model_group': [ 'colnum',  ### should be optional 'colcat'
 
                             'colcat_bin',
