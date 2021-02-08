@@ -566,23 +566,21 @@ def test(config=''):
             # since the example data very small, we don't split the data
             X_train, X_val, X_test, y_train, y_val, y_test = x, x, x, y, y, y
 
+        elif name == 'FLEN':
+            # classification dataset
+            X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col = get_xy_dataset("avazu")
 
-        else:                
-            if name == 'FLEN':
-                # classification dataset
-                X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col = get_xy_dataset("avazu")
+        elif name in ['DeepFM', 'xDeepFM', 'AutoInt', 'FNN', 'ONN', 'NFM', 'FiBiNET', 'FGCNN']:
+            # classification dataset
+            X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col = get_xy_dataset("criteo")
 
-            elif name in ['DeepFM', 'xDeepFM', 'AutoInt', 'FNN', 'ONN', 'NFM', 'FiBiNET', 'FGCNN']:
-                # classification dataset
-                X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col = get_xy_dataset("criteo")
-
-            elif name in ['AFM', 'CCPM', 'PNN']:
-                # regression dataset
-                X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col = get_xy_dataset("movielens")
-                # setting up model_pars for dataset task
-                task = 'regression'
-                loss = 'mse'
-                metrics = ['mae']
+        elif name in ['AFM', 'CCPM', 'PNN']:
+            # regression dataset
+            X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col = get_xy_dataset("movielens")
+            # setting up model_pars for dataset task
+            task = 'regression'
+            loss = 'mse'
+            metrics = ['mae']
 
         # initalize model_pars
         opt = keras.optimizers.Adam()
