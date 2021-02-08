@@ -1,7 +1,7 @@
 # pylint: disable=C0321,C0103,C0301,E1305,E1121,C0302,C0330,C0111,W0613,W0611,R1705
 # -*- coding: utf-8 -*-
 """
-python source/models/keras_widedeep.py
+python source/models/keras_widedeep.py  test
 
 
 pip install Keras==2.4.3
@@ -40,40 +40,39 @@ def init(*kw, **kwargs):
 
 def Modelcustom(n_wide_cross, n_wide, n_feat=8, m_EMBEDDING=10, loss='mse', metric = 'mean_squared_error'):
 
-        # Wide model with the functional API
-        col_wide_cross = layers.Input(shape=(n_wide_cross,))
-        col_wide       = layers.Input(shape=(n_wide,))
-        merged_layer   = layers.concatenate([col_wide_cross, col_wide])
-        merged_layer   = layers.Dense(15, activation='relu')(merged_layer)
-        predictions    = layers.Dense(1)(merged_layer)
-        wide_model     = keras.Model(inputs=[col_wide_cross, col_wide], outputs=predictions)
+        #### Wide model with the functional API
+        col_wide_cross          = layers.Input(shape=(n_wide_cross,))
+        col_wide                = layers.Input(shape=(n_wide,))
+        merged_layer            = layers.concatenate([col_wide_cross, col_wide])
+        merged_layer            = layers.Dense(15, activation='relu')(merged_layer)
+        predictions             = layers.Dense(1)(merged_layer)
+        wide_model              = keras.Model(inputs=[col_wide_cross, col_wide], outputs=predictions)
 
-        wide_model.compile(loss='mse', optimizer='adam', metrics=[ metric ])
+        wide_model.compile(loss = 'mse', optimizer='adam', metrics=[ metric ])
         print(wide_model.summary())
 
 
-        # Deep model with the Functional API
-        deep_inputs = layers.Input(shape=(n_wide,))
-        embedding   = layers.Embedding(n_feat, m_EMBEDDING, input_length= n_wide)(deep_inputs)
-        embedding   = layers.Flatten()(embedding)
+        #### Deep model with the Functional API
+        deep_inputs             = layers.Input(shape=(n_wide,))
+        embedding               = layers.Embedding(n_feat, m_EMBEDDING, input_length= n_wide)(deep_inputs)
+        embedding               = layers.Flatten()(embedding)
 
-        merged_layer   = layers.Dense(15, activation='relu')(embedding)
+        merged_layer            = layers.Dense(15, activation='relu')(embedding)
 
-        embed_out  = layers.Dense(1)(merged_layer)
-        deep_model = keras.Model(inputs=deep_inputs, outputs=embed_out)
+        embed_out               = layers.Dense(1)(merged_layer)
+        deep_model              = keras.Model(inputs=deep_inputs, outputs=embed_out)
         deep_model.compile(loss='mse',   optimizer='adam',  metrics=[ metric ])
         print(deep_model.summary())
 
 
-        # Combine wide and deep into one model
+        #### Combine wide and deep into one model
         merged_out = layers.concatenate([wide_model.output, deep_model.output])
         merged_out = layers.Dense(1)(merged_out)
-        model = keras.Model( wide_model.input + [deep_model.input], merged_out)
+        model      = keras.Model( wide_model.input + [deep_model.input], merged_out)
         model.compile(loss=loss,   optimizer='adam',  metrics=[ metric ])
         print(model.summary())
 
         return model
-
 
 
 class Model(object):
@@ -272,8 +271,7 @@ def get_dataset(data_pars=None, task_type="train", **kw):
         if task_type == "eval":
             d = data_pars[task_type]
 
-
-            Xtrain, ytrain  = d["Xtrain"], d["ytrain"]
+            Xtrain, ytrain  = d["X"], d["y"]
             Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
             Xtuple_train = (Xtrain_A, Xtrain_B, Xtrain_C)
 
@@ -366,7 +364,7 @@ def test(config=''):
 
     early_stopping = EarlyStopping(monitor='loss', patience=3)
     model_ckpt     = ModelCheckpoint(filepath='', save_best_only=True, monitor='loss')
-    callbacks      =     [early_stopping, model_ckpt]
+    callbacks      = [early_stopping, model_ckpt]
 
     n_features      = X_train.shape[1]  # number of features
     n_wide_features = 20
@@ -374,7 +372,7 @@ def test(config=''):
 
     model_pars = {'model_class': 'WideAndDeep',
                   'model_pars': {'n_wide_cross': n_wide_features,
-                                 'n_wide': n_deep_features},
+                                 'n_wide':       n_deep_features},
                  }
     data_pars = {'train': {'Xtrain': X_train,
                            'ytrain': y_train,

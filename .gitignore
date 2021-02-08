@@ -198,3 +198,4 @@ mlflow_local.db
 /source/models/model_dir
 /source/models/data/output/torch_tabular/model
 /source/models/ztmp
+/variables
