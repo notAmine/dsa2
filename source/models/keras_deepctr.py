@@ -54,7 +54,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 
 import deepctr
-from deepctr.feature_column import DenseFeat, SparseFeat, VarLenSparseFeat, get_feat_names
+from deepctr.feature_column import DenseFeat, SparseFeat, VarLenSparseFeat, get_feature_names
 from deepctr.models import DeepFM
 
 # from preprocess import _preprocess_criteo, _preprocess_movielens
@@ -351,7 +351,7 @@ def get_xy_random():
 
     linear_feat_col = feature_col  # containing all the features used by linear part of the model
     dnn_feat_col    = feature_col  # containing all the features used by deep part of the model
-    feature_names      = get_feat_names(linear_feat_col + dnn_feat_col)
+    feature_names      = get_feature_names(linear_feat_col + dnn_feat_col)
 
     train_full, test   = train_test_split(data, random_state=2021, stratify=data['y'])
     train, val         = train_test_split(train_full, random_state=2021, stratify=train_full['y'])
@@ -428,7 +428,7 @@ def get_xy_fd(use_neg=False, hash_flag=False, use_session=False):
             VarLenSparseFeat(SparseFeat('neg_hist_cate_id', 2 + 1, embedding_dim=4, embedding_name='cate_id'),
                              maxlen=4, length_name="seq_length")]
 
-    x = {name: feature_dict[name] for name in get_feat_names(feature_col)}
+    x = {name: feature_dict[name] for name in get_feature_names(feature_col)}
     if use_session: x["sess_length"] = sess_number
     y = np.array([1, 0, 1])
     return x, y, feature_col, behavior_feat_list
@@ -471,7 +471,7 @@ def get_xy_dataset(data_sample=None):
 
         dnn_feat_col    = fixlen_feat_col
         linear_feat_col = fixlen_feat_col
-        feature_names          = get_feat_names(linear_feat_col + dnn_feat_col)
+        feature_names          = get_feature_names(linear_feat_col + dnn_feat_col)
 
     elif data_sample == "criteo":
         data = pd.read_csv('https://raw.githubusercontent.com/shenweichen/DeepCTR/master/examples/criteo_sample.txt')
@@ -497,7 +497,7 @@ def get_xy_dataset(data_sample=None):
 
         dnn_feat_col = fixlen_feat_col
         linear_feat_col = fixlen_feat_col
-        feature_names = get_feat_names(linear_feat_col + dnn_feat_col)
+        feature_names = get_feature_names(linear_feat_col + dnn_feat_col)
 
     elif data_sample == "movielens":
         data = pd.read_csv("https://raw.githubusercontent.com/shenweichen/DeepCTR/master/examples/movielens_sample.txt")
@@ -515,7 +515,7 @@ def get_xy_dataset(data_sample=None):
                                     for feat in sparse_features]
         linear_feat_col = fixlen_feat_col
         dnn_feat_col = fixlen_feat_col
-        feature_names = get_feat_names(linear_feat_col + dnn_feat_col)
+        feature_names = get_feature_names(linear_feat_col + dnn_feat_col)
 
     # 3.generate input data for model
     train_full, test = train_test_split(data, random_state=2021, stratify=data[target])
@@ -595,6 +595,34 @@ def test(config=''):
         # model_ckpt = ModelCheckpoint(filepath='', save_best_only=True, monitor='loss')
         callbacks = [early_stopping]
 
+        m = {
+          'model_pars' : {'model_name': model_name,
+                      'linear_feat_col'    : linear_feat_col,
+                      'dnn_feat_col'       : dnn_feat_col,
+                      'behavior_feat_list' : behavior_feat_list,
+                      'region_feat_col'    : region_feat_col,
+                      'base_feat_col'      : base_feat_col,
+                      'task'                  : task,
+                      'model_pars': {'optimizer': opt,
+                                     'loss': loss,
+                                     'metrics': metrics}
+                     },
+
+        'data_pars' : {'train': {'Xtrain': X_train,
+                               'ytrain' : y_train,
+                               'Xval'   : X_val,
+                               'yval'   : y_val},
+                     'eval': {'X': X_test,
+                              'y': y_test},
+                     'predict': {'X': X_test},
+                    },
+
+        # compute_pars = {}
+        'compute_pars' : {'compute_pars': {'epochs': 1,
+                        'callbacks': callbacks} }
+        }
+
+
         model_pars = {'model_name': model_name,
                       'linear_feat_col'    : linear_feat_col,
                       'dnn_feat_col'       : dnn_feat_col,
@@ -618,7 +646,7 @@ def test(config=''):
         compute_pars = {'compute_pars': {'epochs': 1,
                         'callbacks': callbacks} }
 
-        test_helper(model_name, model_pars, data_pars, compute_pars)
+        test_helper(model_name, m['model_pars'], m['data_pars'], m['compute_pars'])
         # log('Model architecture:')
         # log(model.summary())
 
