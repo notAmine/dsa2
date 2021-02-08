@@ -94,24 +94,6 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     global model, session
     session = None  # Session type for compute
 
-
-    """
-    Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
-    if VERBOSE: log(Xtrain.shape, model.model)
-    
-    n_wide_features = data_pars.get('n_wide_features', None)
-    n_deep_features = data_pars.get('n_deep_features', None)
-
-    Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
-    Xtest_A, Xtest_B, Xtest_C    = Xtest[:, :n_wide_features], Xtest[:, -n_deep_features:], Xtest[:, -n_deep_features:]
-    cpars = compute_pars.get("compute_pars", {})
-    assert 'epochs' in cpars, 'epoch'
-
-    hist = model.model.fit((Xtrain_A, Xtrain_B, Xtrain_C), ytrain,  **cpars)
-    model.history = hist
-
-    """
-
     Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train")
 
     cpars = compute_pars.get("compute_pars", {})
@@ -152,16 +134,7 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
 def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     global model, session
     """
-    if Xpred is None:
-        # data_pars['train'] = False
-        n_wide_features = data_pars.get('n_wide_features', None)
-        n_deep_features = data_pars.get('n_deep_features', None)
 
-        Xpred = get_dataset(data_pars, task_type="predict")
-        Xpred_A, Xpred_B, Xpred_C = Xpred[:, :n_wide_features], Xpred[:, -n_deep_features:], Xpred[:, -n_deep_features:]
-    else:  # if Xpred is tuple contains Xpred_A, Xpred_B, Xpred_C
-        Xpred_A, Xpred_B, Xpred_C = Xpred
-    ypred = model.model.predict((Xpred_A, Xpred_B, Xpred_C))
     """
     if Xpred is None:
         # data_pars['train'] = False
