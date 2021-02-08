@@ -1,6 +1,7 @@
 """"
 
-Most difficult part is pre-processing.
+ python source/models/keras_deepctr.py test
+
 
 # DeepCTR
 https://github.com/shenweichen/DeepCTR
@@ -33,34 +34,14 @@ along with lots of core components layers which can be used to easily build cust
 |                FiBiNET                 | [RecSys 2019][FiBiNET: Combining Feature Importance and Bilinear feature Interaction for Click-Through Rate Prediction](https://arxiv.org/pdf/1905.09433.pdf)   |
 
 
-Names"
-
-model_list = ["AFM",
-"AUTOINT",
-"CCPM",
-"DCN",
-"DeepFM",
-"DIEN",
-"DIN",
-"DSIN",
-"FGCNN",
-"FIBINET",
-"FLEN",
-"FNN",
-"MLR",
-"NFM",
-"ONN",
-"PNN",
-"WDL",
-"XDEEPFM", ]
-
-
 """
+import warnings
+warnings.filterwarnings("ignore")
+
 from jsoncomment import JsonComment ; json = JsonComment()
 import os
 from pathlib import Path
 import importlib
-
 
 import numpy as np
 import pandas as pd
@@ -73,10 +54,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 
 import deepctr
-from deepctr.feature_column import DenseFeat, SparseFeat, VarLenSparseFeat, get_feature_names
+from deepctr.feature_column import DenseFeat, SparseFeat, VarLenSparseFeat, get_feat_names
 from deepctr.models import DeepFM
-
-
 
 # from preprocess import _preprocess_criteo, _preprocess_movielens
 
@@ -85,38 +64,35 @@ import tensorflow as tf
 if tf.__version__ >= '2.0.0':
     tf.compat.v1.disable_eager_execution()
 
-
 ####################################################################################################
 # Helper functions
-#from mlmodels.util import os_package_root_path, log, path_norm
-#from mlmodels.util import save_keras, load_keras
 #from mlmodels.preprocess.tabular_keras  import get_test_data, get_xy_fd_dien, get_xy_fd_din, get_xy_fd_dsin
 
 
 def log(*s):
     print(s, flush=True)
 
-
 ####################################################################################################
 DATA_PARAMS = {
-    "AFM"     : {"sparse_feature_num": 3, "dense_feature_num": 0},
-    "AutoInt" : {"sparse_feature_num": 1, "dense_feature_num": 1},
-    "CCPM"    : {"sparse_feature_num": 3, "dense_feature_num":0},
-    "DCN"     : {"sparse_feature_num": 3, "dense_feature_num": 3},
-    "DeepFM"  : {"sparse_feature_num": 1, "dense_feature_num": 1},
+    "AFM"     : {"sparse_feat_num": 3, "dense_feat_num": 0},
+    "AutoInt" : {"sparse_feat_num": 1, "dense_feat_num": 1},
+    "CCPM"    : {"sparse_feat_num": 3, "dense_feat_num":0},
+    "DCN"     : {"sparse_feat_num": 3, "dense_feat_num": 3},
+    "DCNMix"  : {"sparse_feat_num": 3, "dense_feat_num": 3},
+    "DeepFM"  : {"sparse_feat_num": 1, "dense_feat_num": 1},
     "DIEN"    : {},
     "DIN"     : {},
     "DSIN"    : {},
-    "FGCNN"   : {"embedding_size": 8, "sparse_feature_num": 1, "dense_feature_num": 1},
-    "FiBiNET" : {"sparse_feature_num": 2, "dense_feature_num": 2},
-    "FLEN"    : {"embedding_size": 2, "sparse_feature_num": 6, "dense_feature_num": 6, "use_group": True},
-    "FNN"     : {"sparse_feature_num": 1, "dense_feature_num": 1},
-    "MLR"     : {"sparse_feature_num": 0, "dense_feature_num": 2, "prefix": "region"},
-    "NFM"     : {"sparse_feature_num": 1, "dense_feature_num": 1},
-    "ONN"     : {"sparse_feature_num": 2, "dense_feature_num": 2, "sequence_feature":('sum', 'mean', 'max',), "hash_flag":True},
-    "PNN"     : {"sparse_feature_num": 1, "dense_feature_num": 1},
-    "WDL"     : {"sparse_feature_num": 2, "dense_feature_num": 0},
-    "xDeepFM" : {"sparse_feature_num": 1, "dense_feature_num": 1}
+    "FGCNN"   : {"embedding_size": 8, "sparse_feat_num": 1, "dense_feat_num": 1},
+    "FiBiNET" : {"sparse_feat_num": 2, "dense_feat_num": 2},
+    "FLEN"    : {"embedding_size": 2, "sparse_feat_num": 6, "dense_feat_num": 6, "use_group": True},
+    "FNN"     : {"sparse_feat_num": 1, "dense_feat_num": 1},
+    "MLR"     : {"sparse_feat_num": 0, "dense_feat_num": 2, "prefix": "region"},
+    "NFM"     : {"sparse_feat_num": 1, "dense_feat_num": 1},
+    "ONN"     : {"sparse_feat_num": 2, "dense_feat_num": 2, "sequence_feature":('sum', 'mean', 'max',), "hash_flag":True},
+    "PNN"     : {"sparse_feat_num": 1, "dense_feat_num": 1},
+    "WDL"     : {"sparse_feat_num": 2, "dense_feat_num": 0},
+    "xDeepFM" : {"sparse_feat_num": 1, "dense_feat_num": 1}
 }
 
 MODEL_PARAMS = {
@@ -124,6 +100,7 @@ MODEL_PARAMS = {
     "AutoInt" : {"att_layer_num": 1, "dnn_hidden_units": (), "dnn_dropout": 0.5},
     "CCPM"    : {"conv_kernel_width": (3, 2), "conv_filters": (2, 1), "dnn_hidden_units": [32,], "dnn_dropout": 0.5},
     "DCN"     : {"cross_num": 0, "dnn_hidden_units": (8,), "dnn_dropout": 0.5},
+    "DCNMix"  : {"cross_num": 0, "dnn_hidden_units": (8,), "dnn_dropout": 0.5},
     "DeepFM"  : {"dnn_hidden_units": (2,), "dnn_dropout": 0.5},
     "DIEN"    : {"dnn_hidden_units": [4, 4, 4], "dnn_dropout": 0.5, "gru_type": "GRU"},
     "DIN"     : {"dnn_hidden_units":[4, 4, 4], "dnn_dropout":0.5},
@@ -135,62 +112,52 @@ MODEL_PARAMS = {
     "MLR"     : {},
     "NFM"     : {"dnn_hidden_units":[32, 32], "dnn_dropout":0.5},
     "ONN"     : {"dnn_hidden_units": [32, 32], "embedding_size":4, "dnn_dropout":0.5},
-    "PNN"     : {"embedding_size":4, "dnn_hidden_units":[4, 4], "dnn_dropout":0.5, "use_inner": True, "use_outter": True},
+    "PNN"     : {"dnn_hidden_units":[32, 32], "dnn_dropout":0.5, "use_inner": True, "use_outter": True},
     "WDL"     : {"dnn_hidden_units":[32, 32], "dnn_dropout":0.5},
     "xDeepFM" : {"dnn_dropout": 0.5, "dnn_hidden_units": (8,), "cin_layer_size": (), "cin_split_half": True, "cin_activation": 'linear'}
 }
 
+
 class Model:
     def __init__(self, model_pars=None, data_pars=None, compute_pars=None, **kwargs):
-        self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
-        self.history = None        
         if model_pars is None :
           return self
 
         model_name = model_pars.get("model_name", "DeepFM")
         model_list = list(MODEL_PARAMS.keys())
-      
-        # assert model_name in model_list, raise ValueError('Not existing model', model_name)
-        modeli     = getattr(importlib.import_module("deepctr.models"), model_name)
 
-        # 4.Define Model #################################################
-        model_params = model_pars.get('model_pars', MODEL_PARAMS[model_name] )
+        if not model_name in model_list :
+          raise ValueError('Not existing model', model_name)
+          return self
 
+        modeli = getattr(importlib.import_module("deepctr.models"), model_name)
+
+        if model_name == "MLR":
+            region_feat_col = model_pars.get('region_feat_col', None)
+            base_feat_col   = model_pars.get('base_feat_col', None)
+        else:
+            linear_feat_col = model_pars.get('linear_feat_col', None)
+            dnn_feat_col    = model_pars.get('dnn_feat_col', None)
+            behavior_feat_list  = model_pars.get('behavior_feat_list', None)
+
+
+        task = model_pars.get('task', 'binary')
+        # 4.Define Model
         if model_name in ["DIEN", "DIN", "DSIN"]:
-
-             feature_cols = None
-             behavior_feature_list = [] 
-
-             self.model = modeli(feature_cols, behavior_feature_list, **model_params )
+            self.model = modeli(dnn_feat_col, behavior_feat_list, task=task, **MODEL_PARAMS[model_name])
 
         elif model_name == "MLR":
-             feature_cols = None
-
-             self.model = modeli(feature_cols)
-
+            self.model = modeli(region_feat_col, base_feat_col, task=task, **MODEL_PARAMS[model_name])
 
         elif model_name == "PNN":
-             feature_cols = None
+            self.model = modeli(dnn_feat_col, task=task, **MODEL_PARAMS[model_name])
 
-             self.model = modeli(feature_cols, **MODEL_PARAMS[model_name])
-        
-        else:  # ['WDL' ] :
-             linear_cols = model_pars.get('linear_feature_cols', None)
-             dnn_cols    = model_pars.get('dnn_feature_cols', None)
-             self.model = modeli(linear_cols, dnn_cols, **model_params )
+        else:
+            self.model = modeli(linear_feat_col, dnn_feat_col, task=task, **MODEL_PARAMS[model_name])
 
-        #if model_name in ['WDL' ] : 
-        #    self.model = modeli(linear_feature_cols, dnn_feature_cols, **MODEL_PARAMS[model_name])
-
-
-        #################################################################################
-        self.model.compile(optimizer=model_pars['optimization'],
-                           loss=model_pars['loss'],
-                           metrics=compute_pars.get("metrics", ['binary_crossentropy']), )
+        model_pars = model_pars.get("model_pars", {})
+        self.model.compile(**model_pars)
         self.model.summary()
-
-
-
 
 
 
@@ -199,14 +166,15 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
     global model, session
     session = None  # Session type for compute
-    Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
+    Xtrain, ytrain, Xval, yval = get_dataset(data_pars, task_type="train")
 
     # if VERBOSE: log(Xtrain.shape, model.model)
 
     cpars = compute_pars.get("compute_pars", {})
     assert 'epochs' in cpars, 'epoch'
 
-    hist = model.model.fit(Xtrain, ytrain, **cpars)
+    hist = model.model.fit(Xtrain, ytrain,
+                           validation_data=(Xval, yval), **cpars)
     model.history = hist
 
 
@@ -215,22 +183,10 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
        Return metrics of the model when fitted.
     """
     global model, session
-    data_pars['train'] = True
-    Xval, yval = get_dataset(data_pars, task_type="eval")
-    ypred = predict(Xval, data_pars, compute_pars, out_pars)
-
-    # log(data_pars)
-    mpars = compute_pars.get("metrics_pars", {'metric_name': 'mae'})
-
-    scorer = {
-        "rmse": sklearn.metrics.mean_squared_error,
-        "mae": sklearn.metrics.mean_absolute_error
-    }[mpars['metric_name']]
-
-    mpars2 = mpars.get("metrics_pars", {})  ##Specific to score
-    score_val = scorer(yval, ypred[0], **mpars2)
-
-    ddict = [{"metric_val": score_val, 'metric_name': mpars['metric_name']}]
+    # data_pars['train'] = True
+    Xtest, ytest = get_dataset(data_pars, task_type="eval")
+    results      = model.model.evaluate(Xtest, ytest)
+    ddict        = [{"metric_val": results, 'metric_name': model.model.metrics_names}]
 
     return ddict
 
@@ -252,21 +208,29 @@ def reset():
     model, session = None, None
 
 
-def save(path=None):
+def save(path=None, save_weight=False):
     global model, session
     os.makedirs(path, exist_ok=True)
 
-    filename = "model.h5"
-    filepath = path + filename
-    keras.models.save_model(model.model, filepath)
+    if save_weight:  # only saving the weight
+        filename = "weight.h5"
+        model.model.save_weights(path+filename)
+    else:  # save all model params
+        filename = "model.h5"
+        filepath = path + filename
+        keras.models.save_model(model.model, filepath)
     # model.model.save(filepath)
 
 
-def load_model(path=""):
+def load_model(path="", load_weight=False):
     global model, session
 
-    filepath = path + 'model.h5'
-    model = keras.models.load_model(filepath, deepctr.layers.custom_objects)
+    if load_weight:
+        filename = "weight.h5"
+        model = model.model.load_weights(path+filename)
+    else:
+        filepath = path + 'model.h5'
+        model = keras.models.load_model(filepath, deepctr.layers.custom_objects)
     session = None
     return model, session
 
@@ -287,7 +251,7 @@ def preprocess(prepro_pars):
         from sklearn.datasets import make_classification
         from sklearn.model_selection import train_test_split
 
-        X, y = make_classification(n=10, n_redundant=0, n_informative=2,
+        X, y = make_classification(n_features=10, n_redundant=0, n_informative=2,
                                    random_state=1, n_clusters_per_class=1)
 
         # log(X,y)
@@ -331,7 +295,7 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
         if task_type == "train":
             d = data_pars[task_type]
-            return d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
+            return d["Xtrain"], d["ytrain"], d["Xval"], d["yval"]
 
     elif data_type == "file":
         raise Exception(f' {data_type} data_type Not implemented ')
@@ -362,126 +326,350 @@ def get_params(param_pars={}, **kw):
 ########################################################################################################################
 
 
-
-
 ########################################################################################################################
-def test(config=''):
-    """
-
-     colcat  ---. Sparse Features
-
-     colnum --> Dense features
-
-    """
-    global model, session
-
+def get_xy_random():
     X = np.random.rand(100,30)
     y = np.random.binomial(n=1, p=0.5, size=[100])
 
     ## PREPROCESSING STEPS
     # change into dataframe
-    cols                   = [str(i) for i in range(X.shape[1])]  # define column pd dataframe, need to be string type
-    data                   = pd.DataFrame(X, columns=cols)  # need to convert into df, following the step from documentation
-    data['y']              = y
+    cols      = [str(i) for i in range(X.shape[1])]  # define column pd dataframe, need to be string type
+    data      = pd.DataFrame(X, columns=cols)  # need to convert into df, following the step from documentation
+    data['y'] = y
 
     # define which feature columns sparse or dense type
     # since our data categorize as Dense Features, we define the sparse features as empty list
-    cols_sparse   = []
-    cols_dense    = [str(i) for i in range(X.shape[1])]
+    cols_sparse_features = []
+    cols_dense_features = [str(i) for i in range(X.shape[1])]
 
     # convert feature type into SparseFeat or DenseFeat type, adjusting from DeepCTR library
-    sparse_feat_l          = [SparseFeat(feat, vocabulary_size=data[feat].nunique(), embedding_dim=4) for i,feat
-                              in enumerate(cols_sparse) ]
+    sparse_feat_l = [SparseFeat(feat, vocabulary_size=data[feat].nunique(), embedding_dim=4)
+                    for i,feat in enumerate(cols_sparse_features)]
+                    
+    dense_feat_l       = [DenseFeat(feat, dimension=1) for feat in cols_dense_features]
+    feature_col        = sparse_feat_l + dense_feat_l
 
-    dense_feat_l           = [DenseFeat(feat, dimension=1) for feat in cols_dense]
+    linear_feat_col = feature_col  # containing all the features used by linear part of the model
+    dnn_feat_col    = feature_col  # containing all the features used by deep part of the model
+    feature_names      = get_feat_names(linear_feat_col + dnn_feat_col)
 
-    feature_cols        = sparse_feat_l +  dense_feat_l
+    train_full, test   = train_test_split(data, random_state=2021, stratify=data['y'])
+    train, val         = train_test_split(train_full, random_state=2021, stratify=train_full['y'])
 
+    train_model_input  = {name:train[name] for name in feature_names}
+    val_model_input    = {name:val[name] for name in feature_names}
+    test_model_input   = {name:test[name] for name in feature_names}
+    target             = 'y'
+    ## END OF PREPROCESSING STEPS
 
-    linear_feature_cols    = feature_cols  # containing all the features used by linear part of the model
-    dnn_feature_cols       = feature_cols  # containing all the features used by deep part of the model
-    feature_names          = get_feature_names(linear_feature_cols + dnn_feature_cols)
-
-    train_full, test       = train_test_split(data, random_state=2021, stratify=data['y'])
-    train, val             = train_test_split(train_full, random_state=2021, stratify=train_full['y'])
-
-    train_model_input      = {name:train[name] for name in feature_names}
-    val_model_input        = {name:val[name]   for name in feature_names}
-    test_model_input       = {name:test[name]  for name in feature_names}
-    target                 = 'y'
-    #### END OF PREPROCESSING STEPS
-
-    #### initalize model_pars
-    opt = keras.optimizers.Adam()
-    loss = 'binary_crossentropy'
-
-
-    # initialize compute_pars
-    early_stopping = EarlyStopping(monitor='loss', patience=3)
-    # Note: ModelCheckpoint error when used
-    # model_ckpt = ModelCheckpoint(filepath='', save_best_only=True, monitor='loss')
-    callbacks = [early_stopping]
+    X_train, y_train   = train_model_input, train[target].values
+    X_val, y_val       = val_model_input, val[target].values
+    X_test, y_test     = test_model_input, test[target].values
+    return X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col
 
 
-    for model_name in  ['WDL'] :
-        ######## Model Dict  ########################################################
+def get_xy_fd(use_neg=False, hash_flag=False, use_session=False):
+    feature_col = [SparseFeat('user', 3, embedding_dim=10, use_hash=hash_flag),
+                       SparseFeat('gender', 2, embedding_dim=4, use_hash=hash_flag),
+                       SparseFeat('item_id', 3 + 1, embedding_dim=4, use_hash=hash_flag),
+                       SparseFeat('cate_id', 2 + 1, embedding_dim=4, use_hash=hash_flag),
+                       DenseFeat('pay_score', 1)]
+
+    behavior_feat_list = ["item_id", "cate_id"]
+    uid = np.array([0, 1, 2])
+    ugender = np.array([0, 1, 0])
+    iid = np.array([1, 2, 3])  # 0 is mask value
+    cate_id = np.array([1, 2, 2])  # 0 is mask value
+    score = np.array([0.1, 0.2, 0.3])
+
+    if use_session:
+        feature_col += [
+            VarLenSparseFeat(SparseFeat('sess_0_item_id', 3 + 1, embedding_dim=4, use_hash=hash_flag, embedding_name='item_id'),
+                             maxlen=4), VarLenSparseFeat(
+                SparseFeat('sess_0_cate_id', 2 + 1, embedding_dim=4, use_hash=hash_flag, embedding_name='cate_id'),
+                maxlen=4)]
+        feature_col += [
+            VarLenSparseFeat(SparseFeat('sess_1_item_id', 3 + 1, embedding_dim=4, use_hash=hash_flag, embedding_name='item_id'),
+                             maxlen=4), VarLenSparseFeat(
+                SparseFeat('sess_1_cate_id', 2 + 1, embedding_dim=4, use_hash=hash_flag, embedding_name='cate_id'),
+                maxlen=4)]
+        sess1_iid = np.array([[1, 2, 3, 0], [3, 2, 1, 0], [0, 0, 0, 0]])
+        sess1_cate_id = np.array([[1, 2, 2, 0], [2, 2, 1, 0], [0, 0, 0, 0]])
+
+        sess2_iid = np.array([[1, 2, 3, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+        sess2_cate_id = np.array([[1, 2, 2, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+
+        sess_number = np.array([2, 1, 0])
+
+        feature_dict = {'user': uid, 'gender': ugender, 'item_id': iid, 'cate_id': cate_id,
+                        'sess_0_item_id': sess1_iid, 'sess_0_cate_id': sess1_cate_id, 'pay_score': score,
+                        'sess_1_item_id': sess2_iid, 'sess_1_cate_id': sess2_cate_id, }
+    else:
+        feature_col += [
+                VarLenSparseFeat(SparseFeat('hist_item_id', vocabulary_size=3 + 1, embedding_dim=8, embedding_name='item_id'),
+                                 maxlen=4, length_name="seq_length"),
+                VarLenSparseFeat(SparseFeat('hist_cate_id', 2 + 1, embedding_dim=4, embedding_name='cate_id'), maxlen=4,
+                                 length_name="seq_length")]
+        hist_iid = np.array([[1, 2, 3, 0], [1, 2, 3, 0], [1, 2, 0, 0]])
+        hist_cate_id = np.array([[1, 2, 2, 0], [1, 2, 2, 0], [1, 2, 0, 0]])
+
+        behavior_length = np.array([3, 3, 2])
+
+        feature_dict = {'user': uid, 'gender': ugender, 'item_id': iid, 'cate_id': cate_id,
+                        'hist_item_id': hist_iid, 'hist_cate_id': hist_cate_id,
+                        'pay_score': score, "seq_length": behavior_length}
+
+    if use_neg:
+        feature_dict['neg_hist_item_id'] = np.array([[1, 2, 3, 0], [1, 2, 3, 0], [1, 2, 0, 0]])
+        feature_dict['neg_hist_cate_id'] = np.array([[1, 2, 2, 0], [1, 2, 2, 0], [1, 2, 0, 0]])
+        feature_col += [
+            VarLenSparseFeat(SparseFeat('neg_hist_item_id', vocabulary_size=3 + 1, embedding_dim=8, embedding_name='item_id'),
+                             maxlen=4, length_name="seq_length"),
+            VarLenSparseFeat(SparseFeat('neg_hist_cate_id', 2 + 1, embedding_dim=4, embedding_name='cate_id'),
+                             maxlen=4, length_name="seq_length")]
+
+    x = {name: feature_dict[name] for name in get_feat_names(feature_col)}
+    if use_session: x["sess_length"] = sess_number
+    y = np.array([1, 0, 1])
+    return x, y, feature_col, behavior_feat_list
+
+
+def get_xy_dataset(data_sample=None):
+    if data_sample == "avazu":
+        data = pd.read_csv('https://raw.githubusercontent.com/shenweichen/DeepCTR/master/examples/avazu_sample.txt')
+        data['day'] = data['hour'].apply(lambda x: str(x)[4:6])
+        data['hour'] = data['hour'].apply(lambda x: str(x)[6:])
+
+        sparse_features = ['hour', 'C1', 'banner_pos', 'site_id', 'site_domain',
+                           'site_category', 'app_id', 'app_domain', 'app_category', 'device_id',
+                           'device_model', 'device_type', 'device_conn_type',  # 'device_ip',
+                           'C14',
+                           'C15', 'C16', 'C17', 'C18', 'C19', 'C20', 'C21', ]
+
+        data[sparse_features] = data[sparse_features].fillna('-1', )
+        target = ['click']
+
+        # 1.Label Encoding for sparse features,and do simple Transformation for dense features
+        for feat in sparse_features:
+            lbe = LabelEncoder()
+            data[feat] = lbe.fit_transform(data[feat])
+
+        # 2.count #unique features for each sparse field,and record dense feature field name
+        field_info = dict(C14              = 'user', C15='user', C16='user', C17='user',
+                          C18              = 'user', C19='user', C20='user', C21='user', C1='user',
+                          banner_pos       = 'context', site_id='context',
+                          site_domain      = 'context', site_category='context',
+                          app_id           = 'item', app_domain='item', app_category='item',
+                          device_model     = 'user', device_type='user',
+                          device_conn_type = 'context', hour='context',
+                          device_id        = 'user'
+                          )
+
+        fixlen_feat_col = [
+            SparseFeat(name, vocabulary_size=data[name].nunique(), embedding_dim=16, use_hash=False, dtype='int32',
+                       group_name=field_info[name]) for name in sparse_features]
+
+        dnn_feat_col    = fixlen_feat_col
+        linear_feat_col = fixlen_feat_col
+        feature_names          = get_feat_names(linear_feat_col + dnn_feat_col)
+
+    elif data_sample == "criteo":
+        data = pd.read_csv('https://raw.githubusercontent.com/shenweichen/DeepCTR/master/examples/criteo_sample.txt')
+
+        sparse_features = ['C' + str(i) for i in range(1, 27)]
+        dense_features = ['I' + str(i) for i in range(1, 14)]
+
+        data[sparse_features] = data[sparse_features].fillna('-1', )
+        data[dense_features] = data[dense_features].fillna(0, )
+        target = ['label']
+
+        # 1.Label Encoding for sparse features,and do simple Transformation for dense features
+        for feat in sparse_features:
+            lbe        = LabelEncoder()
+            data[feat] = lbe.fit_transform(data[feat])
+        mms = MinMaxScaler(feature_range=(0, 1))
+        data[dense_features] = mms.fit_transform(data[dense_features])
+
+        # 2.count #unique features for each sparse field,and record dense feature field name
+        fixlen_feat_col = [SparseFeat(feat, vocabulary_size=data[feat].nunique(),embedding_dim=4)
+                                for i,feat in enumerate(sparse_features)] + [DenseFeat(feat, 1,)
+                                for feat in dense_features]
+
+        dnn_feat_col = fixlen_feat_col
+        linear_feat_col = fixlen_feat_col
+        feature_names = get_feat_names(linear_feat_col + dnn_feat_col)
+
+    elif data_sample == "movielens":
+        data = pd.read_csv("https://raw.githubusercontent.com/shenweichen/DeepCTR/master/examples/movielens_sample.txt")
+        sparse_features = ["movie_id", "user_id",
+                            "gender", "age", "occupation", "zip"]
+        target = ['rating']
+
+        # 1.Label Encoding for sparse features,and do simple Transformation for dense features
+        for feat in sparse_features:
+            lbe = LabelEncoder()
+            data[feat] = lbe.fit_transform(data[feat])
+
+        # 2.count #unique features for each sparse field
+        fixlen_feat_col = [SparseFeat(feat, data[feat].nunique(),embedding_dim=4)
+                                    for feat in sparse_features]
+        linear_feat_col = fixlen_feat_col
+        dnn_feat_col = fixlen_feat_col
+        feature_names = get_feat_names(linear_feat_col + dnn_feat_col)
+
+    # 3.generate input data for model
+    train_full, test = train_test_split(data, random_state=2021, stratify=data[target])
+    train, val = train_test_split(train_full, random_state=2021, stratify=train_full[target])
+
+    train_model_input = {name:train[name] for name in feature_names}
+    val_model_input = {name:val[name] for name in feature_names}
+    test_model_input = {name:test[name] for name in feature_names}
+
+    X_train, y_train = train_model_input, train[target].values
+    X_val, y_val = val_model_input, val[target].values
+    X_test, y_test = test_model_input, test[target].values
+    return X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col
+
+
+def test(config=''):
+    global model, session
+
+    # model list succeed on running
+    model_l = ['WDL', 'FNN', 'MLR', 'DCN', 'DCNMix', 'DIEN', 'DIN', 'DSIN', 'FLEN', 'DeepFM', 'xDeepFM', 'AutoInt', 
+               'FNN', 'ONN', 'NFM', 'AFM', 'FiBiNET', 'PNN', 'FGCNN']
+
+    # iterate to test each model on the list model
+    for model_name in model_l:
+
+        # get dataset for testing
+        linear_feat_col, dnn_feat_col  = None, None
+        behavior_feat_list             = None
+        region_feat_col, base_feat_col = None, None  # only for MLR model
+
+
+        # setting up model_pars for dataset task
+        task = 'binary'
+        loss = 'binary_crossentropy'
+        metrics = ['binary_crossentropy']
+
+
+        if model_name in ['WDL', 'FNN', 'DCN', 'DCNMix', 'MLR']:
+            if model_name=='MLR':
+                X_train, X_val, X_test, y_train, y_val, y_test, region_feat_col, base_feat_col = get_xy_random()
+            else:
+                X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col = get_xy_random()
+            # setting up model_pars for dataset task
+            metrics = ['accuracy']
+
+        elif model_name in ['DIN', 'DIEN', 'DSIN']:
+            if model_name=="DIN" : x, y, dnn_feat_col, behavior_feat_list = get_xy_fd()
+            if model_name=="DIEN": x, y, dnn_feat_col, behavior_feat_list = get_xy_fd(use_neg=True)
+            if model_name=="DSIN": x, y, dnn_feat_col, behavior_feat_list = get_xy_fd(hash_flag=True, use_session=True)
+            # since the example data very small, we don't split the data
+            X_train, X_val, X_test, y_train, y_val, y_test = x, x, x, y, y, y
+
+
+        else:                
+            if model_name == 'FLEN':
+                # classification dataset
+                X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col = get_xy_dataset("avazu")
+
+            elif model_name in ['DeepFM', 'xDeepFM', 'AutoInt', 'FNN', 'ONN', 'NFM', 'FiBiNET', 'FGCNN']:
+                # classification dataset
+                X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col = get_xy_dataset("criteo")
+
+            elif model_name in ['AFM', 'CCPM', 'PNN']:
+                # regression dataset
+                X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col = get_xy_dataset("movielens")
+                # setting up model_pars for dataset task
+                task = 'regression'
+                loss = 'mse'
+                metrics = ['mae']
+
+        # initalize model_pars
+        opt = keras.optimizers.Adam()
+
+        # initialize compute_pars
+        early_stopping = EarlyStopping(monitor='loss', patience=1)
+        # Note: ModelCheckpoint error when used
+        # model_ckpt = ModelCheckpoint(filepath='', save_best_only=True, monitor='loss')
+        callbacks = [early_stopping]
+
         model_pars = {'model_name': model_name,
-                      'linear_feature_cols'    : linear_feature_cols,
-                      'dnn_feature_cols'       : dnn_feature_cols,
-
-                      'optimization'           : opt,
-                      'loss'                   : loss}
-
-        data_pars = {'train': {'Xtrain': train_model_input,
-                               'ytrain': train[target].values,
-                               'Xtest':  test_model_input,
-                               'ytest':  test[target].values},
-
-                     'eval': {'X': val_model_input,
-                              'y': val[target].values},
-                     'predict': {'X': val_model_input},
+                      'linear_feat_col'    : linear_feat_col,
+                      'dnn_feat_col'       : dnn_feat_col,
+                      'behavior_feat_list' : behavior_feat_list,
+                      'region_feat_col'    : region_feat_col,
+                      'base_feat_col'      : base_feat_col,
+                      'task'                  : task,
+                      'model_pars': {'optimizer': opt,
+                                     'loss': loss,
+                                     'metrics': metrics}
+                     }
+        data_pars = {'train': {'Xtrain': X_train,
+                               'ytrain' : y_train,
+                               'Xval'   : X_val,
+                               'yval'   : y_val},
+                     'eval': {'X': X_test,
+                              'y': y_test},
+                     'predict': {'X': X_test},
                     }
-
         # compute_pars = {}
-        compute_pars = {'compute_pars': {'epochs': 50,
+        compute_pars = {'compute_pars': {'epochs': 1,
                         'callbacks': callbacks} }
 
-        test_helper(model_pars, data_pars, compute_pars)
+        test_helper(model_name, model_pars, data_pars, compute_pars)
+        # log('Model architecture:')
+        # log(model.summary())
 
 
 
-
-def test_helper(model_pars, data_pars, compute_pars):
-
+def test_helper(model_name, model_pars, data_pars, compute_pars):
+    global model, session
     model = Model(model_pars=model_pars, data_pars=data_pars, compute_pars=compute_pars)
 
-    log('\n\nTraining the model..')
+    log(f'===> Running process for model {model_name}')
+    log('> Training the model..')
     fit(data_pars=data_pars, compute_pars=compute_pars, out_pars=None)
-    log('Training completed!\n\n')
+    log('Training completed!')
 
-    log('Predict data..')
+    log('> Predict data..')
     ypred, ypred_proba = predict(Xpred=None, data_pars=data_pars, compute_pars=compute_pars)
     log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
-    log('Data successfully predicted!\n\n')
-
-    log('Evaluating the model..')
-    log(eval(data_pars=data_pars, compute_pars=compute_pars))
-    log('Evaluating completed!\n\n')
+    log('Data successfully predicted!')
     #
-    log('Saving model..')
-    save(path='model_dir/')
-    log('Model successfully saved!\n\n')
 
-    log('Load model..')
-    model, session = load_model(path="model_dir/")
-    log('Model successfully loaded!\n\n')
+    log('> Evaluating the model..')
+    log(eval(data_pars=data_pars, compute_pars=compute_pars))
+    log('Evaluating completed!')
+    #
 
-    log('Model architecture:')
-    log(model.summary())
+    log('> Saving model..')
+    if model_name == 'FGCNN':
+        save(path='model_dir/', save_weight=True)
+    else:
+        save(path='model_dir/')
+    log('Model successfully saved!')
+
+    log('> Load model..')
+    if model_name == 'FGCNN':
+        model = Model(model_pars=model_pars, data_pars=data_pars, compute_pars=compute_pars)
+        model, session = load_model(path="model_dir/", load_weight=True)
+    else:
+        model, session = load_model(path="model_dir/")
+    log('Model successfully loaded!')
+    log(f'===> Running process for model {model_name} completed!\n\n')
+
+
+
+
+
 
 
 
 if __name__ == '__main__':
+    if tf.__version__ >= '2.0.0':
+        tf.compat.v1.disable_eager_execution()
     import fire
     fire.Fire()
 
@@ -494,42 +682,4 @@ if __name__ == '__main__':
 
 ########################################################################################################################
 ########################################################################################################################
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-
-
-    VERBOSE = True
-    for model_name in MODEL_PARAMS.keys():
-        if model_name == "FGCNN": # TODO: check save io
-            continue
-        test(pars_choice=5, **{"model_name": model_name})
-
-    # test(pars_choice=1)
-    # test(pars_choice=2)
-    # test(pars_choice=3)
-    # test(pars_choice=4)
-
-
-
-"""
-
-
 

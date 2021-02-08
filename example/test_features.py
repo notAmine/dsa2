@@ -201,8 +201,7 @@ def config1(path_model_out="") :
                                 'random_state' :0, 'n_jobs' : 4,
                                },
                  },
-                  'cols_family': 'colgen',     'cols_out': 'col_genetic',     
-                  'type': 'add_coly'   #### Need to add target coly             
+                  'cols_family': 'colgen',     'cols_out': 'col_genetic',  'type': 'add_coly'   #### Need to add target coly
               },
 
         #{'uri': 'source/prepro.py::pd_colnum_quantile_norm',       'pars': {'colsparse' :  [] },
