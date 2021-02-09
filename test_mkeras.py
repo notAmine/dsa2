@@ -104,6 +104,38 @@ def config1() :
         ### LightGBM API model   #######################################
          "model_class": model_class
         ,"model_pars" : {
+
+
+                      'model_name': name,
+                      'linear_feat_col'    : linear_feat_col,
+                      'dnn_feat_col'       : dnn_feat_col,
+                      'behavior_feat_list' : behavior_feat_list,
+                      'region_feat_col'    : region_feat_col,
+                      'base_feat_col'      : base_feat_col,
+                      'task'                  : task,
+                      'model_pars': {'optimizer': opt,
+                                     'loss': loss,
+                                     'metrics': metrics}
+                     },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                         }
 
         , "post_process_fun" : post_process_fun                    ### After prediction  ##########################################

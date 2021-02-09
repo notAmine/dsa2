@@ -166,7 +166,11 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
     global model, session
     session = None  # Session type for compute
-    Xtrain, ytrain, Xval, yval = get_dataset(data_pars, task_type="train")
+    #Xtrain, ytrain, Xval, yval = get_dataset(data_pars, task_type="train")
+
+
+    Xtrain, ytrain, Xval, yval, col_dict = get_dataset(data_pars, task_type="train")
+
 
     # if VERBOSE: log(Xtrain.shape, model.model)
 
@@ -293,9 +297,39 @@ def get_dataset(data_pars=None, task_type="train", **kw):
             d = data_pars[task_type]
             return d["X"], d["y"]
 
+
+
+
+
         if task_type == "train":
             d = data_pars[task_type]
-            return d["Xtrain"], d["ytrain"], d["Xval"], d["yval"]
+
+
+           if name in ['WDL', 'FNN', 'DCN', 'DCNMix', 'MLR']:
+             if name=='MLR':
+                X_train,  y_train, region_feat_col, base_feat_col = get_xy_random2(d['Xtrain'], d['ytrain'])
+                X_test,  y_test, region_feat_col, base_feat_col   = get_xy_random2( d['Xval'], d['yval'] )
+                col_dict = {  'linear_feat_col' : linear_feat_col,
+                              'dnn_feat_col'  : dnn_feat_col 
+                           }
+
+             else:
+                X_train, y_train, linear_feat_col, dnn_feat_col = get_xy_random2(d['Xtrain'], d['ytrain'])
+                X_test, y_test, linear_feat_col, dnn_feat_col   = get_xy_random2( d['Xval'], d['yval'] )
+                col_dict = {  'linear_feat_col' : linear_feat_col,
+                              'dnn_feat_col'  : dnn_feat_col 
+                           }
+
+            return X_train, y_train, X_test, y_test, col_dict
+
+
+
+
+
+
+
+
+
 
     elif data_type == "file":
         raise Exception(f' {data_type} data_type Not implemented ')
@@ -327,6 +361,41 @@ def get_params(param_pars={}, **kw):
 
 
 ########################################################################################################################
+def get_xy_random2(X, y):
+    # X = np.random.rand(100,30)
+    # y = np.random.binomial(n=1, p=0.5, size=[100])
+
+    ## PREPROCESSING STEPS
+    # change into dataframe
+    cols      = [str(i) for i in range(X.shape[1])]  # define column pd dataframe, need to be string type
+    data      = pd.DataFrame(X, columns=cols)  # need to convert into df, following the step from documentation
+    data['y'] = y
+
+    # define which feature columns sparse or dense type
+    # since our data categorize as Dense Features, we define the sparse features as empty list
+    cols_sparse_features = []
+    cols_dense_features = [str(i) for i in range(X.shape[1])]
+
+    # convert feature type into SparseFeat or DenseFeat type, adjusting from DeepCTR library
+    sparse_feat_l = [SparseFeat(feat, vocabulary_size=data[feat].nunique(), embedding_dim=4)
+                     for i,feat in enumerate(cols_sparse_features)]
+                    
+    dense_feat_l       = [DenseFeat(feat, dimension=1) for feat in cols_dense_features]
+    feature_col        = sparse_feat_l + dense_feat_l
+
+    linear_feat_col = feature_col  # containing all the features used by linear part of the model
+    dnn_feat_col    = feature_col  # containing all the features used by deep part of the model
+    feature_names      = get_feature_names(linear_feat_col + dnn_feat_col)
+
+
+    train_model_input  = {name: data[name] for name in feature_names}
+    X_train, y_train   = train_model_input, train[target].values
+
+    return X_train, y_train, linear_feat_col, dnn_feat_col
+
+
+
+
 def get_xy_random():
     X = np.random.rand(100,30)
     y = np.random.binomial(n=1, p=0.5, size=[100])
@@ -344,7 +413,7 @@ def get_xy_random():
 
     # convert feature type into SparseFeat or DenseFeat type, adjusting from DeepCTR library
     sparse_feat_l = [SparseFeat(feat, vocabulary_size=data[feat].nunique(), embedding_dim=4)
-                    for i,feat in enumerate(cols_sparse_features)]
+                     for i,feat in enumerate(cols_sparse_features)]
                     
     dense_feat_l       = [DenseFeat(feat, dimension=1) for feat in cols_dense_features]
     feature_col        = sparse_feat_l + dense_feat_l
@@ -353,8 +422,12 @@ def get_xy_random():
     dnn_feat_col    = feature_col  # containing all the features used by deep part of the model
     feature_names      = get_feature_names(linear_feat_col + dnn_feat_col)
 
+
+
+
     train_full, test   = train_test_split(data, random_state=2021, stratify=data['y'])
     train, val         = train_test_split(train_full, random_state=2021, stratify=train_full['y'])
+
 
     train_model_input  = {name:train[name] for name in feature_names}
     val_model_input    = {name:val[name] for name in feature_names}
@@ -366,6 +439,10 @@ def get_xy_random():
     X_val, y_val       = val_model_input, val[target].values
     X_test, y_test     = test_model_input, test[target].values
     return X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col
+
+
+
+
 
 
 def get_xy_fd(use_neg=False, hash_flag=False, use_session=False):
