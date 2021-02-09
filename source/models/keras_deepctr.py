@@ -304,18 +304,21 @@ def get_dataset(data_pars=None, task_type="train", **kw):
         if task_type == "train":
             d = data_pars[task_type]
 
+            #### run_preprocessor --->   Model feeding  in run_train.py ? Line 253
+            cols_family['coldense']  = data_pars[ "cols_model_type" ]['coldense']
+            cols_family['colsparse'] = data_pars[ "cols_model_type" ]['colsparse']
 
-           if name in ['WDL', 'FNN', 'DCN', 'DCNMix', 'MLR']:
-             if name=='MLR':
-                X_train,  y_train, region_feat_col, base_feat_col = get_xy_random2(d['Xtrain'], d['ytrain'])
-                X_test,  y_test, region_feat_col, base_feat_col   = get_xy_random2( d['Xval'], d['yval'] )
-                col_dict = {  'linear_feat_col' : linear_feat_col,
-                              'dnn_feat_col'  : dnn_feat_col 
+
+           if name=='MLR':
+                X_train,  y_train, region_feat_col, base_feat_col = get_xy_random2(d['Xtrain'], d['ytrain'], cols_family)
+                X_test,  y_test, region_feat_col, base_feat_col   = get_xy_random2( d['Xval'], d['yval'], cols_family )
+                col_dict = {  'linear_feat_col' : region_feat_col,
+                              'dnn_feat_col'  :   base_feat_col 
                            }
 
-             else:
-                X_train, y_train, linear_feat_col, dnn_feat_col = get_xy_random2(d['Xtrain'], d['ytrain'])
-                X_test, y_test, linear_feat_col, dnn_feat_col   = get_xy_random2( d['Xval'], d['yval'] )
+           elif name in ['WDL', 'FNN', 'DCN', 'DCNMix']:
+                X_train, y_train, linear_feat_col, dnn_feat_col = get_xy_random2(d['Xtrain'], d['ytrain'], cols_family)
+                X_test, y_test,   linear_feat_col, dnn_feat_col = get_xy_random2( d['Xval'], d['yval'], cols_family )
                 col_dict = {  'linear_feat_col' : linear_feat_col,
                               'dnn_feat_col'  : dnn_feat_col 
                            }
@@ -361,7 +364,7 @@ def get_params(param_pars={}, **kw):
 
 
 ########################################################################################################################
-def get_xy_random2(X, y):
+def get_xy_random2(X, y, cols_family={}):
     # X = np.random.rand(100,30)
     # y = np.random.binomial(n=1, p=0.5, size=[100])
 
@@ -373,8 +376,12 @@ def get_xy_random2(X, y):
 
     # define which feature columns sparse or dense type
     # since our data categorize as Dense Features, we define the sparse features as empty list
-    cols_sparse_features = []
-    cols_dense_features = [str(i) for i in range(X.shape[1])]
+    #cols_sparse_features = []
+    #cols_dense_features  = [str(i) for i in range(X.shape[1])]
+
+    cols_sparse_features = cols_family['colsparse']
+    cols_dense_features  = cols_family['coldense']
+
 
     # convert feature type into SparseFeat or DenseFeat type, adjusting from DeepCTR library
     sparse_feat_l = [SparseFeat(feat, vocabulary_size=data[feat].nunique(), embedding_dim=4)
@@ -385,7 +392,7 @@ def get_xy_random2(X, y):
 
     linear_feat_col = feature_col  # containing all the features used by linear part of the model
     dnn_feat_col    = feature_col  # containing all the features used by deep part of the model
-    feature_names      = get_feature_names(linear_feat_col + dnn_feat_col)
+    feature_names    = get_feature_names(linear_feat_col + dnn_feat_col)
 
 
     train_model_input  = {name: data[name] for name in feature_names}

@@ -113,6 +113,9 @@ def config1() :
                       'region_feat_col'    : region_feat_col,
                       'base_feat_col'      : base_feat_col,
                       'task'                  : task,
+
+
+                      
                       'model_pars': {'optimizer': opt,
                                      'loss': loss,
                                      'metrics': metrics}
