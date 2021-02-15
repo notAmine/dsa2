@@ -18,7 +18,25 @@ THIS_FILEPATH  =  os.path.abspath(__file__)
 sys.path.append(root_repo)
 from source.util_feature import save,os_get_function_name
 
+#### Libraries for fastapi modeling ####
+from typing import List
+from pydantic import BaseModel
 
+#### Model for Body Request FastAPI #####
+class BodyOne(BaseModel):
+    Age: int
+    Embarked: str
+    Fare: float
+    Name: str
+    Parch: int
+    Sex: str
+    SibSp: int
+    Ticket: int
+    Pclass: int
+
+#### List of Inferences for predict as Batch ####
+class BodyBatch(BaseModel):
+    Batch: List[BodyOne]
 
 
 def global_pars_update(model_dict,  data_name, config_name):
@@ -298,6 +316,15 @@ def predict(config=None, nsample=None):
                               )
 """
 
+from core_run import deploy
+
+"""
+def deploy():
+    import uvicorn
+    uvicorn.run("script_name:fastapi_app", host="127.0.0.1", port=8000, log_level="info")
+
+"""
+
 
 ###########################################################################################################
 ###########################################################################################################
@@ -306,11 +333,13 @@ python  titanic_classifier.py  data_profile
 python  titanic_classifier.py  preprocess  --nsample 100
 python  titanic_classifier.py  train       --nsample 200
 python  titanic_classifier.py  predict
+python  titanic_classifier.py  deploy
 
 
 """
+
 if __name__ == "__main__":
-    d = { "data_profile": data_profile,  "train" : train, "predict" : predict, "config" : config_default }
+    d = { "data_profile": data_profile,  "train" : train, "predict" : predict, "config" : config_default ,"deploy":deploy}
     import fire
     fire.Fire(d)
     
