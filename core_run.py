@@ -234,9 +234,9 @@ def hyperparam_wrapper(config_full="",
     log(best_dict)
     log(path_output)
 
+
 ########################################################################################
-####### Inference / Deploy ######################################################################
-import uvicorn
+####### Inference / Deploy #############################################################
 def deploy():
     """
     Simple deploy using uvicorn on runtime. U can use gunicorn instead.
@@ -245,6 +245,7 @@ def deploy():
 
     return: Service
     """
+    import uvicorn
     uvicorn.run("core_deploy:app", host="127.0.0.1", port=8000, log_level="info")
 
 
