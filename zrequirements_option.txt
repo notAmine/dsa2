@@ -7,3 +7,4 @@ mlflow==1.13.1
 optuna-dashboard
 fastapi
 pydantic
+uvicorn
