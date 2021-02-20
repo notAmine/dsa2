@@ -145,11 +145,8 @@ def config1(path_model_out="") :
     model_class  = 'LGBMClassifier'  ### ACTUAL Class name for model_sklearn.py
     n_sample     = 500
 
-    def post_process_fun(y):
-        return  int(y)
-
-    def pre_process_fun(y):
-        return  int(y)
+    def post_process_fun(y):  return  int(y)
+    def pre_process_fun(y):   return  int(y)
 
     model_dict = {'model_pars': {
     ### LightGBM API model   #######################################
@@ -267,7 +264,7 @@ def config1(path_model_out="") :
 
 
                             'colcat_bin',
-                            'colcat_bin_onehot',
+                            'colcat_onehot',
                             'colcat_minhash',
 
 
