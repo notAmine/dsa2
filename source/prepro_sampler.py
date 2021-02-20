@@ -301,45 +301,38 @@ def pd_augmentation_sdv(df, col=None, pars={})  :
 
 def test_pd_augmentation_sdv():
     from sklearn.datasets import load_boston
-    # loading boston data
     data = load_boston()
-    df = pd.DataFrame(data.data, columns=data.feature_names)
-    log_pd(df)    
-    
+    df   = pd.DataFrame(data.data, columns=data.feature_names)
+    log_pd(df)
+
+    dir_tmp = 'ztmp/'     
+    path = dir_tmp + '/model_par_augmentation.pkl'
+    os.makedirs(dir_tmp, exist_ok=True)
+
     log('##### testing augmentation CTGAN ######################')
-    path = os.getcwd() + '\zz_model_ctgan_augmentation.pkl'
-    pars = {'path_model_save': path,
-            'model_name': 'CTGAN'}
+    pars = {'path_model_save': path,  'model_name': 'CTGAN'}
     df_new, _ = pd_augmentation_sdv(df, pars=pars)
-    
+
     log('####### Reload')
-    pars = {'path_model_load': path}
-    df_new, _ = pd_augmentation_sdv(df, pars=pars)
+    df_new, _ = pd_augmentation_sdv(df, pars={'path_model_load': path})
     
 
     log('##### testing augmentation VAE #########################')
-    path = os.getcwd() + '\zz_model_vae_augmentation.pkl'
     pars = {'path_model_save': path, 'model_name': 'VAE'}
     df_new, _ = pd_augmentation_sdv(df, pars=pars)
     log('####### Reload')
-    pars = {'path_model_load': path}
-    df_new, _ = pd_augmentation_sdv(df, pars=pars)
+    df_new, _ = pd_augmentation_sdv(df, pars={'path_model_load': path})
 
 
     log('##### testing Time Series #############################')
-    try:
-        from sdv.demo import load_timeseries_demo
-    except:
-        os.system('pip install sdv')
-        from sdv.demo import load_timeseries_demo
-        
+    from sdv.demo import load_timeseries_demo        
     df = load_timeseries_demo()
     log_pd(df)
+    
     entity_columns  = ['Symbol']
     context_columns = ['MarketCap', 'Sector', 'Industry']
     sequence_index  = 'Date'
 
-    path = os.getcwd() + '\zz_model_par_augmentation.pkl'
     pars = {'path_model_save': path,
             'model_name': 'PAR',
             'entity_columns' : entity_columns,
@@ -349,8 +342,7 @@ def test_pd_augmentation_sdv():
     df_new, _ = pd_augmentation_sdv(df, pars=pars)
     
     log('####### Reload')
-    pars = {'path_model_load': path,   'n_samples' : 5}
-    df_new, _ = pd_augmentation_sdv(df, pars=pars)
+    df_new, _ = pd_augmentation_sdv(df, pars={'path_model_load': path,  'n_samples' : 5 })
     log_pd(df_new)
 
 
