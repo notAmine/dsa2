@@ -60,8 +60,6 @@ def save_features(df, name, path):
        df0.to_parquet( f"{path}/{name}/features.parquet")
 
 
-
-
 ###################################################################################################
 ##### Filtering / cleaning rows :   ###############################################################
 def pd_filter_rows(df, col, pars):
@@ -96,14 +94,12 @@ def pd_filter_rows(df, col, pars):
 
 def pd_resample(df=None, col=None, pars=None):
     """
-        Over-sample, Under-sample
+        Over-sample
     """
-    prefix = 'col_imbalance'
+    prefix = 'col_over_sampling'
     ######################################################################################
     from imblearn.over_sampling import SMOTE
-
     model_resample = { 'SMOTE' : SMOTE}[  pars.get("model_name", 'SMOTE') ]
-
     pars_resample  = pars.get('pars_resample',
                              {'sampling_strategy' : 'auto', 'random_state':0, 'k_neighbors':5, 'n_jobs': 2})
 
@@ -113,11 +109,11 @@ def pd_resample(df=None, col=None, pars=None):
         #pars = load(pars['path_pipeline'] + f"/{prefix}_pars.pkl" )
 
     else :     ### Training time
-        colX          = col # [col_ for col_ in col if col_ not in coly]
-        train_X       = df[colX].fillna(method='ffill')
-        coly     = pars['coly']
-        train_y  = pars['dfy']
-        gp       = model_resample( **pars_resample)
+        colX    = col # [col_ for col_ in col if col_ not in coly]
+        coly    = pars['coly']
+        train_X = df[colX].fillna(method='ffill')
+        train_y = pars['dfy']
+        gp      = model_resample( **pars_resample)
         X_resample, y_resample = gp.fit_resample(train_X, train_y)
 
         df2       = pd.DataFrame(X_resample, columns = col, index=train_X.index)
@@ -130,12 +126,12 @@ def pd_resample(df=None, col=None, pars=None):
        save_features(df2, 'df_resample', pars['path_features_store'])
        save(gp,             pars['path_pipeline_export'] + f"/{prefix}_model.pkl" )
        save(col,            pars['path_pipeline_export'] + f"/{prefix}.pkl" )
-       save(pars_resample,   pars['path_pipeline_export'] + f"/{prefix}_pars.pkl" )
+       save(pars_resample,  pars['path_pipeline_export'] + f"/{prefix}_pars.pkl" )
 
 
     col_pars = {'prefix' : prefix , 'path' :   pars.get('path_pipeline_export', pars.get('path_pipeline', None)) }
     col_pars['cols_new'] = {
-       prefix :  col_new  ### list
+       prefix :  col_new  ###  for training input data
     }
     return df2, col_pars
 
@@ -295,10 +291,8 @@ def pd_augmentation_sdv(df, col=None, pars={})  :
     return df_new, col
 
 
-
-
-    
-
+#####################################################################################
+#####################################################################################
 def test_pd_augmentation_sdv():
     from sklearn.datasets import load_boston
     data = load_boston()
@@ -328,7 +322,7 @@ def test_pd_augmentation_sdv():
     from sdv.demo import load_timeseries_demo        
     df = load_timeseries_demo()
     log_pd(df)
-    
+
     entity_columns  = ['Symbol']
     context_columns = ['MarketCap', 'Sector', 'Industry']
     sequence_index  = 'Date'
