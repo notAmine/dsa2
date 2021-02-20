@@ -83,10 +83,9 @@ cols_input_type_2 = {
 ####################################################################################
 """
 
+Features to be tested.
 
-        #### Data Over/Under sampling 
-        prepro_sampler.pd_autoencoder(df,col, pars)
-        
+        #### Data Over/Under sampling         
         prepro_sampler.pd_col_genetic_transform(df,col, pars)        
         prepro_sampler.pd_colcat_encoder_generic(df,col, pars)
         
@@ -165,7 +164,7 @@ def config1(path_model_out="") :
     model_dict = {'model_pars': {
     ### LightGBM API model   #######################################
      'model_class': model_class
-    ,'model_pars' : {'objective': 'binary', 'n_estimators':100,
+    ,'model_pars' : {'objective': 'binary', 'n_estimators':5,
                     }
 
     , 'post_process_fun' : post_process_fun
@@ -174,10 +173,15 @@ def config1(path_model_out="") :
     ### Pipeline for data processing ##############################
     'pipe_list': [
         {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+
+        ### numerics, continuous
         {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
         {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
+        
+        ### Category
         {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
         {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
+        
         {'uri': 'source/prepro.py::pd_colcross',             'pars': {}, 'cols_family': 'colcross',   'cols_out': 'colcross_pair_onehot',  'type': 'cross'},
 
 
