@@ -148,7 +148,6 @@ def config1(path_model_out="") :
     def pre_process_fun(y):
         return  int(y)
 
-
     model_dict = {'model_pars': {
     ### LightGBM API model   #######################################
      'model_class': model_class
@@ -157,14 +156,15 @@ def config1(path_model_out="") :
     , 'post_process_fun' : post_process_fun
     , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,
 
+
     ### Pipeline for data processing ##############################
     'pipe_list': [
-    ### remove NA rows
-    #   , {'uri': 'source/prepro.py::pd_filter_rows'               , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    ### Filter rows
+    #,{'uri': 'source/prepro.py::pd_filter_rows'               , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
     ###  coly encoding
     {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }        
-    #   , {'uri': 'source/prepro.py::pd_coly_clean'                , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro.py::pd_coly_clean'                , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
 
     ### colnum : continuous
@@ -204,34 +204,34 @@ def config1(path_model_out="") :
           }
 
     #### Date        
-    #   , {'uri': 'source/prepro.py::pd_coldate'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro.py::pd_coldate'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
     #### Text        
-    #   , {'uri': 'source/prepro.py::pd_coltext'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #   , {'uri': 'source/prepro.py::pd_coltext_clean'             , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #   , {'uri': 'source/prepro.py::pd_coltext_universal_google'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #   , {'uri': 'source/prepro.py::pd_coltext_wordfreq'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    {'uri': 'source/prepro.py::pd_coltext'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro.py::pd_coltext_clean'             , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro.py::pd_coltext_universal_google'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro.py::pd_coltext_wordfreq'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
     
 
     #### Data Over/Under sampling, New data         
-    #   , {'uri': 'source/prepro_sampler.py::pd_resample'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #   , {'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #   , {'uri': 'source/prepro_sampler.py::pd_augmentation_sdv'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_sampler.py::pd_resample'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_sampler.py::pd_augmentation_sdv'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
 
     #### Time Series 
-    #   , {'uri': 'source/prepro_tseries.py::pd_ts_autoregressive' , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #   , {'uri': 'source/prepro_tseries.py::pd_ts_basic'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #   , {'uri': 'source/prepro_tseries.py::pd_ts_date'           , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_autoregressive' , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_basic'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_date'           , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
     
-    #   , {'uri': 'source/prepro_tseries.py::pd_ts_detrend'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #   , {'uri': 'source/prepro_tseries.py::pd_ts_generic'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #   , {'uri': 'source/prepro_tseries.py::pd_ts_groupby'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #   , {'uri': 'source/prepro_tseries.py::pd_ts_identity'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #   , {'uri': 'source/prepro_tseries.py::pd_ts_lag'            , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #   , {'uri': 'source/prepro_tseries.py::pd_ts_onehot'         , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #   , {'uri': 'source/prepro_tseries.py::pd_ts_rolling'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #   , {'uri': 'source/prepro_tseries.py::pd_ts_template'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_detrend'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_generic'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_groupby'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_identity'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_lag'            , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_onehot'         , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_rolling'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_template'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
     
     #### Example of Custom processor
