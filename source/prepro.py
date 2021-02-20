@@ -143,7 +143,7 @@ def pd_coly(df, col, pars):
             return 0
     df['_isfloat'] = df[ coly ].apply(lambda x : isfloat(x) )
     df             = df[ df['_isfloat'] > 0 ]
-    df[coly] = df[coly].astype('float32')
+    df[coly]       = df[coly].astype('float64')
     del df['_isfloat']
     logs("----------df[coly]------------",df[coly])
     ymin, ymax = pars.get('ymin', -9999999999.0), pars.get('ymax', 999999999.0)
