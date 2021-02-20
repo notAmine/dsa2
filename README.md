@@ -76,7 +76,7 @@ Preprocessors Check
         prepro_sampler.pd_col_genetic_transform(df,col, pars)        
         prepro_sampler.pd_colcat_encoder_generic(df,col, pars)
         
-        prepro_sampler.pd_resample(df,col, pars)
+        prepro_sampler.pd_sample_imblearn(df,col, pars)
         prepro_sampler.pd_filter_rows(df,col, pars)
 
 
@@ -109,7 +109,7 @@ Preprocessors Check
         #### Target label encoding  ##################################
         source/prepro.py::pd_coly(df,col, pars)
         
-        source/prepro.py::pd_resample(df,col, pars)
+        source/prepro.py::pd_sample_imblearn(df,col, pars)
         source/prepro.py::pd_filter_rows(df,col, pars)
         source/prepro.py::pd_coly_clean(df,col, pars)
 

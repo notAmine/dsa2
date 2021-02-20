@@ -1,8 +1,10 @@
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
-Transformation for ALL COlumns :
+Transformation for ALL Columns :
    Increase samples, Reduce Samples.
+
+
 
 """
 import warnings
@@ -40,7 +42,7 @@ def log_pd(df, *s, n=0, m=1):
     print(sjump,  df.head(n), flush=True)
 
 
-from util_feature import  save, load_function_uri, load, save_features
+from util_feature import  save, load_function_uri, load, save_features, params_check
 ####################################################################################################
 ####################################################################################################
 
@@ -77,21 +79,25 @@ def pd_filter_rows(df, col, pars):
     return df, col
 
 
-def pd_resample(df=None, col=None, pars=None):
+def pd_sample_imblearn(df=None, col=None, pars=None):
     """
         Over-sample
     """
-    prefix = 'col_over_sampling'
+    params_check(pars, ['model_name', 'pars_resample', 'coly', 'dfy'])
+    prefix = 'col_sampling'
+
     ######################################################################################
     from imblearn.over_sampling import SMOTE
-    model_resample = { 'SMOTE' : SMOTE}[  pars.get("model_name", 'SMOTE') ]
+    from imblearn.combine import SMOTEENN, SMOTETomek
+    from imblearn.under_sampling import NearMiss
+
+    # model_resample = { 'SMOTE' : SMOTE, 'SMOTEENN': SMOTEENN }[  pars.get("model_name", 'SMOTEENN') ]
+    model_resample = locals()[  pars.get("model_name", 'SMOTEENN')  ]
     pars_resample  = pars.get('pars_resample',
-                             {'sampling_strategy' : 'auto', 'random_state':0, 'k_neighbors':5, 'n_jobs': 2})
+                             {'sampling_strategy' : 'auto', 'random_state':0, 'n_jobs': 2})
 
     if 'path_pipeline' in pars :   #### Inference time
         return df, {'col_new': col }
-        #gp   = load(pars['path_pipeline'] + f"/{prefix}_model.pkl" )
-        #pars = load(pars['path_pipeline'] + f"/{prefix}_pars.pkl" )
 
     else :     ### Training time
         colX    = col # [col_ for col_ in col if col_ not in coly]
@@ -104,11 +110,10 @@ def pd_resample(df=None, col=None, pars=None):
         df2       = pd.DataFrame(X_resample, columns = col, index=train_X.index)
         df2[coly] = y_resample
 
-
     col_new = col
     ###################################################################################
     if 'path_features_store' in pars and 'path_pipeline_export' in pars:
-       save_features(df2, 'df_resample', pars['path_features_store'])
+       save_features(df2, prefix.replace("col_", "df_"), pars['path_features_store'])
        save(gp,             pars['path_pipeline_export'] + f"/{prefix}_model.pkl" )
        save(col,            pars['path_pipeline_export'] + f"/{prefix}.pkl" )
        save(pars_resample,  pars['path_pipeline_export'] + f"/{prefix}_pars.pkl" )
@@ -119,6 +124,8 @@ def pd_resample(df=None, col=None, pars=None):
        prefix :  col_new  ###  for training input data
     }
     return df2, col_pars
+
+
 
 
 def pd_autoencoder(df, col, pars):
@@ -381,6 +388,24 @@ def pd_covariate_shift_adjustment():
     plt.show()
     sparsity = np.mean(sol.toarray().ravel() != 0)
     print('Sparsity of solution: %s%%' % (sparsity * 100))
+
+
+
+
+########################################################################################
+########################################################################################
+def test():
+    from util_feature import test_get_classification_data
+    dfX, dfy = test_get_classification_data()
+    cols     = list(dfX.columsn)
+    ll       = [ ('pd_sample_imblearn', {}  )
+
+
+               ]
+
+    for fname, pars in ll :
+        myfun = globals()[fname]
+        res   = myfun(dfX, cols, pars)
 
 
 

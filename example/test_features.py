@@ -69,7 +69,7 @@ config_default   = 'config1'          ### name of function which contains data c
 Features to be tested.
 
         #### Data Over/Under sampling         
-        source/prepro_sampler.py::pd_resample(df,col, pars)
+        source/prepro_sampler.py::pd_sample_imblearn(df,col, pars)
         source/prepro_sampler.py::pd_filter_rows(df,col, pars)
 
 
@@ -213,7 +213,7 @@ def config1(path_model_out="") :
     
 
     #### Data Over/Under sampling, New data         
-    #,{'uri': 'source/prepro_sampler.py::pd_resample'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_sampler.py::pd_sample_imblearn'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
     #,{'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
     #,{'uri': 'source/prepro_sampler.py::pd_augmentation_sdv'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
