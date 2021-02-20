@@ -192,12 +192,10 @@ def config1(path_model_out="") :
          ### Issue with Binary 1 or 0  : need to pass with Logistic
          'pars': {'pars_generic' :{'metric': 'spearman', 'generations': 100, 'population_size': 100,  ### Higher than nb_features
                             'tournament_size': 20, 'stopping_criteria': 1.0, 'const_range': (-1., 1.),
-                            'p_crossover': 0.9, 'p_subtree_mutation': 0.01, 'p_hoist_mutation': 0.01,
-                            'p_point_mutation': 0.01, 'p_point_replace': 0.05,
+                            'p_crossover': 0.9, 'p_subtree_mutation': 0.01, 'p_hoist_mutation': 0.01, 'p_point_mutation': 0.01, 'p_point_replace': 0.05,
                             'parsimony_coefficient' : 0.0005,   ####   0.00005 Control Complexity
-                            'max_samples' : 0.9, 'verbose' : 1,
+                            'max_samples' : 0.9, 'verbose' : 1, 'random_state' :0, 'n_jobs' : 4,
                             #'n_components'      ###    'metric': 'spearman', Control number of outtput features  : n_components
-                            'random_state' :0, 'n_jobs' : 4,
                            }
              },
             'cols_family': 'colgen',     'cols_out': 'col_genetic',  'type': 'add_coly'   #### Need to add target coly
