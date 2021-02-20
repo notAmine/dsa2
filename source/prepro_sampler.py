@@ -4,6 +4,21 @@
 Transformation for ALL Columns :
    Increase samples, Reduce Samples.
 
+Main isssue is the number of rows change  !!!!
+
+  cannot merge with others
+
+  --> store as train data
+
+
+  train data ---> new train data
+
+
+  Transformation with less rows !
+
+
+
+
 
 
 """
@@ -47,6 +62,30 @@ from util_feature import  save, load_function_uri, load, save_features, params_c
 ####################################################################################################
 
 
+
+def pd_export(df, col, pars):
+    """
+       Export in train folder for next training
+       colsall
+    :param df:
+    :param col:
+    :param pars:
+    :return:
+    """
+    colid, colsX, coly = pars['colid'], pars['colsX'], pars['coly']
+    dfX   = df[colsX]
+    dfX   = dfX.set_index(colid)
+    dfX.to_parquet( pars['path_export'] + "/features.parquet")
+
+
+    dfy = df[coly]
+    dfy = dfy.set_index(colid)
+    dfX.to_parquet( pars['path_export'] + "/target.parquet")
+
+
+
+
+
 ###################################################################################################
 ##### Filtering / cleaning rows :   ###############################################################
 def pd_filter_rows(df, col, pars):
@@ -75,7 +114,6 @@ def pd_filter_rows(df, col, pars):
     df = df[df[coly] > ymin]
     df = df[df[coly] < ymax]
     del df['_isfloat']
-
     return df, col
 
 

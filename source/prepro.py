@@ -40,13 +40,13 @@ def log_pd(df, *s, n=0, m=1):
     print(sjump,  df.head(n), flush=True)
 
 
-from util_feature import  save, load_function_uri, load, save_features, os_get_function_name
+from util_feature import  (save,  load, save_features, os_get_function_name,
+                           params_check)
 import util_feature
+
+
 ####################################################################################################
 ####################################################################################################
-
-
-
 def pd_col_atemplate(df=None, col=None, pars={}):
     """
     Example of custom Processor
