@@ -1,14 +1,9 @@
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
-
 python  example/test_features.py  preprocess  --nsample 100
 
 python  example/test_features.py  train       --nsample 200
-
-
-
-
 
 
 """
@@ -89,7 +84,6 @@ Features to be tested.
         source/prepro_sampler.py::pd_filter_rows(df,col, pars)
 
 
-
         #### Category, Numerical
         source/prepro.py::pd_col_genetic_transform(df,col, pars)
         
@@ -165,83 +159,83 @@ def config1(path_model_out="") :
 
     ### Pipeline for data processing ##############################
     'pipe_list': [
-        ### remove NA rows
-        #   , {'uri': 'source/prepro.py::pd_filter_rows'               , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    ### remove NA rows
+    #   , {'uri': 'source/prepro.py::pd_filter_rows'               , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
-        ###  coly encoding
-        {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }        
-        #   , {'uri': 'source/prepro.py::pd_coly_clean'                , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-
-
-        ### colnum : continuous
-        ,{'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             }
-        ,{'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             }
-        #{'uri': 'source/prepro.py::pd_colnum_quantile_norm',       'pars': {'colsparse' :  [] }, 'cols_family': 'colnum',     'cols_out': 'colnum_quantile_norm',     'type': ''             },
-        #,{'uri': 'source/prepro.py::pd_colnum'                    , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #,{'uri': 'source/prepro.py::pd_colnum_normalize'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    ###  coly encoding
+    {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }        
+    #   , {'uri': 'source/prepro.py::pd_coly_clean'                , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
 
-        ### colcat :Category
-        ,{'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             }
-        ,{'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             }
-        ,{'uri': 'source/prepro.py::pd_colcat_minhash',       'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_minhash',     'type': ''             }
-        #,{'uri': 'source/prepro.py::pd_colcat_encoder_generic'    , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #,{'uri': 'source/prepro.py::pd_colcat_minhash'            , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-
-        
-
-        ### colcat, colnum cross-features
-        ,{'uri': 'source/prepro.py::pd_colcross',             'pars': {}, 'cols_family': 'colcross',   'cols_out': 'colcross_pair_onehot',  'type': 'cross'}
-
-        ### New Features
-        ,{'uri': 'source/prepro.py::pd_col_genetic_transform',
-             ### Issue with Binary 1 or 0  : need to pass with Logistic
-             'pars': {'pars_generic' :{'metric': 'spearman', 'generations': 100, 'population_size': 100,  ### Higher than nb_features
-                                'tournament_size': 20, 'stopping_criteria': 1.0, 'const_range': (-1., 1.),
-                                'p_crossover': 0.9, 'p_subtree_mutation': 0.01, 'p_hoist_mutation': 0.01,
-                                'p_point_mutation': 0.01, 'p_point_replace': 0.05,
-                                'parsimony_coefficient' : 0.0005,   ####   0.00005 Control Complexity
-                                'max_samples' : 0.9, 'verbose' : 1,
-                                #'n_components'      ###    'metric': 'spearman', Control number of outtput features  : n_components
-                                'random_state' :0, 'n_jobs' : 4,
-                               }
-                 },
-                'cols_family': 'colgen',     'cols_out': 'col_genetic',  'type': 'add_coly'   #### Need to add target coly
-              }
-
-        #### Date        
-        #   , {'uri': 'source/prepro.py::pd_coldate'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-
-        #### Text        
-        #   , {'uri': 'source/prepro.py::pd_coltext'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #   , {'uri': 'source/prepro.py::pd_coltext_clean'             , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #   , {'uri': 'source/prepro.py::pd_coltext_universal_google'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #   , {'uri': 'source/prepro.py::pd_coltext_wordfreq'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        
-
-        #### Data Over/Under sampling, New data         
-        #   , {'uri': 'source/prepro_sampler.py::pd_resample'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #   , {'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #   , {'uri': 'source/prepro_sampler.py::pd_augmentation_sdv'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    ### colnum : continuous
+    ,{'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             }
+    ,{'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             }
+    #{'uri': 'source/prepro.py::pd_colnum_quantile_norm',       'pars': {'colsparse' :  [] }, 'cols_family': 'colnum',     'cols_out': 'colnum_quantile_norm',     'type': ''             },
+    #,{'uri': 'source/prepro.py::pd_colnum'                    , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro.py::pd_colnum_normalize'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
 
-        #### Time Series 
-        #   , {'uri': 'source/prepro_tseries.py::pd_ts_autoregressive' , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #   , {'uri': 'source/prepro_tseries.py::pd_ts_basic'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #   , {'uri': 'source/prepro_tseries.py::pd_ts_date'           , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        
-        #   , {'uri': 'source/prepro_tseries.py::pd_ts_detrend'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #   , {'uri': 'source/prepro_tseries.py::pd_ts_generic'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #   , {'uri': 'source/prepro_tseries.py::pd_ts_groupby'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #   , {'uri': 'source/prepro_tseries.py::pd_ts_identity'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #   , {'uri': 'source/prepro_tseries.py::pd_ts_lag'            , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #   , {'uri': 'source/prepro_tseries.py::pd_ts_onehot'         , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #   , {'uri': 'source/prepro_tseries.py::pd_ts_rolling'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #   , {'uri': 'source/prepro_tseries.py::pd_ts_template'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    ### colcat :Category
+    ,{'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             }
+    ,{'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             }
+    ,{'uri': 'source/prepro.py::pd_colcat_minhash',       'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_minhash',     'type': ''             }
+    #,{'uri': 'source/prepro.py::pd_colcat_encoder_generic'    , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro.py::pd_colcat_minhash'            , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
-        
-        #### Example of Custom processor
-        ,{"uri":  THIS_FILEPATH + "::pd_col_myfun",   "pars": {}, "cols_family": "colnum",   "cols_out": "col_myfun",  "type": "" },  
+    
+
+    ### colcat, colnum cross-features
+    ,{'uri': 'source/prepro.py::pd_colcross',             'pars': {}, 'cols_family': 'colcross',   'cols_out': 'colcross_pair_onehot',  'type': 'cross'}
+
+    ### New Features
+    ,{'uri': 'source/prepro.py::pd_col_genetic_transform',
+         ### Issue with Binary 1 or 0  : need to pass with Logistic
+         'pars': {'pars_generic' :{'metric': 'spearman', 'generations': 100, 'population_size': 100,  ### Higher than nb_features
+                            'tournament_size': 20, 'stopping_criteria': 1.0, 'const_range': (-1., 1.),
+                            'p_crossover': 0.9, 'p_subtree_mutation': 0.01, 'p_hoist_mutation': 0.01,
+                            'p_point_mutation': 0.01, 'p_point_replace': 0.05,
+                            'parsimony_coefficient' : 0.0005,   ####   0.00005 Control Complexity
+                            'max_samples' : 0.9, 'verbose' : 1,
+                            #'n_components'      ###    'metric': 'spearman', Control number of outtput features  : n_components
+                            'random_state' :0, 'n_jobs' : 4,
+                           }
+             },
+            'cols_family': 'colgen',     'cols_out': 'col_genetic',  'type': 'add_coly'   #### Need to add target coly
+          }
+
+    #### Date        
+    #   , {'uri': 'source/prepro.py::pd_coldate'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+
+    #### Text        
+    #   , {'uri': 'source/prepro.py::pd_coltext'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #   , {'uri': 'source/prepro.py::pd_coltext_clean'             , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #   , {'uri': 'source/prepro.py::pd_coltext_universal_google'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #   , {'uri': 'source/prepro.py::pd_coltext_wordfreq'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    
+
+    #### Data Over/Under sampling, New data         
+    #   , {'uri': 'source/prepro_sampler.py::pd_resample'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #   , {'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #   , {'uri': 'source/prepro_sampler.py::pd_augmentation_sdv'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+
+
+    #### Time Series 
+    #   , {'uri': 'source/prepro_tseries.py::pd_ts_autoregressive' , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #   , {'uri': 'source/prepro_tseries.py::pd_ts_basic'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #   , {'uri': 'source/prepro_tseries.py::pd_ts_date'           , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    
+    #   , {'uri': 'source/prepro_tseries.py::pd_ts_detrend'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #   , {'uri': 'source/prepro_tseries.py::pd_ts_generic'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #   , {'uri': 'source/prepro_tseries.py::pd_ts_groupby'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #   , {'uri': 'source/prepro_tseries.py::pd_ts_identity'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #   , {'uri': 'source/prepro_tseries.py::pd_ts_lag'            , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #   , {'uri': 'source/prepro_tseries.py::pd_ts_onehot'         , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #   , {'uri': 'source/prepro_tseries.py::pd_ts_rolling'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #   , {'uri': 'source/prepro_tseries.py::pd_ts_template'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+
+    
+    #### Example of Custom processor
+    ,{"uri":  THIS_FILEPATH + "::pd_col_myfun",   "pars": {}, "cols_family": "colnum",   "cols_out": "col_myfun",  "type": "" },  
 
     ],
            }
@@ -251,30 +245,33 @@ def config1(path_model_out="") :
                   },
 
   'data_pars': { 'n_sample' : n_sample,
+
+      #### columns as raw data input
       'cols_input_type' : cols_input_type_2,
-      ### family of columns for MODEL  #########################################################
-      #  "colnum", "colnum_bin", "colnum_onehot", "colnum_binmap",  #### Colnum columns
+
+      #  "colnum", "colnum_bin", "colnum_onehot",   #### Colnum columns
       #  "colcat", "colcat_bin", "colcat_onehot", "colcat_bin_map",  #### colcat columns
       #  'colcross_single_onehot_select', "colcross_pair_onehot",  'colcross_pair',  #### colcross columns
       #  'coldate','coltext',
-      'cols_model_group': [ 'colnum',  ### should be optional 'colcat'
 
-                            'colcat_bin',
-                            # 'colcat_bin',
-                            # 'colnum_onehot',
-
-                            #'colcat_minhash',
-                            # 'colcat_onehot',
-                            # 'coltext_universal_google'
-
-
-                            #'colcat_minhash',
-
-                            # 'col_genetic',
-
+      ### columns for model input    #########################################################
+      'cols_model_group': [ 'colnum', 
+                            'colnum_bin',
+                            'colnum_onehot',
                             #'colnum_quantile_norm'
 
 
+                            'colcat_bin',
+                            'colcat_bin_onehot',
+                            'colcat_minhash',
+
+
+
+                            # 'coltext_universal_google'
+
+
+
+                            # 'col_genetic',
 
 
                           ]
@@ -302,17 +299,17 @@ def pd_col_myfun(df=None, col=None, pars={}):
         prepro   = load(pars["path_pipeline"] + f"/{prefix}_model.pkl" )
         pars     = load(pars["path_pipeline"] + f"/{prefix}_pars.pkl" )
         pars     = {} if pars is None else  pars
+
     #### Do something #################################################################
     df_new         = df[col]  ### Do nithi
     df_new.columns = [  col + "_myfun"  for col in df.columns ]
     cols_new       = list(df_new.columns)
-
     prepro   = None
     pars_new = None
 
 
 
-    ###################################################################################
+    ######Expor #######################################################################
     if "path_features_store" in pars and "path_pipeline_export" in pars:
        save(prepro,         pars["path_pipeline_export"] + f"/{prefix}_model.pkl" )
        save(cols_new,       pars["path_pipeline_export"] + f"/{prefix}.pkl" )
@@ -320,7 +317,7 @@ def pd_col_myfun(df=None, col=None, pars={}):
 
     col_pars = {"prefix" : prefix , "path" :   pars.get("path_pipeline_export", pars.get("path_pipeline", None)) }
     col_pars["cols_new"] = {
-        "col_myfun" :  cols_new  ### list
+        prefix :  cols_new  ### list
     }
     return df_new, col_pars
 
