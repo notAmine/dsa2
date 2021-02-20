@@ -1,37 +1,12 @@
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
-
-Transformation by category
-
-https://github.com/Automunge/AutoMunge#library-of-transformations
-Library of Transformations
-Library of Transformations Subheadings:
-Intro
-Numerical Set Normalizations
-Numerical Set Transformations
-Numercial Set Bins and Grainings
-Sequential Numerical Set Transformations
-Categorical Set Encodings
-Date-Time Data Normalizations
-Date-Time Data Bins
-Differential Privacy Noise Injections
-Misc. Functions
-String Parsing
-More Efficient String Parsing
-Multi-tier String Parsing
-List of Root Categories
-List of Suffix Appenders
-Other Reserved Strings
-Root Category Family Tree Definitions
-
-
+colnum, colcat, coldate transformation
 
 """
 import warnings
 warnings.filterwarnings('ignore')
-import sys, gc, os, pandas as pd, json, copy
-import numpy as np
+import sys, gc, os, pandas as pd, json, copy, numpy as np
 
 ####################################################################################################
 #### Add path for python import
@@ -65,10 +40,13 @@ def log_pd(df, *s, n=0, m=1):
     print(sjump,  df.head(n), flush=True)
 
 
-from util_feature import  save, load_function_uri, load, save_features
+from util_feature import  save, load_function_uri, load, save_features, os_get_function_name
 import util_feature
 ####################################################################################################
 ####################################################################################################
+
+
+
 def pd_col_atemplate(df=None, col=None, pars={}):
     """
     Example of custom Processor
@@ -114,8 +92,7 @@ def pd_col_atemplate(df=None, col=None, pars={}):
 
 
 
-
-####################################################################################################
+###########################################################################################
 ##### Label processing   ##################################################################
 def pd_coly_clean(df, col, pars):
     path_features_store = pars['path_features_store']
@@ -174,8 +151,8 @@ def pd_colnum(df, col, pars):
 
 
 def pd_colnum_fill_na_median(df, col, pars):
-	for quant_col in col:
-		df[quant_col].fillna((df[quant_col].median()), inplace=True)
+    for quant_col in col:
+        df[quant_col].fillna((df[quant_col].median()), inplace=True)
 
 
 def pd_colnum_normalize(df, col, pars):
@@ -268,7 +245,6 @@ def pd_colnum_quantile_norm(df, col, pars={}):
       save(colnew,     pars['path_pipeline_export']  + f"/{prefix}.pkl" )
       save(pars_new,   pars['path_pipeline_export']  + f"/{prefix}_pars.pkl" )
       save(model,      pars['path_pipeline_export']  + f"/{prefix}_model.pkl" )
-
 
   col_pars = {'prefix' : prefix, 'path': pars.get('path_pipeline_export', pars.get('path_pipeline', None)) }
   col_pars['cols_new'] = {
@@ -423,18 +399,20 @@ def pd_colcat_bin(df, col=None, pars=None):
 
 def pd_colcross(df, col, pars):
     """
-
+     cross_feature_new =  feat1 X feat2  (pair feature)
 
     """
-    prefix = 'colcross_onehot'
     log("#####  Cross Features From OneHot Features   ######################################")
+    prefix = 'colcross_onehot'
+
+    params_check([('dfcat_hist', pd.DataFrame), 'colid',   ])
     from util_feature import pd_feature_generate_cross
 
     dfcat_hot = pars['dfcat_hot']
-    dfnum_hot = pars['dfnum_hot']
     colid     = pars['colid']
 
     try :
+       dfnum_hot = pars['dfnum_hot']
        df_onehot = dfcat_hot.join(dfnum_hot, on=colid, how='left')
     except :
        df_onehot = copy.deepcopy(dfcat_hot)
@@ -694,6 +672,32 @@ def pd_col_genetic_transform(df=None, col=None, pars=None):
        prefix :  col_new  ### list
     }
     return df_genetic, col_pars
+
+
+
+
+
+
+
+
+
+######################################################################################
+def test():
+    from util_feature import test_get_classification_data
+    dfX, dfy = test_get_classification_data()
+    cols     = list(dfX.columsn)
+    ll       = [ ('pd_colnum_bin', {}  )
+               ]
+
+    for fname, pars in ll :
+        try :
+           myfun = globals()[fname]
+           res   = myfun(dfX, cols, pars)
+           log( f"Success, {fname}, {pars}, {e}")
+        except Exception as e :
+            log( f"Failed, {fname}, {pars}, {e}")
+
+
 
 
 if __name__ == "__main__":

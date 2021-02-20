@@ -41,6 +41,49 @@ def os_getcwd():
 
 
 #############################################################################################
+def test_get_classification_data(name=None):
+    from sklearn.datasets import make_classification
+    X, y = make_classification(n_classes=2, class_sep=2,
+         weights=[0.1, 0.9], n_informative=3, n_redundant=1, flip_y=0,
+         n_features=20, n_clusters_per_class=1, n_samples=1000, random_state=10)
+
+    cols = [ f'x_{i}' for i in range(0,X.shape[1]) ]
+    dfX   = pd.DataFrame(X, columns=cols)
+    dfX['colid'] = np.arange(0, len(dfX))
+    dfX = dfX.set_index('colid')
+
+    dfy   = pd.DataFrame(y, columns=['coly'])
+    dfy['colid'] = np.arange(0, len(dfy))
+    dfy = dfy.set_index('colid')
+    return dfX, dfy
+
+
+def params_check(pars, check_list, name=""):
+    """
+      Validate a dict parans
+    :param pars:
+    :param check_list:
+    :param name:
+    :return:
+    """
+    ss = ""
+    for t in check_list :
+        if isinstance(t, tuple) :
+            if t[0] not in pars :
+                  ss = ss + f"--missing {t}\n"
+            else :
+               if isinstance(pars[t[0]], t[1]) :
+                  ss = ss + f"--error_type {t}\n"
+        else :
+            if t not in pars :
+                  ss = ss + f"--missing {t}\n"
+    if ss == "" :
+        return True
+    else :
+        ss = f"{name}\n" + ss
+        raise Exception(ss)
+
+
 def save_features(df, name, path=None):
     """ Save dataframe on disk
     :param df:
