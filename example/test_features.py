@@ -82,64 +82,59 @@ cols_input_type_2 = {
 
 ####################################################################################
 """
-
 Features to be tested.
 
         #### Data Over/Under sampling         
-        prepro_sampler.pd_col_genetic_transform(df,col, pars)        
-        prepro_sampler.pd_colcat_encoder_generic(df,col, pars)
-        
-        prepro_sampler.pd_resample(df,col, pars)
-        prepro_sampler.pd_filter_rows(df,col, pars)
+        source/prepro_sampler.py::pd_resample(df,col, pars)
+        source/prepro_sampler.py::pd_filter_rows(df,col, pars)
+
 
 
         #### Category, Numerical
-        prepro.pd_autoencoder(df,col, pars)
-        prepro.pd_col_genetic_transform(df,col, pars)
+        source/prepro.py::pd_col_genetic_transform(df,col, pars)
         
-        prepro.pd_colcat_bin(df,col, pars)
-        prepro.pd_colcat_encoder_generic(df,col, pars)
-        prepro.pd_colcat_minhash(df,col, pars)
-        prepro.pd_colcat_to_onehot(df,col, pars)
+        source/prepro.py::pd_colcat_bin(df,col, pars)
+        source/prepro.py::pd_colcat_encoder_generic(df,col, pars)
+        source/prepro.py::pd_colcat_minhash(df,col, pars)
+        source/prepro.py::pd_colcat_to_onehot(df,col, pars)
         
-        prepro.pd_colcross(df,col, pars)
-        prepro.pd_coldate(df,col, pars)
+        source/prepro.py::pd_colcross(df,col, pars)
+        source/prepro.py::pd_coldate(df,col, pars)
         
-        prepro.pd_colnum(df,col, pars)
-        prepro.pd_colnum_bin(df,col, pars)
-        prepro.pd_colnum_binto_onehot(df,col, pars)
-        prepro.pd_colnum_normalize(df,col, pars)
-        prepro.pd_colnum_quantile_norm(df,col, pars)
+        source/prepro.py::pd_colnum(df,col, pars)
+        source/prepro.py::pd_colnum_bin(df,col, pars)
+        source/prepro.py::pd_colnum_binto_onehot(df,col, pars)
+        source/prepro.py::pd_colnum_normalize(df,col, pars)
+        source/prepro.py::pd_colnum_quantile_norm(df,col, pars)
 
         
         #### Text        
-        prepro.pd_coltext(df,col, pars)
-        prepro.pd_coltext_clean(df,col, pars)
-        prepro.pd_coltext_universal_google(df,col, pars)
-        prepro.pd_coltext_wordfreq(df,col, pars)
+        source/prepro.py::pd_coltext(df,col, pars)
+        source/prepro.py::pd_coltext_clean(df,col, pars)
+        source/prepro.py::pd_coltext_universal_google(df,col, pars)
+        source/prepro.py::pd_coltext_wordfreq(df,col, pars)
         
         
         #### Target label encoding
-        prepro.pd_coly(df,col, pars)
+        source/prepro.py::pd_coly(df,col, pars)
         
-        prepro.pd_resample(df,col, pars)
-        prepro.pd_filter_rows(df,col, pars)
-        prepro.pd_coly_clean(df,col, pars)
+        source/prepro.py::pd_filter_rows(df,col, pars)
+        source/prepro.py::pd_coly_clean(df,col, pars)
 
 
         #### Time Series 
-        prepro_tseries.pd_ts_autoregressive(df,col, pars)
-        prepro_tseries.pd_ts_basic(df,col, pars)
-        prepro_tseries.pd_ts_date(df,col, pars)
+        source/prepro_tseries.py::pd_ts_autoregressive(df,col, pars)
+        source/prepro_tseries.py::pd_ts_basic(df,col, pars)
+        source/prepro_tseries.py::pd_ts_date(df,col, pars)
         
-        prepro_tseries.pd_ts_detrend(df,col, pars)
-        prepro_tseries.pd_ts_generic(df,col, pars)
-        prepro_tseries.pd_ts_groupby(df,col, pars)
-        prepro_tseries.pd_ts_identity(df,col, pars)
-        prepro_tseries.pd_ts_lag(df,col, pars)
-        prepro_tseries.pd_ts_onehot(df,col, pars)
-        prepro_tseries.pd_ts_rolling(df,col, pars)
-        prepro_tseries.pd_ts_template(df,col, pars)
+        source/prepro_tseries.py::pd_ts_detrend(df,col, pars)
+        source/prepro_tseries.py::pd_ts_generic(df,col, pars)
+        source/prepro_tseries.py::pd_ts_groupby(df,col, pars)
+        source/prepro_tseries.py::pd_ts_identity(df,col, pars)
+        source/prepro_tseries.py::pd_ts_lag(df,col, pars)
+        source/prepro_tseries.py::pd_ts_onehot(df,col, pars)
+        source/prepro_tseries.py::pd_ts_rolling(df,col, pars)
+        source/prepro_tseries.py::pd_ts_template(df,col, pars)
 
 """
 
@@ -164,32 +159,44 @@ def config1(path_model_out="") :
     model_dict = {'model_pars': {
     ### LightGBM API model   #######################################
      'model_class': model_class
-    ,'model_pars' : {'objective': 'binary', 'n_estimators':5,
-                    }
+    ,'model_pars' : {'objective': 'binary', 'n_estimators':5,  }
 
     , 'post_process_fun' : post_process_fun
     , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,
 
     ### Pipeline for data processing ##############################
     'pipe_list': [
-        {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+        ####  coly encoding
+        {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }
+        #   , {'uri': 'source/prepro.py::pd_coly'                      , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        
+        #   , {'uri': 'source/prepro.py::pd_filter_rows'               , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro.py::pd_coly_clean'                , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
-        ### numerics, continuous
+
+
+
+
+
+        ### colnum : continuous
         {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
         {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
-        
-        ### Category
+        #{'uri': 'source/prepro.py::pd_colnum_quantile_norm',       'pars': {'colsparse' :  [] }, 'cols_family': 'colnum',     'cols_out': 'colnum_quantile_norm',     'type': ''             },
+        #   , {'uri': 'source/prepro.py::pd_colnum'                    , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro.py::pd_colnum_normalize'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+
+
+        ### colcat :Category
         {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
         {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
-        
-        {'uri': 'source/prepro.py::pd_colcross',             'pars': {}, 'cols_family': 'colcross',   'cols_out': 'colcross_pair_onehot',  'type': 'cross'},
-
-
         {'uri': 'source/prepro.py::pd_colcat_minhash',       'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_minhash',     'type': ''             },
+        #   , {'uri': 'source/prepro.py::pd_colcat_encoder_generic'    , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro.py::pd_colcat_minhash'            , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
+        
 
-        # {'uri': 'source/prepro.py::pd_coltext_universal_google',   'pars': {}, 'cols_family': 'coltext',     'cols_out': 'coltext_universal_google',     'type': ''    },
-
+        ### colcat, colnum
+        {'uri': 'source/prepro.py::pd_colcross',             'pars': {}, 'cols_family': 'colcross',   'cols_out': 'colcross_pair_onehot',  'type': 'cross'},
 
         {'uri': 'source/prepro.py::pd_col_genetic_transform',
          'pars': {'pars_generic' :{
@@ -208,8 +215,65 @@ def config1(path_model_out="") :
                   'cols_family': 'colgen',     'cols_out': 'col_genetic',  'type': 'add_coly'   #### Need to add target coly
               },
 
-        #{'uri': 'source/prepro.py::pd_colnum_quantile_norm',       'pars': {'colsparse' :  [] },
-        # 'cols_family': 'colnum',     'cols_out': 'colnum_quantile_norm',     'type': ''             },
+
+    
+        #### Data Over/Under sampling         
+        #   , {'uri': 'source/prepro_sampler.py::pd_resample'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+
+
+
+        #### Category , Numerical
+        #   , {'uri': 'source/prepro.py::pd_col_genetic_transform'     , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        
+
+        
+        #   , {'uri': 'source/prepro.py::pd_colcross'                  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro.py::pd_coldate'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        
+
+
+        
+        #### Text        
+        #   , {'uri': 'source/prepro.py::pd_coltext'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro.py::pd_coltext_clean'             , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro.py::pd_coltext_universal_google'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro.py::pd_coltext_wordfreq'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        
+        
+        #### Target label encoding
+
+        #### Time Series 
+        #   , {'uri': 'source/prepro_tseries.py::pd_ts_autoregressive' , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro_tseries.py::pd_ts_basic'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro_tseries.py::pd_ts_date'           , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        
+        #   , {'uri': 'source/prepro_tseries.py::pd_ts_detrend'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro_tseries.py::pd_ts_generic'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro_tseries.py::pd_ts_groupby'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro_tseries.py::pd_ts_identity'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro_tseries.py::pd_ts_lag'            , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro_tseries.py::pd_ts_onehot'         , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro_tseries.py::pd_ts_rolling'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro_tseries.py::pd_ts_template'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     ],
            }
