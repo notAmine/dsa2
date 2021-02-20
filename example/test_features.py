@@ -92,10 +92,10 @@ Features to be tested.
 
         
         #### Text        
-        source/prepro.py::pd_coltext(df,col, pars)
-        source/prepro.py::pd_coltext_clean(df,col, pars)
-        source/prepro.py::pd_coltext_universal_google(df,col, pars)
-        source/prepro.py::pd_coltext_wordfreq(df,col, pars)
+        source/prepro_text.py::pd_coltext(df,col, pars)
+        source/prepro_text.py::pd_coltext_clean(df,col, pars)
+        source/prepro_text.py::pd_coltext_universal_google(df,col, pars)
+        source/prepro_text.py::pd_coltext_wordfreq(df,col, pars)
         
         
         #### Target label encoding
