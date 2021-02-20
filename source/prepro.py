@@ -1,6 +1,9 @@
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
+
+Transformation by category
+
 https://github.com/Automunge/AutoMunge#library-of-transformations
 Library of Transformations
 Library of Transformations Subheadings:
@@ -85,12 +88,6 @@ def save_features(df, name, path):
 
 
 ####################################################################################################
-def coltext_stopwords(text, stopwords=None, sep=" "):
-    tokens = text.split(sep)
-    tokens = [t.strip() for t in tokens if t.strip() not in stopwords]
-    return " ".join(tokens)
-
-
 def pd_coltext_clean( df, col, stopwords= None , pars=None):
     import string, re
     ntoken= pars.get('n_token', 1)
@@ -99,6 +96,12 @@ def pd_coltext_clean( df, col, stopwords= None , pars=None):
     log(dftext)
     log(col)
     list1 = col
+
+    def coltext_remove_stopwords(text, stopwords=None, sep=" "):
+        tokens = text.split(sep)
+        tokens = [t.strip() for t in tokens if t.strip() not in stopwords]
+        return " ".join(tokens)
+
     # list1 = []
     # list1.append(col)
     # fromword = [ r"\b({w})\b".format(w=w)  for w in fromword    ]
@@ -109,7 +112,7 @@ def pd_coltext_clean( df, col, stopwords= None , pars=None):
         dftext[col_n] = dftext[col_n].apply(lambda x: x.translate(string.punctuation))
         dftext[col_n] = dftext[col_n].apply(lambda x: x.translate(string.digits))
         dftext[col_n] = dftext[col_n].apply(lambda x: re.sub("[!@,#$+%*:()'-]", " ", x))
-        dftext[col_n] = dftext[col_n].apply(lambda x: coltext_stopwords(x, stopwords=stopwords))
+        dftext[col_n] = dftext[col_n].apply(lambda x: coltext_remove_stopwords(x, stopwords=stopwords))
     return dftext
 
 
@@ -217,82 +220,8 @@ def pd_coltext(df, col, pars={}):
     return dftext_svd_list_all, col_pars
 
 
-
-##### Filtering / cleaning rows :   #########################################################
-def pd_filter_rows(df, col, pars):
-    import re
-    coly = col
-    filter_pars =  pars
-    def isfloat(x):
-        #x = re.sub("[!@,#$+%*:()'-]", "", str(x))
-        try :
-            a= float(x)
-            return 1
-        except:
-            return 0
-
-    ymin, ymax = pars.get('ymin', -9999999999.0), filter_pars.get('ymax', 999999999.0)
-
-    df['_isfloat'] = df[ coly ].apply(lambda x : isfloat(x),axis=1 )
-    df = df[ df['_isfloat'] > 0 ]
-    df = df[df[coly] > ymin]
-    df = df[df[coly] < ymax]
-    del df['_isfloat']
-
-    return df, col
-
-
-def pd_filter_resample(df=None, col=None, pars=None):
-    """
-        Over-sample, Under-sample
-    """
-    prefix = 'col_imbalance'
-    ######################################################################################
-    from imblearn.over_sampling import SMOTE
-
-    model_resample = { 'SMOTE' : SMOTE}[  pars.get("model_name", 'SMOTE') ]
-
-    pars_resample  = pars.get('pars_resample',
-                             {'sampling_strategy' : 'auto', 'random_state':0, 'k_neighbors':5, 'n_jobs': 2})
-
-    if 'path_pipeline' in pars :   #### Inference time
-        return df, {'col_new': col }
-        #gp   = load(pars['path_pipeline'] + f"/{prefix}_model.pkl" )
-        #pars = load(pars['path_pipeline'] + f"/{prefix}_pars.pkl" )
-
-    else :     ### Training time
-        colX          = col # [col_ for col_ in col if col_ not in coly]
-        train_X       = df[colX].fillna(method='ffill')
-        coly     = pars['coly']
-        train_y  = pars['dfy']
-        gp       = model_resample( **pars_resample)
-        X_resample, y_resample = gp.fit_resample(train_X, train_y)
-
-        df2       = pd.DataFrame(X_resample, columns = col, index=train_X.index)
-        df2[coly] = y_resample
-
-
-    col_new = col
-    ###################################################################################
-    if 'path_features_store' in pars and 'path_pipeline_export' in pars:
-       save_features(df2, 'df_resample', pars['path_features_store'])
-       save(gp,             pars['path_pipeline_export'] + f"/{prefix}_model.pkl" )
-       save(col,            pars['path_pipeline_export'] + f"/{prefix}.pkl" )
-       save(pars_resample,   pars['path_pipeline_export'] + f"/{prefix}_pars.pkl" )
-
-
-    col_pars = {'prefix' : prefix , 'path' :   pars.get('path_pipeline_export', pars.get('path_pipeline', None)) }
-    col_pars['cols_new'] = {
-       prefix :  col_new  ### list
-    }
-    return df2, col_pars
-
-
-
-
-
 ##### Label processing   ##################################################################
-def pd_label_clean(df, col, pars):
+def pd_coly_clean(df, col, pars):
     path_features_store = pars['path_features_store']
     # path_pipeline_export = pars['path_pipeline_export']
     coly = col=[0]
@@ -308,7 +237,7 @@ def pd_label_clean(df, col, pars):
 
 
 def pd_coly(df, col, pars):
-    ##### Filtering / cleaning rows :   #########################################################
+    ##### Filtering / cleaning rows :   ################
     coly=col
     def isfloat(x):
         try :
@@ -676,55 +605,6 @@ def pd_coldate(df, col, pars):
     return dfdate, col_pars
 
 
-def pd_autoencoder(df, col, pars):
-    """"
-    (4) Autoencoder
-    An autoencoder is a type of artificial neural network used to learn efficient data codings in an unsupervised manner. The aim of an autoencoder is to learn a representation (encoding) for a set of data, typically for dimensionality reduction, by training the network to ignore noise.
-
-    (i) Feed Forward
-
-    The simplest form of an autoencoder is a feedforward, non-recurrent neural network similar to single layer perceptrons that participate in multilayer perceptrons
-    """
-    from sklearn.preprocessing import minmax_scale
-    import tensorflow as tf
-    import numpy as np
-
-    def encoder_dataset(df, drop=None, dimesions=20):
-
-      if drop:
-        train_scaled = minmax_scale(df.drop(drop,axis=1).values, axis = 0)
-      else:
-        train_scaled = minmax_scale(df.values, axis = 0)
-
-      # define the number of encoding dimensions
-      encoding_dim = dimesions
-      # define the number of features
-      ncol = train_scaled.shape[1]
-      input_dim = tf.keras.Input(shape = (ncol, ))
-
-      # Encoder Layers
-      encoded1 = tf.keras.layers.Dense(3000, activation = 'relu')(input_dim)
-      encoded2 = tf.keras.layers.Dense(2750, activation = 'relu')(encoded1)
-      encoded3 = tf.keras.layers.Dense(2500, activation = 'relu')(encoded2)
-      encoded4 = tf.keras.layers.Dense(750, activation = 'relu')(encoded3)
-      encoded5 = tf.keras.layers.Dense(500, activation = 'relu')(encoded4)
-      encoded6 = tf.keras.layers.Dense(250, activation = 'relu')(encoded5)
-      encoded7 = tf.keras.layers.Dense(encoding_dim, activation = 'relu')(encoded6)
-
-      encoder = tf.keras.Model(inputs = input_dim, outputs = encoded7)
-      encoded_input = tf.keras.Input(shape = (encoding_dim, ))
-
-      encoded_train = pd.DataFrame(encoder.predict(train_scaled),index=df.index)
-      encoded_train = encoded_train.add_prefix('encoded_')
-      if drop:
-        encoded_train = pd.concat((df[drop],encoded_train),axis=1)
-
-      # df_out = mapper.encoder_dataset(df.copy(), ["Close_1"], 15); df_out.head()
-      return encoded_train
-
-
-
-
 def pd_colcat_encoder_generic(df, col, pars):
     """
         Create a Class or decorator
@@ -994,73 +874,6 @@ def pd_coltext_universal_google(df, col, pars={}):
     }
     return dfall, col_pars
 
-
-
-def pd_col_covariate_shift_adjustment():
-   """
-    https://towardsdatascience.com/understanding-dataset-shift-f2a5a262a766
-
-     Covariate shift has been extensively studied in the literature, and a number of proposals to work under it have been published. Some of the most important ones include:
-        Weighting the log-likelihood function (Shimodaira, 2000)
-        Importance weighted cross-validation (Sugiyama et al, 2007 JMLR)
-        Integrated optimization problem. Discriminative learning. (Bickel et al, 2009 JMRL)
-        Kernel mean matching (Gretton et al., 2009)
-        Adversarial search (Globerson et al, 2009)
-        Frank-Wolfe algorithm (Wen et al., 2015)
-
-import numpy as np
-from scipy import sparse
-
-# .. for plotting ..
-import pylab as plt
-# .. to generate a synthetic dataset ..
-from sklearn import datasets
-
-n_samples, n_features = 1000, 10000
-A, b = datasets.make_regression(n_samples, n_features)
-
-def FW(alpha, max_iter=200, tol=1e-8):
-    # .. initial estimate, could be any feasible point ..
-    x_t = sparse.dok_matrix((n_features, 1))
-    trace = []  # to keep track of the gap
-
-    # .. some quantities can be precomputed ..
-    Atb = A.T.dot(b)
-    for it in range(max_iter):
-        # .. compute gradient. Slightly more involved than usual because ..
-        # .. of the use of sparse matrices ..
-        Ax = x_t.T.dot(A.T).ravel()
-        grad = (A.T.dot(Ax) - Atb)
-
-        # .. the LMO results in a vector that is zero everywhere except for ..
-        # .. a single index. Of this vector we only store its index and magnitude ..
-        idx_oracle = np.argmax(np.abs(grad))
-        mag_oracle = alpha * np.sign(-grad[idx_oracle])
-        g_t = x_t.T.dot(grad).ravel() - grad[idx_oracle] * mag_oracle
-        trace.append(g_t)
-        if g_t <= tol:
-            break
-        q_t = A[:, idx_oracle] * mag_oracle - Ax
-        step_size = min(q_t.dot(b - Ax) / q_t.dot(q_t), 1.)
-        x_t = (1. - step_size) * x_t
-        x_t[idx_oracle] = x_t[idx_oracle] + step_size * mag_oracle
-    return x_t, np.array(trace)
-
-# .. plot evolution of FW gap ..
-sol, trace = FW(.5 * n_features)
-plt.plot(trace)
-plt.yscale('log')
-plt.xlabel('Number of iterations')
-plt.ylabel('FW gap')
-plt.title('FW on a Lasso problem')
-plt.grid()
-plt.show()
-
-sparsity = np.mean(sol.toarray().ravel() != 0)
-print('Sparsity of solution: %s%%' % (sparsity * 100))
-
-   """
-   pass
 
 if __name__ == "__main__":
     import fire

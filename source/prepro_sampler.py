@@ -1,26 +1,9 @@
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
-https://github.com/Automunge/AutoMunge#library-of-transformations
-Library of Transformations
-Library of Transformations Subheadings:
-Intro
-Numerical Set Normalizations
-Numerical Set Transformations
-Numercial Set Bins and Grainings
-Sequential Numerical Set Transformations
-Categorical Set Encodings
-Date-Time Data Normalizations
-Date-Time Data Bins
-Differential Privacy Noise Injections
-Misc. Functions
-String Parsing
-More Efficient String Parsing
-Multi-tier String Parsing
-List of Root Categories
-List of Suffix Appenders
-Other Reserved Strings
-Root Category Family Tree Definitions
+Transformation for ALL COlumns :
+   Increase samples, Reduce Samples.
+
 """
 import warnings
 warnings.filterwarnings('ignore')
@@ -60,7 +43,7 @@ def log_pd(df, *s, n=0, m=1):
 
 
 from util_feature import  save, load_function_uri, load
-import util_feature
+
 ####################################################################################################
 ####################################################################################################
 def save_features(df, name, path):
@@ -82,8 +65,15 @@ def save_features(df, name, path):
 
 
 ###################################################################################################
-##### Filtering / cleaning rows :   #########################################################
+##### Filtering / cleaning rows :   ###############################################################
 def pd_filter_rows(df, col, pars):
+    """
+       Remove rows based on criteria
+    :param df:
+    :param col:
+    :param pars:
+    :return:
+    """
     import re
     coly = col
     filter_pars =  pars
@@ -106,7 +96,7 @@ def pd_filter_rows(df, col, pars):
     return df, col
 
 
-def pd_filter_resample(df=None, col=None, pars=None):
+def pd_resample(df=None, col=None, pars=None):
     """
         Over-sample, Under-sample
     """
@@ -152,16 +142,15 @@ def pd_filter_resample(df=None, col=None, pars=None):
     return df2, col_pars
 
 
-
-
-
-##### Label processing   ##################################################################
 def pd_autoencoder(df, col, pars):
     """"
     (4) Autoencoder
-    An autoencoder is a type of artificial neural network used to learn efficient data codings in an unsupervised manner. The aim of an autoencoder is to learn a representation (encoding) for a set of data, typically for dimensionality reduction, by training the network to ignore noise.
+    An autoencoder is a type of artificial neural network used to learn efficient data codings in an unsupervised manner.
+    The aim of an autoencoder is to learn a representation (encoding) for a set of data, typically for dimensionality reduction,
+    by training the network to ignore noise.
     (i) Feed Forward
-    The simplest form of an autoencoder is a feedforward, non-recurrent neural network similar to single layer perceptrons that participate in multilayer perceptrons
+    The simplest form of an autoencoder is a feedforward, non-recurrent
+    neural network similar to single layer perceptrons that participate in multilayer perceptrons
     """
     from sklearn.preprocessing import minmax_scale
     import tensorflow as tf
@@ -206,177 +195,16 @@ def pd_autoencoder(df, col, pars):
     encoded5 = tf.keras.layers.Dense(500, activation = 'relu')(encoded4)
     encoded6 = tf.keras.layers.Dense(250, activation = 'relu')(encoded5)
     encoded7 = tf.keras.layers.Dense(encoding_dim, activation = 'relu')(encoded6)
-    encoder = tf.keras.Model(inputs = input_dim, outputs = encoded7)
+    encoder =  tf.keras.Model(inputs = input_dim, outputs = encoded7)
     encoded_input = tf.keras.Input(shape = (encoding_dim, ))
     encoded_train = pd.DataFrame(encoder.predict(train_scaled),index=df.index)
     encoded_train = encoded_train.add_prefix('encoded_')
-    if pars.get('drop', None):
+    if 'drop' in pars :
+        drop = pars['drop']
         encoded_train = pd.concat((df[drop],encoded_train),axis=1)
+
     return encoded_train
     # df_out = mapper.encoder_dataset(df.copy(), ["Close_1"], 15); df_out.head()
-    pass
-
-
-
-def pd_colcat_encoder_generic(df, col, pars):
-    """
-        Create a Class or decorator
-        https://pypi.org/project/category-encoders/
-        encoder = ce.BackwardDifferenceEncoder(cols=[...])
-        encoder = ce.BaseNEncoder(cols=[...])
-        encoder = ce.BinaryEncoder(cols=[...])
-        encoder = ce.CatBoostEncoder(cols=[...])
-        encoder = ce.CountEncoder(cols=[...])
-        encoder = ce.GLMMEncoder(cols=[...])
-        encoder = ce.HashingEncoder(cols=[...])
-        encoder = ce.HelmertEncoder(cols=[...])
-        encoder = ce.JamesSteinEncoder(cols=[...])
-        encoder = ce.LeaveOneOutEncoder(cols=[...])
-        encoder = ce.MEstimateEncoder(cols=[...])
-        encoder = ce.OneHotEncoder(cols=[...])
-        encoder = ce.OrdinalEncoder(cols=[...])
-        encoder = ce.SumEncoder(cols=[...])
-        encoder = ce.PolynomialEncoder(cols=[...])
-        encoder = ce.TargetEncoder(cols=[...])
-        encoder = ce.WOEEncoder(cols=[...])
-    """
-    prefix     = "colcat_encoder_generic"
-    pars_model = None
-    if 'path_pipeline' in  pars  :   ### Load during Inference
-       colcat_encoder = load( pars['path_pipeline'] + f"/{prefix}.pkl" )
-       pars_model     = load( pars['path_pipeline'] + f"/{prefix}_pars.pkl" )
-       #model         = load( pars['path_pipeline'] + f"/{prefix}_model.pkl" )
-
-    ####### Custom Code ###############################################################
-    from category_encoders import HashingEncoder, WOEEncoder
-    pars_model         = pars.get('model_pars', {})  if pars_model is None else pars_model
-    pars_model['cols'] = col
-    model_name         = pars.get('model_name', 'HashingEncoder')
-
-    model_class        = { 'HashingEncoder' : HashingEncoder  }[model_name]
-    model              = model_class(**pars_model)
-    dfcat_encoder      = model.fit_transform(df[col])
-
-    dfcat_encoder.columns = [t + "_cod" for t in dfcat_encoder.columns ]
-    colcat_encoder        = list(dfcat_encoder.columns)
-
-
-    ###################################################################################
-    if 'path_features_store' in pars and 'path_pipeline_export' in pars:
-       save_features(dfcat_encoder, 'dfcat_encoder', pars['path_features_store'])
-       save(model,           pars['path_pipeline_export'] + f"/{prefix}_model.pkl" )
-       save(pars_model,      pars['path_pipeline_export'] + f"/{prefix}_pars.pkl" )
-       save(colcat_encoder,  pars['path_pipeline_export'] + f"/{prefix}.pkl" )
-
-    col_pars = { 'prefix' : prefix,  'path' :   pars.get('path_pipeline_export', pars.get('path_pipeline', None)) }
-    col_pars['cols_new'] = {
-     'colcat_encoder_generic' :  colcat_encoder  ### list
-    }
-    return dfcat_encoder, col_pars
-
-
-
-def os_convert_topython_code(txt):
-    # from sympy import sympify
-    # converter = {
-    #     'sub': lambda x, y: x - y,
-    #     'div': lambda x, y: x / y,
-    #     'mul': lambda x, y: x * y,
-    #     'add': lambda x, y: x + y,
-    #     'neg': lambda x: -x,
-    #     'pow': lambda x, y: x ** y
-    # }
-    # formula = sympify( txt, locals=converter)
-    # print(formula)
-    pass
-
-
-def save_json(js, pfile, mode='a'):
-    import  json
-    with open(pfile, mode=mode) as fp :
-        json.dump(js, fp)
-
-
-def pd_col_genetic_transform(df=None, col=None, pars=None):
-    """
-        Find Symbolic formulae for faeture engineering
-    """
-    prefix = 'col_genetic'
-    ######################################################################################
-    from gplearn.genetic import SymbolicTransformer
-    from gplearn.functions import make_function
-    import random
-
-    colX          = col # [col_ for col_ in col if col_ not in coly]
-    train_X       = df[colX].fillna(method='ffill')
-    feature_name_ = colX
-
-    def squaree(x):  return x * x
-    square_ = make_function(function=squaree, name='square_', arity=1)
-
-    function_set = pars.get('function_set',
-                            ['add', 'sub', 'mul', 'div',  'sqrt', 'log', 'abs', 'neg', 'inv','tan', square_])
-    pars_genetic = pars.get('pars_genetic',
-                             {'generations': 5, 'population_size': 10,  ### Higher than nb_features
-                              'metric': 'spearman',
-                              'tournament_size': 20, 'stopping_criteria': 1.0, 'const_range': (-1., 1.),
-                              'p_crossover': 0.9, 'p_subtree_mutation': 0.01, 'p_hoist_mutation': 0.01,
-                              'p_point_mutation': 0.01, 'p_point_replace': 0.05,
-                              'parsimony_coefficient' : 0.005,   ####   0.00005 Control Complexity
-                              'max_samples' : 0.9, 'verbose' : 1,
-
-                              #'n_components'      ### Control number of outtput features  : n_components
-                              'random_state' :0, 'n_jobs' : 4,
-                              })
-
-    if 'path_pipeline' in pars :   #### Inference time
-        gp   = load(pars['path_pipeline'] + f"/{prefix}_model.pkl" )
-        pars = load(pars['path_pipeline'] + f"/{prefix}_pars.pkl" )
-
-    else :     ### Training time
-        coly     = pars['coly']
-        train_y  = pars['dfy']
-        gp = SymbolicTransformer(hall_of_fame  = train_X.shape[1] + 1,  ### Buggy
-                                 n_components  = pars_genetic.get('n_components', train_X.shape[1] ),
-                                 feature_names = feature_name_,
-                                 function_set  = function_set,
-                                 **pars_genetic)
-        gp.fit(train_X, train_y)
-
-    ##### Transform Data  #########################################
-    df_genetic = gp.transform(train_X)
-    tag = random.randint(0,10)   #### UNIQUE TAG
-    col_genetic  = [ f"gen_{tag}_{i}" for i in range(df_genetic.shape[1])]
-    df_genetic   = pd.DataFrame(df_genetic, columns= col_genetic, index = train_X.index )
-    df_genetic.index = train_X.index
-    pars_gen_all = {'pars_genetic'  : pars_genetic , 'function_set' : function_set }
-
-    ##### Formulae Exrraction #####################################
-    formula   = str(gp).replace("[","").replace("]","")
-    flist     = formula.split(",\n")
-    form_dict = {  x: flist[i]  for i,x in enumerate(col_genetic) }
-    pars_gen_all['formulae_dict'] = form_dict
-    log("########## Formulae ", form_dict)
-    # col_pars['map_dict'] = dict(zip(train_X.columns.to_list(), feature_name_))
-
-    col_new = col_genetic
-
-    ###################################################################################
-    if 'path_features_store' in pars and 'path_pipeline_export' in pars:
-       save_features(df_genetic, 'df_genetic', pars['path_features_store'])
-       save(gp,             pars['path_pipeline_export'] + f"/{prefix}_model.pkl" )
-       save(col_genetic,    pars['path_pipeline_export'] + f"/{prefix}.pkl" )
-       save(pars_gen_all,   pars['path_pipeline_export'] + f"/{prefix}_pars.pkl" )
-       # save(form_dict,      pars['path_pipeline_export'] + f"/{prefix}_formula.pkl")
-       save_json(form_dict, pars['path_pipeline_export'] + f"/{prefix}_formula.json")   ### Human readable
-
-
-    col_pars = {'prefix' : prefix , 'path' :   pars.get('path_pipeline_export', pars.get('path_pipeline', None)) }
-    col_pars['cols_new'] = {
-       prefix :  col_new  ### list
-    }
-    return df_genetic, col_pars
-
 
 
 
@@ -469,44 +297,38 @@ def pd_augmentation_sdv(df, col=None, pars={})  :
     return df_new, col
 
 
-def test_sdv_vae():
-    from sklearn.datasets import load_boston
-    
-    # loading boston data
-    data = load_boston()
-    df = pd.DataFrame(data.data, columns=data.feature_names)
-    log_pd(df)    
-    
-    log('##### testing augmentation #####')    
-    path = os.getcwd() + '\zz_model_vae_augmentation.pkl'
-    pars = {'path_model_save': path}
-    df_new, _ = pd_augmentation_sdv(df, pars=pars)
-    
-    log('####### Generating using saved model test started #######')    
-    pars = {'path_model_load': path}
-    df_new, _ = pd_augmentation_sdv(df, pars=pars)
+
+
     
 
-def test_sdv_ctgan():
+def test_pd_augmentation_sdv():
     from sklearn.datasets import load_boston
-    
     # loading boston data
     data = load_boston()
     df = pd.DataFrame(data.data, columns=data.feature_names)
     log_pd(df)    
     
-    log('##### testing augmentation #####')    
+    log('##### testing augmentation CTGAN ######################')
     path = os.getcwd() + '\zz_model_ctgan_augmentation.pkl'
     pars = {'path_model_save': path,
             'model_name': 'CTGAN'}
     df_new, _ = pd_augmentation_sdv(df, pars=pars)
     
-    log('####### Generating using saved model test started #######')    
+    log('####### Reload')
     pars = {'path_model_load': path}
     df_new, _ = pd_augmentation_sdv(df, pars=pars)
     
-    
-def test_sdv_par():
+
+    log('##### testing augmentation VAE #########################')
+    path = os.getcwd() + '\zz_model_vae_augmentation.pkl'
+    pars = {'path_model_save': path, 'model_name': 'VAE'}
+    df_new, _ = pd_augmentation_sdv(df, pars=pars)
+    log('####### Reload')
+    pars = {'path_model_load': path}
+    df_new, _ = pd_augmentation_sdv(df, pars=pars)
+
+
+    log('##### testing Time Series #############################')
     try:
         from sdv.demo import load_timeseries_demo
     except:
@@ -515,11 +337,10 @@ def test_sdv_par():
         
     df = load_timeseries_demo()
     log_pd(df)
-    entity_columns = ['Symbol']
+    entity_columns  = ['Symbol']
     context_columns = ['MarketCap', 'Sector', 'Industry']
-    sequence_index = 'Date'
-    
-    log('##### testing augmentation #####')
+    sequence_index  = 'Date'
+
     path = os.getcwd() + '\zz_model_par_augmentation.pkl'
     pars = {'path_model_save': path,
             'model_name': 'PAR',
@@ -529,14 +350,15 @@ def test_sdv_par():
             'n_samples' : 5}
     df_new, _ = pd_augmentation_sdv(df, pars=pars)
     
-    log('####### Generating using saved model test started #######')    
-    pars = {'path_model_load': path,
-            'n_samples' : 5}
+    log('####### Reload')
+    pars = {'path_model_load': path,   'n_samples' : 5}
     df_new, _ = pd_augmentation_sdv(df, pars=pars)
-    
-    
-def pd_col_covariate_shift_adjustment():
-   """
+    log_pd(df_new)
+
+
+
+def pd_covariate_shift_adjustment():
+    """
     https://towardsdatascience.com/understanding-dataset-shift-f2a5a262a766
      Covariate shift has been extensively studied in the literature, and a number of proposals to work under it have been published. Some of the most important ones include:
         Weighting the log-likelihood function (Shimodaira, 2000)
@@ -545,51 +367,53 @@ def pd_col_covariate_shift_adjustment():
         Kernel mean matching (Gretton et al., 2009)
         Adversarial search (Globerson et al, 2009)
         Frank-Wolfe algorithm (Wen et al., 2015)
-import numpy as np
-from scipy import sparse
-# .. for plotting ..
-import pylab as plt
-# .. to generate a synthetic dataset ..
-from sklearn import datasets
-n_samples, n_features = 1000, 10000
-A, b = datasets.make_regression(n_samples, n_features)
-def FW(alpha, max_iter=200, tol=1e-8):
-    # .. initial estimate, could be any feasible point ..
-    x_t = sparse.dok_matrix((n_features, 1))
-    trace = []  # to keep track of the gap
-    # .. some quantities can be precomputed ..
-    Atb = A.T.dot(b)
-    for it in range(max_iter):
-        # .. compute gradient. Slightly more involved than usual because ..
-        # .. of the use of sparse matrices ..
-        Ax = x_t.T.dot(A.T).ravel()
-        grad = (A.T.dot(Ax) - Atb)
-        # .. the LMO results in a vector that is zero everywhere except for ..
-        # .. a single index. Of this vector we only store its index and magnitude ..
-        idx_oracle = np.argmax(np.abs(grad))
-        mag_oracle = alpha * np.sign(-grad[idx_oracle])
-        g_t = x_t.T.dot(grad).ravel() - grad[idx_oracle] * mag_oracle
-        trace.append(g_t)
-        if g_t <= tol:
-            break
-        q_t = A[:, idx_oracle] * mag_oracle - Ax
-        step_size = min(q_t.dot(b - Ax) / q_t.dot(q_t), 1.)
-        x_t = (1. - step_size) * x_t
-        x_t[idx_oracle] = x_t[idx_oracle] + step_size * mag_oracle
-    return x_t, np.array(trace)
-# .. plot evolution of FW gap ..
-sol, trace = FW(.5 * n_features)
-plt.plot(trace)
-plt.yscale('log')
-plt.xlabel('Number of iterations')
-plt.ylabel('FW gap')
-plt.title('FW on a Lasso problem')
-plt.grid()
-plt.show()
-sparsity = np.mean(sol.toarray().ravel() != 0)
-print('Sparsity of solution: %s%%' % (sparsity * 100))
-   """
-   pass
+    """
+    import numpy as np
+    from scipy import sparse
+    import pylab as plt
+
+    # .. to generate a synthetic dataset ..
+    from sklearn import datasets
+    n_samples, n_features = 1000, 10000
+    A, b = datasets.make_regression(n_samples, n_features)
+    def FW(alpha, max_iter=200, tol=1e-8):
+        # .. initial estimate, could be any feasible point ..
+        x_t = sparse.dok_matrix((n_features, 1))
+        trace = []  # to keep track of the gap
+        # .. some quantities can be precomputed ..
+        Atb = A.T.dot(b)
+        for it in range(max_iter):
+            # .. compute gradient. Slightly more involved than usual because ..
+            # .. of the use of sparse matrices ..
+            Ax = x_t.T.dot(A.T).ravel()
+            grad = (A.T.dot(Ax) - Atb)
+            # .. the LMO results in a vector that is zero everywhere except for ..
+            # .. a single index. Of this vector we only store its index and magnitude ..
+            idx_oracle = np.argmax(np.abs(grad))
+            mag_oracle = alpha * np.sign(-grad[idx_oracle])
+            g_t = x_t.T.dot(grad).ravel() - grad[idx_oracle] * mag_oracle
+            trace.append(g_t)
+            if g_t <= tol:
+                break
+            q_t = A[:, idx_oracle] * mag_oracle - Ax
+            step_size = min(q_t.dot(b - Ax) / q_t.dot(q_t), 1.)
+            x_t = (1. - step_size) * x_t
+            x_t[idx_oracle] = x_t[idx_oracle] + step_size * mag_oracle
+        return x_t, np.array(trace)
+
+    # .. plot evolution of FW gap ..
+    sol, trace = FW(.5 * n_features)
+    plt.plot(trace)
+    plt.yscale('log')
+    plt.xlabel('Number of iterations')
+    plt.ylabel('FW gap')
+    plt.title('FW on a Lasso problem')
+    plt.grid()
+    plt.show()
+    sparsity = np.mean(sol.toarray().ravel() != 0)
+    print('Sparsity of solution: %s%%' % (sparsity * 100))
+
+
 
 if __name__ == "__main__":
     import fire

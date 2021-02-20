@@ -89,7 +89,7 @@ Features to be tested.
         prepro_sampler.pd_col_genetic_transform(df,col, pars)        
         prepro_sampler.pd_colcat_encoder_generic(df,col, pars)
         
-        prepro_sampler.pd_filter_resample(df,col, pars)
+        prepro_sampler.pd_resample(df,col, pars)
         prepro_sampler.pd_filter_rows(df,col, pars)
 
 
@@ -122,9 +122,9 @@ Features to be tested.
         #### Target label encoding
         prepro.pd_coly(df,col, pars)
         
-        prepro.pd_filter_resample(df,col, pars)
+        prepro.pd_resample(df,col, pars)
         prepro.pd_filter_rows(df,col, pars)
-        prepro.pd_label_clean(df,col, pars)
+        prepro.pd_coly_clean(df,col, pars)
 
 
         #### Time Series 
