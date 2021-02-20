@@ -7,13 +7,11 @@ Transformation for ALL COlumns :
 """
 import warnings
 warnings.filterwarnings('ignore')
-import sys, gc, os, pandas as pd, json, copy
-import numpy as np
+import sys, gc, os, pandas as pd, json, copy, numpy as np
 
 ####################################################################################################
 #### Add path for python import
 sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
-
 
 #### Root folder analysis
 root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
@@ -188,14 +186,14 @@ def pd_autoencoder(df, col, pars):
     ncol = train_scaled.shape[1]
     input_dim = tf.keras.Input(shape = (ncol, ))
     # Encoder Layers
-    encoded1 = tf.keras.layers.Dense(3000, activation = 'relu')(input_dim)
-    encoded2 = tf.keras.layers.Dense(2750, activation = 'relu')(encoded1)
-    encoded3 = tf.keras.layers.Dense(2500, activation = 'relu')(encoded2)
-    encoded4 = tf.keras.layers.Dense(750, activation = 'relu')(encoded3)
-    encoded5 = tf.keras.layers.Dense(500, activation = 'relu')(encoded4)
-    encoded6 = tf.keras.layers.Dense(250, activation = 'relu')(encoded5)
-    encoded7 = tf.keras.layers.Dense(encoding_dim, activation = 'relu')(encoded6)
-    encoder =  tf.keras.Model(inputs = input_dim, outputs = encoded7)
+    encoded1      = tf.keras.layers.Dense(3000, activation = 'relu')(input_dim)
+    encoded2      = tf.keras.layers.Dense(2750, activation = 'relu')(encoded1)
+    encoded3      = tf.keras.layers.Dense(2500, activation = 'relu')(encoded2)
+    encoded4      = tf.keras.layers.Dense(750, activation = 'relu')(encoded3)
+    encoded5      = tf.keras.layers.Dense(500, activation = 'relu')(encoded4)
+    encoded6      = tf.keras.layers.Dense(250, activation = 'relu')(encoded5)
+    encoded7      = tf.keras.layers.Dense(encoding_dim, activation = 'relu')(encoded6)
+    encoder       = tf.keras.Model(inputs = input_dim, outputs = encoded7)
     encoded_input = tf.keras.Input(shape = (encoding_dim, ))
     encoded_train = pd.DataFrame(encoder.predict(train_scaled),index=df.index)
     encoded_train = encoded_train.add_prefix('encoded_')
