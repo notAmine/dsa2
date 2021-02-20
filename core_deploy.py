@@ -54,12 +54,12 @@ BodyBatch = load_function_uri(uri_name= config_path+'::BodyBatch')
 ############# Extracted from source/run_predict.py run_predict method #############
 
 ###### load model_dict trained  ##########################################
-model_dict = model_dict_load(None, config_path, config_name, verbose=True)
-m          = model_dict['global_pars']
+model_dict    = model_dict_load(None, config_path, config_name, verbose=True)
+m             = model_dict['global_pars']
 
-model_class      = model_dict['model_pars']['model_class']
-path_pipeline    = m['path_pred_pipeline']
-path_model       = m['path_pred_model']
+model_class   = model_dict['model_pars']['model_class']
+path_pipeline = m['path_pred_pipeline']
+path_model    = m['path_pred_model']
 
 pars = {'cols_group': model_dict['data_pars']['cols_input_type'],
         'pipe_list' : model_dict['model_pars']['pre_process_pars']['pipe_list']}
