@@ -127,7 +127,7 @@ cols_input_type_2 = {
     ,"colid"  :   "PassengerId"
     ,"colcat" :   ["Sex", "Embarked" ]
     ,"colnum" :   ["Pclass", "Age","SibSp", "Parch","Fare"]
-    ,"coltext" :  ["Name", "Ticket"]
+    ,"coltext" :  ["Ticket"]
     ,"coldate" :  []
     ,"colcross" : [ "Name", "Sex", "Ticket","Embarked"  ]
 
@@ -209,11 +209,12 @@ def config1(path_model_out="") :
     #### Date        
     #,{'uri': 'source/prepro.py::pd_coldate'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
+
     #### Text        
-    {'uri': 'source/prepro.py::pd_coltext'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #,{'uri': 'source/prepro.py::pd_coltext_clean'             , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #,{'uri': 'source/prepro.py::pd_coltext_universal_google'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #,{'uri': 'source/prepro.py::pd_coltext_wordfreq'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    # ,{'uri': 'source/prepro_text.py::pd_coltext'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_text.py::pd_coltext_clean'             , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_text.py::pd_coltext_universal_google'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_text.py::pd_coltext_wordfreq'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
     
 
     #### Data Over/Under sampling, New data         
@@ -252,12 +253,13 @@ def config1(path_model_out="") :
       #### columns as raw data input
       'cols_input_type' : cols_input_type_2,
 
+
+
+      ### columns for model input    #########################################################
       #  "colnum", "colnum_bin", "colnum_onehot",   #### Colnum columns
       #  "colcat", "colcat_bin", "colcat_onehot", "colcat_bin_map",  #### colcat columns
       #  'colcross', "colcross_pair_onehot" #### colcross columns
       #  'coldate','coltext',
-
-      ### columns for model input    #########################################################
       'cols_model_group': [ 'colnum', 
                             'colnum_bin',
                             'colnum_onehot',
@@ -279,13 +281,13 @@ def config1(path_model_out="") :
 
                           ]
 
-      ### Filter data rows   ##################################################################
+      ### Filter data rows   ###################################################################
      ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 }
 
          }
       }
 
-    ##### Filling Global parameters    ############################################################
+    ##### Filling Global parameters    #########################################################
     model_dict        = global_pars_update(model_dict, data_name, config_name )
     return model_dict
 
