@@ -62,17 +62,6 @@ def global_pars_update(model_dict,  data_name, config_name):
 config_default   = 'config1'          ### name of function which contains data configuration
 
 
-cols_input_type_2 = {
-     "coly"   :   "Survived"
-    ,"colid"  :   "PassengerId"
-    ,"colcat" :   ["Sex", "Embarked" ]
-    ,"colnum" :   ["Pclass", "Age","SibSp", "Parch","Fare"]
-    ,"coltext" :  ["Name", "Ticket"]
-    ,"coldate" :  []
-    ,"colcross" : [ "Name", "Sex", "Ticket","Embarked"  ]
-
-    ,'colgen'  : [   "Pclass", "Age","SibSp", "Parch","Fare" ]
-}
 
 
 ####################################################################################
@@ -131,6 +120,20 @@ Features to be tested.
         source/prepro_tseries.py::pd_ts_template(df,col, pars)
 
 """
+
+
+cols_input_type_2 = {
+     "coly"   :   "Survived"
+    ,"colid"  :   "PassengerId"
+    ,"colcat" :   ["Sex", "Embarked" ]
+    ,"colnum" :   ["Pclass", "Age","SibSp", "Parch","Fare"]
+    ,"coltext" :  ["Name", "Ticket"]
+    ,"coldate" :  []
+    ,"colcross" : [ "Name", "Sex", "Ticket","Embarked"  ]
+
+    ,'colgen'  : [   "Pclass", "Age","SibSp", "Parch","Fare" ]
+}
+
 
 
 def config1(path_model_out="") :
@@ -251,7 +254,7 @@ def config1(path_model_out="") :
 
       #  "colnum", "colnum_bin", "colnum_onehot",   #### Colnum columns
       #  "colcat", "colcat_bin", "colcat_onehot", "colcat_bin_map",  #### colcat columns
-      #  'colcross_single_onehot_select', "colcross_pair_onehot",  'colcross_pair',  #### colcross columns
+      #  'colcross', "colcross_pair_onehot" #### colcross columns
       #  'coldate','coltext',
 
       ### columns for model input    #########################################################
