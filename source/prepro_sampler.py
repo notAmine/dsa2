@@ -40,24 +40,9 @@ def log_pd(df, *s, n=0, m=1):
     print(sjump,  df.head(n), flush=True)
 
 
-from util_feature import  save, load_function_uri, load
-
+from util_feature import  save, load_function_uri, load, save_features
 ####################################################################################################
 ####################################################################################################
-def save_features(df, name, path):
-    """
-    :param df:
-    :param name:
-    :param path:
-    :return:
-    """
-    if path is not None :
-       os.makedirs( f"{path}/{name}" , exist_ok=True)
-       if isinstance(df, pd.Series):
-           df0=df.to_frame()
-       else:
-           df0=df
-       df0.to_parquet( f"{path}/{name}/features.parquet")
 
 
 ###################################################################################################
