@@ -175,9 +175,6 @@ def config1(path_model_out="") :
 
 
 
-
-
-
         ### colnum : continuous
         {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
         {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
@@ -215,33 +212,21 @@ def config1(path_model_out="") :
                   'cols_family': 'colgen',     'cols_out': 'col_genetic',  'type': 'add_coly'   #### Need to add target coly
               },
 
-
-    
-        #### Data Over/Under sampling         
-        #   , {'uri': 'source/prepro_sampler.py::pd_resample'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        #   , {'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-
-
-
-        #### Category , Numerical
-        #   , {'uri': 'source/prepro.py::pd_col_genetic_transform'     , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        
-
-        
-        #   , {'uri': 'source/prepro.py::pd_colcross'                  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #### Date        
         #   , {'uri': 'source/prepro.py::pd_coldate'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-        
 
-
-        
         #### Text        
         #   , {'uri': 'source/prepro.py::pd_coltext'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
         #   , {'uri': 'source/prepro.py::pd_coltext_clean'             , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
         #   , {'uri': 'source/prepro.py::pd_coltext_universal_google'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
         #   , {'uri': 'source/prepro.py::pd_coltext_wordfreq'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
         
-        
-        #### Target label encoding
+
+    
+        #### Data Over/Under sampling         
+        #   , {'uri': 'source/prepro_sampler.py::pd_resample'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+        #   , {'uri': 'source/prepro_sampler.py::pd_augmentation_sdv'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
         #### Time Series 
         #   , {'uri': 'source/prepro_tseries.py::pd_ts_autoregressive' , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
@@ -258,22 +243,8 @@ def config1(path_model_out="") :
         #   , {'uri': 'source/prepro_tseries.py::pd_ts_template'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
         
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        #### Example of Custom processor
+        {"uri":  THIS_FILEPATH + "::pd_col_myfun",   "pars": {}, "cols_family": "colnum",   "cols_out": "col_myfun",  "type": "" },  
 
     ],
            }
@@ -307,6 +278,8 @@ def config1(path_model_out="") :
                             #'colnum_quantile_norm'
 
 
+
+
                           ]
 
       ### Filter data rows   ##################################################################
@@ -318,6 +291,43 @@ def config1(path_model_out="") :
     ##### Filling Global parameters    ############################################################
     model_dict        = global_pars_update(model_dict, data_name, config_name )
     return model_dict
+
+
+
+
+def pd_col_myfun(df=None, col=None, pars={}):
+    """
+         Example of custom Processor
+    """
+    from source.util_feature import save, load
+    prefix = "col_myfun`"
+    if "path_pipeline" in pars :   #### Inference time LOAD previous pars
+        prepro   = load(pars["path_pipeline"] + f"/{prefix}_model.pkl" )
+        pars     = load(pars["path_pipeline"] + f"/{prefix}_pars.pkl" )
+        pars     = {} if pars is None else  pars
+    #### Do something #################################################################
+    df_new         = df[col]  ### Do nithi
+    df_new.columns = [  col + "_myfun"  for col in df.columns ]
+    cols_new       = list(df_new.columns)
+
+    prepro   = None
+    pars_new = None
+
+
+
+    ###################################################################################
+    if "path_features_store" in pars and "path_pipeline_export" in pars:
+       save(prepro,         pars["path_pipeline_export"] + f"/{prefix}_model.pkl" )
+       save(cols_new,       pars["path_pipeline_export"] + f"/{prefix}.pkl" )
+       save(pars_new,       pars["path_pipeline_export"] + f"/{prefix}_pars.pkl" )
+
+    col_pars = {"prefix" : prefix , "path" :   pars.get("path_pipeline_export", pars.get("path_pipeline", None)) }
+    col_pars["cols_new"] = {
+        "col_myfun" :  cols_new  ### list
+    }
+    return df_new, col_pars
+
+
 
 
 
