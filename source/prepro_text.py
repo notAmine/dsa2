@@ -41,77 +41,10 @@ def log_pd(df, *s, n=0, m=1):
     print(sjump,  df.head(n), flush=True)
 
 
-from util_feature import  save, load_function_uri, load
-import util_feature
+from util_feature import  save, load_function_uri, load, save_features
 ####################################################################################################
 ####################################################################################################
-def save_features(df, name, path):
-    """
-    :param df:
-    :param name:
-    :param path:
-    :return:
-    """
-    if path is not None :
-       os.makedirs( f"{path}/{name}" , exist_ok=True)
-       if isinstance(df, pd.Series):
-           df0=df.to_frame()
-       else:
-           df0=df
-       df0.to_parquet( f"{path}/{name}/features.parquet")
 
-
-
-####################################################################################################
-def pd_col_template(df=None, col=None, pars={}):
-    """
-    Example of custom Processor
-    Used at prediction time
-        "path_pipeline"  : 
-
-    Training time :
-        "path_features_store" :  to store intermediate dataframe
-        "path_pipeline_export":  to store pipeline  for later usage
-
-    """
-    from source.util_feature import save, load
-    prefix = "col_myfun"
-    #### Inference time LOAD previous pars  ########################################### 
-    if "path_pipeline" in pars :   
-        prepro   = load(pars["path_pipeline"] + f"/{prefix}_model.pkl" )
-        pars     = load(pars["path_pipeline"] + f"/{prefix}_pars.pkl" )
-        pars     = {} if pars is None else  pars
-
-    #### Do something #################################################################
-    df_new         = df[col]  ### Do nithi
-    df_new.columns = [  col + "_myfun"  for col in df.columns ]
-    cols_new       = list(df_new.columns)
-
-    prepro   = None   ### model
-    pars_new = None   ### new params
-
-
-
-
-
-    ###################################################################################
-    ###### Training time save all #####################################################
-    if "path_features_store" in pars and "path_pipeline_export" in pars :
-       save(prepro,         pars["path_pipeline_export"] + f"/{prefix}_model.pkl" )
-       save(cols_new,       pars["path_pipeline_export"] + f"/{prefix}.pkl" )
-       save(pars_new,       pars["path_pipeline_export"] + f"/{prefix}_pars.pkl" )
-
-    ###### Training & Inference time : df + new column names ##########################
-    col_pars = {"prefix" : prefix , "path" :   pars.get("path_pipeline_export", pars.get("path_pipeline", None)) }
-    col_pars["cols_new"] = {
-        "col_myfun" :  cols_new  ### new column list
-    }
-    return df_new, col_pars
-
-
-
-
-####################################################################################################
 def pd_coltext_clean( df, col, stopwords= None , pars=None):
     import string, re
     ntoken= pars.get('n_token', 1)
