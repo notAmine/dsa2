@@ -204,6 +204,12 @@ def config1(path_model_out="") :
     #### Date        
     #,{'uri': 'source/prepro.py::pd_coldate'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
+    #### Data Over/Under sampling, New data         
+    #,{'uri': 'source/prepro_sampler.py::pd_sample_imblearn'   , 'pars': {} , 'cols_family': 'colall' , 'cols_out': 'colall_out' , 'type': '' }
+    #,{'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_sampler.py::pd_augmentation_sdv'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+
+
 
     #### Text        
     #,{'uri': 'source/prepro_text.py::pd_coltext'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
@@ -212,10 +218,6 @@ def config1(path_model_out="") :
     #,{'uri': 'source/prepro_text.py::pd_coltext_wordfreq'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
     
 
-    #### Data Over/Under sampling, New data         
-    #,{'uri': 'source/prepro_sampler.py::pd_sample_imblearn'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #,{'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #,{'uri': 'source/prepro_sampler.py::pd_augmentation_sdv'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
 
     #### Time Series 
@@ -265,16 +267,18 @@ def config1(path_model_out="") :
                             'colcat_onehot',
                             'colcat_minhash',
 
-
-
                             # 'coltext_universal_google'
-
-
-
                             # 'col_genetic',
 
+                          ],
 
-                          ]
+
+      #### Separate Category Sparse from Continuous (DLearning input)
+      'cols_model_type': {
+         'continuous' : [ 'colnum',   ],
+         'discreate'  : [ 'colcat_bin', 'colnum_bin'   ]
+      }   
+
 
       ### Filter data rows   ###################################################################
      ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 }
