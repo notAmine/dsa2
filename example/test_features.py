@@ -251,7 +251,6 @@ def config1(path_model_out="") :
       'cols_input_type' : cols_input_type_2,
 
 
-
       ### columns for model input    #########################################################
       #  "colnum", "colnum_bin", "colnum_onehot",   #### Colnum columns
       #  "colcat", "colcat_bin", "colcat_onehot", "colcat_bin_map",  #### colcat columns
@@ -272,11 +271,10 @@ def config1(path_model_out="") :
 
                           ],
 
-
       #### Separate Category Sparse from Continuous (DLearning input)
       'cols_model_type': {
          'continuous' : [ 'colnum',   ],
-         'discreate'  : [ 'colcat_bin', 'colnum_bin'   ]
+         'discreate'  : [ 'colcat_bin', 'colnum_bin',  'colcat_minhash',  'colcat_onehot', 'colnum_onehot'    ]
       }   
 
 
