@@ -405,7 +405,7 @@ def pd_colcross(df, col, pars):
     log("#####  Cross Features From OneHot Features   ######################################")
     prefix = 'colcross_onehot'
 
-    params_check([('dfcat_hist', pd.DataFrame), 'colid',   ])
+    # params_check(pars,  [('dfcat_hot', pd.DataFrame), 'colid',   ])
     from util_feature import pd_feature_generate_cross
 
     dfcat_hot = pars['dfcat_hot']

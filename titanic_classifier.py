@@ -345,7 +345,7 @@ python  titanic_classifier.py  deploy
 """
 
 if __name__ == "__main__":
-    d = { "data_profile": data_profile,  "train" : train, "predict" : predict, "config" : config_default ,"deploy":deploy}
+    d = { "data_profile": data_profile,  "train" : train, "predict" : predict, "config" : config_default }
     import fire
     fire.Fire(d)
     
