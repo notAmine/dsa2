@@ -27,3 +27,4 @@ mlflow==1.13.1
 mljar-supervised
 explainerdashboard
 petastorm
+pandas-profiling
