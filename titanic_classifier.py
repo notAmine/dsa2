@@ -321,7 +321,7 @@ try :
   class BodyBatch(BaseModel):
       Batch: List[BodyOne]
         
-  from core_run import deploy
+  # from core_run import deploy
   """
   def deploy():
       import uvicorn
@@ -339,7 +339,6 @@ python  titanic_classifier.py  data_profile
 python  titanic_classifier.py  preprocess  --nsample 100
 python  titanic_classifier.py  train       --nsample 200
 python  titanic_classifier.py  predict
-python  titanic_classifier.py  deploy
 
 
 """
