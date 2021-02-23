@@ -35,7 +35,7 @@ tensorflow_text>=2.0.0rc0
 # tqdm==4.48.0
 mlflow==1.13.1
 mljar-supervised
-explainerdashboard
+#explainerdashboard
 #petastorm
 
 
