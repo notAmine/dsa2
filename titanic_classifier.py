@@ -1,9 +1,11 @@
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
+### Usage:
+  python titanic_classifier.py  train      --config  config1
+  python titanic_classifier.py  predict    --config  config1
 
-  python titanic_classifier.py  train    > zlog/log_titanic_train.txt 2>&1
-  python titanic_classifier.py  predict  > zlog/log_titanic_predict.txt 2>&1
+  
 
 
 """
@@ -17,7 +19,6 @@ THIS_FILEPATH  =  os.path.abspath(__file__)
 
 sys.path.append(root_repo)
 from source.util_feature import save,os_get_function_name
-
 
 
 
@@ -137,7 +138,7 @@ def config1() :
 
       "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
 
-                        ,"mlflow_pars" : {}   ### Not empty --> use mlflow
+                        # ,"mlflow_pars" : {}   ### Not empty --> use mlflow
                       },
 
       "data_pars": { "n_sample" : n_sample,
@@ -298,7 +299,7 @@ def predict(config=None, nsample=None):
                               )
 """
 
-####################################################################################
+#################################################################################
 ####### Deploy ##################################################################
 #### Libraries for fastapi modeling ####
 try :
@@ -321,13 +322,6 @@ try :
   class BodyBatch(BaseModel):
       Batch: List[BodyOne]
         
-  # from core_run import deploy
-  """
-  def deploy():
-      import uvicorn
-      uvicorn.run("script_name:fastapi_app", host="127.0.0.1", port=8000, log_level="info")
-
-  """
 except : pass
 
 
