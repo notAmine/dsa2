@@ -5,7 +5,7 @@
   python titanic_classifier.py  train      --config  config1
   python titanic_classifier.py  predict    --config  config1
 
-  
+
 
 
 """
@@ -249,9 +249,10 @@ def preprocess(config=None, nsample=None):
 
 ##################################################################################
 ########## Train #################################################################
+# def train(config=None, nsample=None):
 from core_run import train
 """
-def train(config=None, nsample=None):
+
 
     config_name  = config  if config is not None else config_default
     mdict        = globals()[config_name]()
