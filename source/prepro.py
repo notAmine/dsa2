@@ -1,34 +1,12 @@
 # pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
 # -*- coding: utf-8 -*-
 """
-https://github.com/Automunge/AutoMunge#library-of-transformations
-Library of Transformations
-Library of Transformations Subheadings:
-Intro
-Numerical Set Normalizations
-Numerical Set Transformations
-Numercial Set Bins and Grainings
-Sequential Numerical Set Transformations
-Categorical Set Encodings
-Date-Time Data Normalizations
-Date-Time Data Bins
-Differential Privacy Noise Injections
-Misc. Functions
-String Parsing
-More Efficient String Parsing
-Multi-tier String Parsing
-List of Root Categories
-List of Suffix Appenders
-Other Reserved Strings
-Root Category Family Tree Definitions
-
-
+colnum, colcat, coldate transformation
 
 """
 import warnings
 warnings.filterwarnings('ignore')
-import sys, gc, os, pandas as pd, json, copy
-import numpy as np
+import sys, gc, os, pandas as pd, json, copy, numpy as np
 
 ####################################################################################################
 #### Add path for python import
@@ -62,237 +40,61 @@ def log_pd(df, *s, n=0, m=1):
     print(sjump,  df.head(n), flush=True)
 
 
-from util_feature import  save, load_function_uri, load
+from util_feature import  (save,  load, save_features, os_get_function_name,
+                           params_check)
 import util_feature
-####################################################################################################
-####################################################################################################
-def save_features(df, name, path):
-    """
-    :param df:
-    :param name:
-    :param path:
-    :return:
-    """
-    if path is not None :
-       os.makedirs( f"{path}/{name}" , exist_ok=True)
-       if isinstance(df, pd.Series):
-           df0=df.to_frame()
-       else:
-           df0=df
-       df0.to_parquet( f"{path}/{name}/features.parquet")
-
-
 
 
 ####################################################################################################
-def coltext_stopwords(text, stopwords=None, sep=" "):
-    tokens = text.split(sep)
-    tokens = [t.strip() for t in tokens if t.strip() not in stopwords]
-    return " ".join(tokens)
-
-
-def pd_coltext_clean( df, col, stopwords= None , pars=None):
-    import string, re
-    ntoken= pars.get('n_token', 1)
-    df      = df.fillna("")
-    dftext = df
-    log(dftext)
-    log(col)
-    list1 = col
-    # list1 = []
-    # list1.append(col)
-    # fromword = [ r"\b({w})\b".format(w=w)  for w in fromword    ]
-    # print(fromword)
-    for col_n in list1:
-        dftext[col_n] = dftext[col_n].fillna("")
-        dftext[col_n] = dftext[col_n].str.lower()
-        dftext[col_n] = dftext[col_n].apply(lambda x: x.translate(string.punctuation))
-        dftext[col_n] = dftext[col_n].apply(lambda x: x.translate(string.digits))
-        dftext[col_n] = dftext[col_n].apply(lambda x: re.sub("[!@,#$+%*:()'-]", " ", x))
-        dftext[col_n] = dftext[col_n].apply(lambda x: coltext_stopwords(x, stopwords=stopwords))
-    return dftext
-
-
-
-def pd_coltext_wordfreq(df, col, stopwords, ntoken=100):
+####################################################################################################
+def pd_col_atemplate(df=None, col=None, pars={}):
     """
-    :param df:
-    :param coltext:  text where word frequency should be extracted
-    :param nb_to_show:
-    :return:
-    """
-    sep=" "
-    logs('----col-----\n', col)
-    coltext_freq = df[col].apply(str).apply(lambda x: pd.value_counts(x.split(sep))).sum(axis=0).reset_index()
-    coltext_freq.columns = ["word", "freq"]
-    coltext_freq = coltext_freq.sort_values("freq", ascending=0)
-    log(coltext_freq)
+    Example of custom Processor
+    Used at prediction time
+        "path_pipeline"  : 
 
-    word_tokeep  = coltext_freq["word"].values[:ntoken]
-    word_tokeep  = [  t for t in word_tokeep if t not in stopwords   ]
-
-    return coltext_freq, word_tokeep
-
-
-def nlp_get_stopwords():
-    import json
-    import string
-    stopwords = json.load(open("source/utils/stopwords_en.json") )["word"]
-    stopwords = [ t for t in string.punctuation ] + stopwords
-    stopwords = [ "", " ", ",", ".", "-", "*", '€', "+", "/" ] + stopwords
-    stopwords =list(set( stopwords ))
-    stopwords.sort()
-    print( stopwords )
-    stopwords = set(stopwords)
-    return stopwords
-
-
-def pd_coltext(df, col, pars={}):
-    """
-    df : Datframe
-    col : list of columns
-    pars : dict of pars
+    Training time :
+        "path_features_store" :  to store intermediate dataframe
+        "path_pipeline_export":  to store pipeline  for later usage
 
     """
-    from utils import util_text, util_model
+    from source.util_feature import save, load
+    prefix = "col_myfun"
+    #### Inference time LOAD previous pars  ########################################### 
+    if "path_pipeline" in pars :   
+        prepro   = load(pars["path_pipeline"] + f"/{prefix}_model.pkl" )
+        pars     = load(pars["path_pipeline"] + f"/{prefix}_pars.pkl" )
+        pars     = {} if pars is None else  pars
 
-    #### Load pars ###################################################################
-    path_pipeline        = pars.get('path_pipeline', None)
-    word_tokeep_dict_all = load(  path_pipeline + "/word_tokeep_dict_all.pkl" )  if path_pipeline is not None else {}
-    # dftext_tdidf_all = load(f'{path_pipeline}/dftext_tdidf.pkl') if  path_pipeline else None
-    # dftext_svd_list_all      = load(f'{path_pipeline}/dftext_svd.pkl')   if  path_pipeline else None
-    dimpca       = pars.get('dimpca', 2)
-    word_minfreq = pars.get('word_minfreq', 3)
+    #### Do something #################################################################
+    df_new         = df[col]  ### Do nithi
+    df_new.columns = [  col + "_myfun"  for col in df.columns ]
+    cols_new       = list(df_new.columns)
 
-    #### Process  ####################################################################
-    stopwords           = nlp_get_stopwords()
-    dftext              = pd_coltext_clean(df, col, stopwords= stopwords , pars=pars)
-    dftext_svd_list_all = None
-    dftext_tdidf_all    = None
-
-    ### Processing each of text columns to create a bag of word/to load the bag of word -> tf-idf -> svd
-    for col_ in col:
-
-            if path_pipeline is not None:
-                ### If it is in Inference step, use the saved bag of word for the column `col_`
-                word_tokeep = word_tokeep_dict_all[col_]
-
-            else:
-                ### If it is not, create a bag of word
-                coltext_freq, word_tokeep = pd_coltext_wordfreq(df, col_, stopwords, ntoken=100)  ## nb of words to keep
-                word_tokeep_dict_all[col_] = word_tokeep  ## save the bag of wrod for `col_` in a dict
-
-            dftext_tdidf_dict, word_tokeep_dict = util_text.pd_coltext_tdidf(dftext, coltext=col_, word_minfreq= word_minfreq,
-                                                                             word_tokeep = word_tokeep,
-                                                                             return_val  = "dataframe,param")
-
-            dftext_tdidf_all = pd.DataFrame(dftext_tdidf_dict) if dftext_tdidf_all is None else pd.concat((dftext_tdidf_all,pd.DataFrame(dftext_tdidf_dict)),axis=1)
-            log(word_tokeep_dict)
-
-            ###  Dimesnion reduction for Sparse Matrix
-            dftext_svd_list, svd_list = util_model.pd_dim_reduction(dftext_tdidf_dict,
-                                                           colname        = None,
-                                                           model_pretrain = None,
-                                                           colprefix      = col_ + "_svd",
-                                                           method         = "svd",  dimpca=dimpca,  return_val="dataframe,param")
-
-            dftext_svd_list_all = dftext_svd_list if dftext_svd_list_all is None else pd.concat((dftext_svd_list_all,dftext_svd_list),axis=1)
-    #################################################################################
-
-    ###### Save and Export ##########################################################
-    if 'path_features_store' in pars:
-            save_features(dftext_svd_list_all, 'dftext_svd' + "-" + str(col), pars['path_features_store'])
-            # save(dftext_svd_list_all,  pars['path_pipeline_export'] + "/dftext_svd.pkl")
-            # save(dftext_tdidf_all,     pars['path_pipeline_export'] + "/dftext_tdidf.pkl" )
-            save(word_tokeep_dict_all,     pars['path_pipeline_export'] + "/word_tokeep_dict_all.pkl" )
-
-    col_pars = {}
-    col_pars['cols_new'] = {
-     # 'coltext_tdidf'    : dftext_tdidf_all.columns.tolist(),       ### list
-     'coltext_svd'      : dftext_svd_list_all.columns.tolist()      ### list
-    }
-
-    dftext_svd_list_all.index = dftext.index
-    # return pd.concat((dftext_svd_list_all,dftext_svd_list_all),axis=1), col_pars
-    return dftext_svd_list_all, col_pars
+    prepro   = None   ### model
+    pars_new = None   ### new params
 
 
 
-##### Filtering / cleaning rows :   #########################################################
-def pd_filter_rows(df, col, pars):
-    import re
-    coly = col
-    filter_pars =  pars
-    def isfloat(x):
-        #x = re.sub("[!@,#$+%*:()'-]", "", str(x))
-        try :
-            a= float(x)
-            return 1
-        except:
-            return 0
-
-    ymin, ymax = pars.get('ymin', -9999999999.0), filter_pars.get('ymax', 999999999.0)
-
-    df['_isfloat'] = df[ coly ].apply(lambda x : isfloat(x),axis=1 )
-    df = df[ df['_isfloat'] > 0 ]
-    df = df[df[coly] > ymin]
-    df = df[df[coly] < ymax]
-    del df['_isfloat']
-
-    return df, col
-
-
-def pd_filter_resample(df=None, col=None, pars=None):
-    """
-        Over-sample, Under-sample
-    """
-    prefix = 'col_imbalance'
-    ######################################################################################
-    from imblearn.over_sampling import SMOTE
-
-    model_resample = { 'SMOTE' : SMOTE}[  pars.get("model_name", 'SMOTE') ]
-
-    pars_resample  = pars.get('pars_resample',
-                             {'sampling_strategy' : 'auto', 'random_state':0, 'k_neighbors':5, 'n_jobs': 2})
-
-    if 'path_pipeline' in pars :   #### Inference time
-        return df, {'col_new': col }
-        #gp   = load(pars['path_pipeline'] + f"/{prefix}_model.pkl" )
-        #pars = load(pars['path_pipeline'] + f"/{prefix}_pars.pkl" )
-
-    else :     ### Training time
-        colX          = col # [col_ for col_ in col if col_ not in coly]
-        train_X       = df[colX].fillna(method='ffill')
-        coly     = pars['coly']
-        train_y  = pars['dfy']
-        gp       = model_resample( **pars_resample)
-        X_resample, y_resample = gp.fit_resample(train_X, train_y)
-
-        df2       = pd.DataFrame(X_resample, columns = col, index=train_X.index)
-        df2[coly] = y_resample
-
-
-    col_new = col
     ###################################################################################
-    if 'path_features_store' in pars and 'path_pipeline_export' in pars:
-       save_features(df2, 'df_resample', pars['path_features_store'])
-       save(gp,             pars['path_pipeline_export'] + f"/{prefix}_model.pkl" )
-       save(col,            pars['path_pipeline_export'] + f"/{prefix}.pkl" )
-       save(pars_resample,   pars['path_pipeline_export'] + f"/{prefix}_pars.pkl" )
+    ###### Training time save all #####################################################
+    if "path_features_store" in pars and "path_pipeline_export" in pars :
+       save(prepro,         pars["path_pipeline_export"] + f"/{prefix}_model.pkl" )
+       save(cols_new,       pars["path_pipeline_export"] + f"/{prefix}.pkl" )
+       save(pars_new,       pars["path_pipeline_export"] + f"/{prefix}_pars.pkl" )
 
-
-    col_pars = {'prefix' : prefix , 'path' :   pars.get('path_pipeline_export', pars.get('path_pipeline', None)) }
-    col_pars['cols_new'] = {
-       prefix :  col_new  ### list
+    ###### Training & Inference time : df + new column names ##########################
+    col_pars = {"prefix" : prefix , "path" :   pars.get("path_pipeline_export", pars.get("path_pipeline", None)) }
+    col_pars["cols_new"] = {
+        "col_myfun" :  cols_new  ### new column list
     }
-    return df2, col_pars
+    return df_new, col_pars
 
 
 
-
-
+###########################################################################################
 ##### Label processing   ##################################################################
-def pd_label_clean(df, col, pars):
+def pd_coly_clean(df, col, pars):
     path_features_store = pars['path_features_store']
     # path_pipeline_export = pars['path_pipeline_export']
     coly = col=[0]
@@ -308,7 +110,7 @@ def pd_label_clean(df, col, pars):
 
 
 def pd_coly(df, col, pars):
-    ##### Filtering / cleaning rows :   #########################################################
+    ##### Filtering / cleaning rows :   ################
     coly=col
     def isfloat(x):
         try :
@@ -318,7 +120,7 @@ def pd_coly(df, col, pars):
             return 0
     df['_isfloat'] = df[ coly ].apply(lambda x : isfloat(x) )
     df             = df[ df['_isfloat'] > 0 ]
-    df[coly] = df[coly].astype('float32')
+    df[coly]       = df[coly].astype('float64')
     del df['_isfloat']
     logs("----------df[coly]------------",df[coly])
     ymin, ymax = pars.get('ymin', -9999999999.0), pars.get('ymax', 999999999.0)
@@ -348,6 +150,11 @@ def pd_colnum(df, col, pars):
     log(df.dtypes)
 
 
+def pd_colnum_fill_na_median(df, col, pars):
+    for quant_col in col:
+        df[quant_col].fillna((df[quant_col].median()), inplace=True)
+
+
 def pd_colnum_normalize(df, col, pars):
     log("### colnum normalize  ###############################################################")
     from util_feature import pd_colnum_normalize
@@ -361,9 +168,6 @@ def pd_colnum_normalize(df, col, pars):
         path_features_store = pars['path_features_store']
         save_features(dfnum_norm, 'dfnum_norm', path_features_store)
     return dfnum_norm, colnum_norm
-
-
-
 
 
 def pd_colnum_quantile_norm(df, col, pars={}):
@@ -442,7 +246,6 @@ def pd_colnum_quantile_norm(df, col, pars={}):
       save(pars_new,   pars['path_pipeline_export']  + f"/{prefix}_pars.pkl" )
       save(model,      pars['path_pipeline_export']  + f"/{prefix}_model.pkl" )
 
-
   col_pars = {'prefix' : prefix, 'path': pars.get('path_pipeline_export', pars.get('path_pipeline', None)) }
   col_pars['cols_new'] = {
     prefix :  colnew  ### list
@@ -450,13 +253,10 @@ def pd_colnum_quantile_norm(df, col, pars={}):
   return dfnew,  col_pars
 
 
-
-
-
 def pd_colnum_bin(df, col, pars):
     from util_feature import  pd_colnum_tocat
 
-    path_pipeline = pars.get('path_pipeline', False)
+    path_pipeline  = pars.get('path_pipeline', False)
     colnum_binmap  = load(f'{path_pipeline}/colnum_binmap.pkl') if  path_pipeline else None
     log(colnum_binmap)
 
@@ -490,8 +290,8 @@ def pd_colnum_bin(df, col, pars):
 def pd_colnum_binto_onehot(df, col=None, pars=None):
     assert isinstance(col, list) and isinstance(df, pd.DataFrame)
 
-    dfnum_bin = df[col]
-    colnum_bin = col
+    dfnum_bin     = df[col]
+    colnum_bin    = col
 
     path_pipeline = pars.get('path_pipeline', False)
     colnum_onehot = load(f'{path_pipeline}/colnum_onehot.pkl') if  path_pipeline else None
@@ -522,6 +322,7 @@ def pd_colcat_to_onehot(df, col=None, pars=None):
 
     """
     log("#### colcat to onehot")
+    col         = [col]  if isinstance(col, str) else col
     if len(col)==1:
         colnew       = [col[0] + "_onehot"]
         df[ colnew ] =  df[col]
@@ -563,10 +364,10 @@ def pd_colcat_to_onehot(df, col=None, pars=None):
 
 def pd_colcat_bin(df, col=None, pars=None):
     # dfbum_bin = df[col]
-    path_pipeline = pars.get('path_pipeline', False)
+    path_pipeline  = pars.get('path_pipeline', False)
     colcat_bin_map = load(f'{path_pipeline}/colcat_bin_map.pkl') if  path_pipeline else None
+    colcat         = [col]  if isinstance(col, str) else col
 
-    colcat = col
     log("#### Colcat to integer encoding ")
     dfcat_bin, colcat_bin_map = util_feature.pd_colcat_toint(df[colcat], colname=colcat,
                                                             colcat_map=  colcat_bin_map ,
@@ -596,18 +397,20 @@ def pd_colcat_bin(df, col=None, pars=None):
 
 def pd_colcross(df, col, pars):
     """
-
+     cross_feature_new =  feat1 X feat2  (pair feature)
 
     """
-    prefix = 'colcross_onehot'
     log("#####  Cross Features From OneHot Features   ######################################")
+    prefix = 'colcross_onehot'
+
+    # params_check(pars,  [('dfcat_hot', pd.DataFrame), 'colid',   ])
     from util_feature import pd_feature_generate_cross
 
     dfcat_hot = pars['dfcat_hot']
-    dfnum_hot = pars['dfnum_hot']
     colid     = pars['colid']
 
     try :
+       dfnum_hot = pars['dfnum_hot']
        df_onehot = dfcat_hot.join(dfnum_hot, on=colid, how='left')
     except :
        df_onehot = copy.deepcopy(dfcat_hot)
@@ -669,55 +472,6 @@ def pd_coldate(df, col, pars):
         'dfdate': list(dfdate.columns)  ### list
     }
     return dfdate, col_pars
-
-
-def pd_autoencoder(df, col, pars):
-    """"
-    (4) Autoencoder
-    An autoencoder is a type of artificial neural network used to learn efficient data codings in an unsupervised manner. The aim of an autoencoder is to learn a representation (encoding) for a set of data, typically for dimensionality reduction, by training the network to ignore noise.
-
-    (i) Feed Forward
-
-    The simplest form of an autoencoder is a feedforward, non-recurrent neural network similar to single layer perceptrons that participate in multilayer perceptrons
-    """
-    from sklearn.preprocessing import minmax_scale
-    import tensorflow as tf
-    import numpy as np
-
-    def encoder_dataset(df, drop=None, dimesions=20):
-
-      if drop:
-        train_scaled = minmax_scale(df.drop(drop,axis=1).values, axis = 0)
-      else:
-        train_scaled = minmax_scale(df.values, axis = 0)
-
-      # define the number of encoding dimensions
-      encoding_dim = dimesions
-      # define the number of features
-      ncol = train_scaled.shape[1]
-      input_dim = tf.keras.Input(shape = (ncol, ))
-
-      # Encoder Layers
-      encoded1 = tf.keras.layers.Dense(3000, activation = 'relu')(input_dim)
-      encoded2 = tf.keras.layers.Dense(2750, activation = 'relu')(encoded1)
-      encoded3 = tf.keras.layers.Dense(2500, activation = 'relu')(encoded2)
-      encoded4 = tf.keras.layers.Dense(750, activation = 'relu')(encoded3)
-      encoded5 = tf.keras.layers.Dense(500, activation = 'relu')(encoded4)
-      encoded6 = tf.keras.layers.Dense(250, activation = 'relu')(encoded5)
-      encoded7 = tf.keras.layers.Dense(encoding_dim, activation = 'relu')(encoded6)
-
-      encoder = tf.keras.Model(inputs = input_dim, outputs = encoded7)
-      encoded_input = tf.keras.Input(shape = (encoding_dim, ))
-
-      encoded_train = pd.DataFrame(encoder.predict(train_scaled),index=df.index)
-      encoded_train = encoded_train.add_prefix('encoded_')
-      if drop:
-        encoded_train = pd.concat((df[drop],encoded_train),axis=1)
-
-      # df_out = mapper.encoder_dataset(df.copy(), ["Close_1"], 15); df_out.head()
-      return encoded_train
-
-
 
 
 def pd_colcat_encoder_generic(df, col, pars):
@@ -872,7 +626,7 @@ def pd_col_genetic_transform(df=None, col=None, pars=None):
 
     if 'path_pipeline' in pars :   #### Inference time
         gp   = load(pars['path_pipeline'] + f"/{prefix}_model.pkl" )
-        pars = load(pars['path_pipeline'] + f"/{prefix}_pars.pkl" )
+        pars = load(pars['path_pipeline'] + f"/{prefix}_pars.pkl"  )
     else :     ### Training time
         coly     = pars['coly']
         train_y  = pars['dfy']
@@ -923,142 +677,27 @@ def pd_col_genetic_transform(df=None, col=None, pars=None):
 
 
 
-def pd_coltext_universal_google(df, col, pars={}):
-    """
-     # Universal sentence encoding from Tensorflow
-       Text ---> Vectors
-    from source.preprocessors import  pd_coltext_universal_google
-    https://tfhub.dev/google/universal-sentence-encoder-multilingual/3
-
-    #latest Tensorflow that supports sentencepiece is 1.13.1
-    !pip uninstall --quiet --yes tensorflow
-    !pip install --quiet tensorflow-gpu==1.13.1
-    !pip install --quiet tensorflow-hub
-    pip install --quiet tf-sentencepiece, simpleneighbors
-    !pip install --quiet simpleneighbors
-
-    # df : dataframe
-    # col : list of text colnum names
-    pars
-    """
-    prefix = "coltext_universal_google"
-    if 'path_pipeline' in  pars  :   ### Load during Inference
-       coltext_embed = load( pars['path_pipeline'] + "/{prefix}.pkl" )
-       pars_model    = load( pars['path_pipeline'] + "/{prefix}_pars.pkl" )
-
-    ####### Custom Code ###############################################################
-    import tensorflow as tf
-    import tensorflow_hub as hub
-    import tensorflow_text
-    #from tqdm import tqdm #progress bar
-    uri_list = [
-    ]
-    url_default = "https://tfhub.dev/google/universal-sentence-encoder-multilingual/3"
-    url         = pars.get("model_uri", url_default )
-    model       = hub.load( url )
-    pars_model  = {}
-    dfall       = None
-    for coli in col[:1] :
-        X = []
-        for r in (df[coli]):
-            if pd.isnull(r)==True :
-                r=""
-            emb = model(r)
-            review_emb = tf.reshape(emb, [-1]).numpy()
-            X.append(review_emb)
-
-        dfi   = pd.DataFrame(X, columns= [ coli + "_" + str(i) for i in range( len(X[0]))   ] ,
-                             index = df.index)
-        dfall = pd.concat((dfall, dfi))  if dfall is not None else dfi
-
-    coltext_embed = list(dfall.columns)
 
 
-    ##### Export ####################################################################
-    if 'path_features_store' in pars and 'path_pipeline_export' in pars:
-       save_features(dfall, 'dftext_embed', pars['path_features_store'])
-       save(coltext_embed,  pars['path_pipeline_export'] + "/{prefix}.pkl" )
-       save(pars_model,     pars['path_pipeline_export'] + "/{prefix}_pars.pkl" )
-       save(model,          pars['path_pipeline_export'] + "/{prefix}_model.pkl" )
-       model_uri = pars['path_pipeline_export'] + "/{prefix}_model.pkl"
+######################################################################################
+def test():
+    from util_feature import test_get_classification_data
+    dfX, dfy = test_get_classification_data()
+    cols     = list(dfX.columsn)
+    ll       = [ ('pd_colnum_bin', {}  )
+               ]
 
-
-    col_pars = {'model_uri' :  model_uri, 'pars': pars_model}
-    col_pars['cols_new']      = {
-       'coltext_universal_google' :  coltext_embed ### list
-    }
-    return dfall, col_pars
+    for fname, pars in ll :
+        try :
+           myfun = globals()[fname]
+           res   = myfun(dfX, cols, pars)
+           log( f"Success, {fname}, {pars}, {e}")
+        except Exception as e :
+            log( f"Failed, {fname}, {pars}, {e}")
 
 
 
-def pd_col_covariate_shift_adjustment():
-   """
-    https://towardsdatascience.com/understanding-dataset-shift-f2a5a262a766
-
-     Covariate shift has been extensively studied in the literature, and a number of proposals to work under it have been published. Some of the most important ones include:
-        Weighting the log-likelihood function (Shimodaira, 2000)
-        Importance weighted cross-validation (Sugiyama et al, 2007 JMLR)
-        Integrated optimization problem. Discriminative learning. (Bickel et al, 2009 JMRL)
-        Kernel mean matching (Gretton et al., 2009)
-        Adversarial search (Globerson et al, 2009)
-        Frank-Wolfe algorithm (Wen et al., 2015)
-
-import numpy as np
-from scipy import sparse
-
-# .. for plotting ..
-import pylab as plt
-# .. to generate a synthetic dataset ..
-from sklearn import datasets
-
-n_samples, n_features = 1000, 10000
-A, b = datasets.make_regression(n_samples, n_features)
-
-def FW(alpha, max_iter=200, tol=1e-8):
-    # .. initial estimate, could be any feasible point ..
-    x_t = sparse.dok_matrix((n_features, 1))
-    trace = []  # to keep track of the gap
-
-    # .. some quantities can be precomputed ..
-    Atb = A.T.dot(b)
-    for it in range(max_iter):
-        # .. compute gradient. Slightly more involved than usual because ..
-        # .. of the use of sparse matrices ..
-        Ax = x_t.T.dot(A.T).ravel()
-        grad = (A.T.dot(Ax) - Atb)
-
-        # .. the LMO results in a vector that is zero everywhere except for ..
-        # .. a single index. Of this vector we only store its index and magnitude ..
-        idx_oracle = np.argmax(np.abs(grad))
-        mag_oracle = alpha * np.sign(-grad[idx_oracle])
-        g_t = x_t.T.dot(grad).ravel() - grad[idx_oracle] * mag_oracle
-        trace.append(g_t)
-        if g_t <= tol:
-            break
-        q_t = A[:, idx_oracle] * mag_oracle - Ax
-        step_size = min(q_t.dot(b - Ax) / q_t.dot(q_t), 1.)
-        x_t = (1. - step_size) * x_t
-        x_t[idx_oracle] = x_t[idx_oracle] + step_size * mag_oracle
-    return x_t, np.array(trace)
-
-# .. plot evolution of FW gap ..
-sol, trace = FW(.5 * n_features)
-plt.plot(trace)
-plt.yscale('log')
-plt.xlabel('Number of iterations')
-plt.ylabel('FW gap')
-plt.title('FW on a Lasso problem')
-plt.grid()
-plt.show()
-
-sparsity = np.mean(sol.toarray().ravel() != 0)
-print('Sparsity of solution: %s%%' % (sparsity * 100))
-
-   """
-   pass
 
 if __name__ == "__main__":
     import fire
     fire.Fire()
-
-
