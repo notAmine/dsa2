@@ -225,7 +225,8 @@ def hyperparam_wrapper(config_full="",
     ##### Optuna Params   ####################################################
     engine_pars = {'metric_target' :'loss',
                    'study_name'    : config_name  ,
-                   'storage'       : f"sqlite:///" + os.path.abspath(path_optuna_storage).replace("\\", "/") }
+                   'storage'       : "sqlite:///:memory:" }
+                    # f"sqlite:///" + os.path.abspath(path_optuna_storage).replace("\\", "/") }
 
     ##### Running the optim
     best_dict   = run_hyper_optuna(objective_fun, mdict, mdict_range, engine_pars, ntrials= ntrials)
