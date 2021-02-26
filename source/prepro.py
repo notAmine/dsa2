@@ -293,8 +293,8 @@ def pd_colnum_bin(df, col, pars):
 def pd_colnum_binto_onehot(df, col=None, pars=None):
     assert isinstance(col, list) and isinstance(df, pd.DataFrame)
 
-    dfnum_bin = df[col]
-    colnum_bin = col
+    dfnum_bin     = df[col]
+    colnum_bin    = col
 
     path_pipeline = pars.get('path_pipeline', False)
     colnum_onehot = load(f'{path_pipeline}/colnum_onehot.pkl') if  path_pipeline else None
@@ -325,6 +325,7 @@ def pd_colcat_to_onehot(df, col=None, pars=None):
 
     """
     log("#### colcat to onehot")
+    col         = [col]  if isinstance(col, str) else col
     if len(col)==1:
         colnew       = [col[0] + "_onehot"]
         df[ colnew ] =  df[col]
@@ -366,10 +367,10 @@ def pd_colcat_to_onehot(df, col=None, pars=None):
 
 def pd_colcat_bin(df, col=None, pars=None):
     # dfbum_bin = df[col]
-    path_pipeline = pars.get('path_pipeline', False)
+    path_pipeline  = pars.get('path_pipeline', False)
     colcat_bin_map = load(f'{path_pipeline}/colcat_bin_map.pkl') if  path_pipeline else None
+    colcat         = [col]  if isinstance(col, str) else col
 
-    colcat = col
     log("#### Colcat to integer encoding ")
     dfcat_bin, colcat_bin_map = util_feature.pd_colcat_toint(df[colcat], colname=colcat,
                                                             colcat_map=  colcat_bin_map ,
