@@ -253,13 +253,10 @@ def pd_colnum_quantile_norm(df, col, pars={}):
   return dfnew,  col_pars
 
 
-
-
-
 def pd_colnum_bin(df, col, pars):
     from util_feature import  pd_colnum_tocat
 
-    path_pipeline = pars.get('path_pipeline', False)
+    path_pipeline  = pars.get('path_pipeline', False)
     colnum_binmap  = load(f'{path_pipeline}/colnum_binmap.pkl') if  path_pipeline else None
     log(colnum_binmap)
 
