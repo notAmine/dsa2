@@ -215,71 +215,56 @@ def preprocess(prepro_pars):
 ############ Do not change #########################################################################
 def get_dataset(data_pars=None, task_type="train", **kw):
     """
-      "ram"  :
-      "file" :
-
-    n_wide_features = data_pars.get('n_wide_features', None)
-    n_deep_features = data_pars.get('n_deep_features', None)
-
-    Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
-    Xtest_A, Xtest_B, Xtest_C    = Xtest[:, :n_wide_features], Xtest[:, -n_deep_features:], Xtest[:, -n_deep_features:]
-
-
+      return tuple of dataframes
     """
     # log(data_pars)
     data_type = data_pars.get('type', 'ram')
-    if data_type == "ram":
-        # n_wide_features = data_pars.get('n_wide_features', None)
-        # n_deep_features = data_pars.get('n_deep_features', None)
 
-        cols_model_input_groupname = ['cols_wide_input', 'cols_deep_input', 'cols_deep_input' ]
+    if data_type == "ram":
+        cols_input_groupname = ['cols_wide_input', 'cols_deep_input', 'cols_deep_input' ]
+        ### dict  colgroup ---> list of colname
+        cols_input_group     = data_pars['cols_model_type2']
 
         if task_type == "predict":
             d = data_pars[task_type]
-            Xtrain = d["X"]
-            ### dict  colgroup ---> list of colname
-            cols_model_input_group     = data_pars['cols_model_input_group']
-
+            Xtrain       = d["X"]
 
             Xtuple_train = []
-            for cols_groupname in cols_model_input_groupname :
-                Xtuple_train.append( Xtrain[cols_groupname] )
+            for cols_groupname in cols_input_groupname :
+                cols_i = cols_input_group[cols_groupname]
+                Xtuple_train.append( Xtrain[cols_i] )
+
             return Xtuple_train
 
 
         if task_type == "eval":
             d = data_pars[task_type]
-
-            Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
-
-            ### dict  colgroup ---> list of colname
-            cols_model_input_group     = data_pars['cols_model_input_group']
+            Xtrain, ytrain  = d["Xtrain"], d["ytrain"]
 
             Xtuple_train = []
-            for cols_groupname in cols_model_input_groupname :
-                Xtuple_train.append( Xtrain[cols_groupname] )
+            for cols_groupname in cols_input_groupname :
+                cols_i = cols_input_group[cols_groupname]
+                Xtuple_train.append( Xtrain[cols_i] )
 
             return Xtuple_train, ytrain
 
 
         if task_type == "train":
             d = data_pars[task_type]
-
             Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
 
-            ### dict  colgroup ---> list of colname
-            cols_model_input_group     = data_pars['cols_model_input_group']
-
+            ### dict  colgroup ---> list of df
             Xtuple_train = []
-            for cols_groupname in cols_model_input_groupname :
-                Xtuple_train.append( Xtrain[cols_groupname] )
+            for cols_groupname in cols_input_groupname :
+                cols_i = cols_input_group[cols_groupname]
+                Xtuple_train.append( Xtrain[cols_i] )
 
             Xtuple_test = []
-            for cols_groupname in cols_model_input_groupname :
-                Xtuple_test.append( Xtest[cols_groupname] )
+            for cols_groupname in cols_input_groupname :
+                cols_i = cols_input_group[cols_groupname]
+                Xtuple_test.append( Xtest[cols_i] )
 
             return Xtuple_train, ytrain, Xtuple_test, ytest
-
 
 
     elif data_type == "file":
@@ -292,12 +277,9 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 def test(config=''):
     """
         Group of columns for the input model
+           cols_input_group = [
 
-         cols_input_group = [
-
-         ]
-
-
+          ]
           for cols in cols_input_group,
 
 
@@ -326,6 +308,13 @@ def test(config=''):
       'cols_wide_input':   ['colnum', 'colcat_onehot' ],
       'cols_deep_input':   ['colnum', 'colcat_onehot' ],
     }
+
+
+    cols_family = {
+        'colnum' : [],
+        'colcat' : []
+    }
+
     cols_model_input_group = {}
     for colg, colist in colg_input.items() :
         cols_model_input_group[colg] = []
@@ -333,15 +322,11 @@ def test(config=''):
           cols_model_input_group[colg].extend( cols_family[colg_i] )
 
 
-    cols_wide_input = list(X.columns)[:n_wide_features]  ##
-
-    cols_wide_input = list(X.columns)[:n_wide_features]  ##
-
-
     model_pars = {'model_class': 'WideAndDeep',
                   'model_pars': {'n_wide_cross': n_wide_features,
                                  'n_wide':       n_deep_features},
                  }
+
     data_pars = {'train': {'Xtrain': X_train,
                            'ytrain': y_train,
                            'Xtest': X_test,
@@ -351,12 +336,13 @@ def test(config=''):
                  'predict': {'X': X_valid},
 
 
-                 'cols_model_input_group' :cols_model_input_group
+                 'cols_model_input_group' :cols_model_input_group,
 
                  'n_features': n_features,
                  'n_wide_features': n_wide_features,
                  'n_deep_features': n_deep_features,
                 }
+
     compute_pars = { 'compute_pars' : { 'epochs': 2,
                     'callbacks': callbacks} }
 
