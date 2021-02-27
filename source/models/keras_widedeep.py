@@ -411,9 +411,6 @@ def get_dataset2(data_pars=None, task_type="train", **kw):
 
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
-
-
-
 def get_params_sklearn(deep=False):
     return model.model.get_params(deep=deep)
 
@@ -467,7 +464,9 @@ def test_helper(model_pars, data_pars, compute_pars):
 
 
 #######################################################################################
+
 def test2(config=''):
+
     global model, session
 
     X = np.random.rand(100,30)
@@ -503,6 +502,7 @@ def test2(config=''):
                     'callbacks': callbacks} }
 
     test_helper(model_pars, data_pars, compute_pars)
+
 
 
 
