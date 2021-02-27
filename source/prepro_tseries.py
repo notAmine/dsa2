@@ -2,6 +2,9 @@
 """
  Time Series preprocessing tools :
 
+   Transform time series  (zt) INTO  supervised problem  yi = F(Xi)
+
+
   coldate                        : Parse the date and split date into columns
   groupby features               : Using data within a group ;  For each date,  aggregate col. over the groupby
   smooth, autoregressive feature : Using Past data :   For each date, a Fixed column,  aggregate over past time window.
@@ -57,52 +60,39 @@ except:
     import pandasvault, datetime as dt
 
 
+
+
 ###########################################################################################
 ###########################################################################################
-def get_sampledata():
-    df = pd.read_csv("https://github.com/firmai/random-assets-two/raw/master/numpy/tsla.csv")
-    df["Close_1"] = df["Close"].shift(-1)
-    with pd.option_context('mode.use_inf_as_na', True):
-        df = df.dropna()
-    df["Date"] = pd.to_datetime(df["Date"])
-    df = df.set_index("Date")
-    return df
-
-
-def pd_ts_date2(df, col, pars=None):
-    """
-        Parse and Split the date.
-
-    """
-    from utils import util_date
-    coldate = col
-    dfdate = None
-    for coldate_i in coldate:
-        dfdate_i = util_date.pd_datestring_split(df[[coldate_i]], coldate_i, fmt="auto", return_val="split")
-        dfdate_i.columns = [coldate_i + "_" + t for t in coldate]
-        dfdate = pd.concat((dfdate, dfdate_i), axis=1) if dfdate is not None else dfdate_i
-
-    return dfdate
-
-
 def pd_ts_date(df, col, pars=None):
-    coldate = col
+
+    df      = df[col]
+    coldate = [col] if isinstance(col, str) else col
     dfdate  =  None
+    col_add = pars.get('col_add', ['day', ',month'])
+    df2     = pd.DataFrame()
     for coldate_i in coldate:
         df2[coldate_i]               = pd.to_datetime(df[coldate_i], errors='coerce')
-        df2[coldate_i + '_day']      = df2[coldate_i].dt.day
-        df2[coldate_i + '_month']    = df2[coldate_i].dt.month
-        df2[coldate_i + '_year']     = df2[coldate_i].dt.year
-        df2[coldate_i + '_hour']     = df2[coldate_i].dt.hour
-        df2[coldate_i + '_minute']   = df2[coldate_i].dt.minute
-        df2[coldate_i + '_weekday']  = df2[coldate_i].dt.weekday
-        df2[coldate_i + '_dayyear']  = df2[coldate_i].dt.dayofyear
-        df2[coldate_i + '_weekyear'] = df2[coldate_i].dt.weekofyear
-
-
+        if 'day'  in col_add : df2[coldate_i + '_day']      = df2[coldate_i].dt.day
+        if 'month'  in col_add : df2[coldate_i + '_month']    = df2[coldate_i].dt.month
+        if 'day'  in col_add : df2[coldate_i + '_year']     = df2[coldate_i].dt.year
+        if 'day'  in col_add : df2[coldate_i + '_hour']     = df2[coldate_i].dt.hour
+        if 'day'  in col_add : df2[coldate_i + '_minute']   = df2[coldate_i].dt.minute
+        if 'day'  in col_add : df2[coldate_i + '_weekday']  = df2[coldate_i].dt.weekday
+        if 'day'  in col_add : df2[coldate_i + '_dayyear']  = df2[coldate_i].dt.dayofyear
+        if 'day'  in col_add : df2[coldate_i + '_weekyear'] = df2[coldate_i].dt.weekofyear
         dfdate = pd.concat((dfall, df2 )) if dfate is not None else df2  
-        df = df.loc[:, (df != 0).any(axis=0)]
-    return dfdate
+        del dfdate[coldate_i]  ### delete col
+
+    ##### output  ##########################################
+    col_pars = {}
+    col_pars['cols_new'] = {
+        # 'colcross_single'     :  col ,    ###list
+        'dfdate': list(dfdate.columns)  ### list
+    }
+    return dfdate, col_pars
+
+
 
 
 def pd_ts_groupby(df, col, pars):
@@ -154,10 +144,14 @@ def pd_ts_autoregressive(df, col, pars):
 
 
 def pd_ts_rolling(df, col, pars):
+    """
+      Rolling statistics
+
+    """
     cat_cols     = []
-    created_cols = []
-    colgroup     = 'id'
-    colstat      = 'mdi'
+    col_new      = []
+    colgroup     = pars['col_groupby']
+    colstat      = pars['col_stat']
 
     len_shift = 28
     for i in [7, 14, 30, 60, 180]:
@@ -168,8 +162,8 @@ def pd_ts_rolling(df, col, pars):
         df['rolling_std_' + str(i)] = df.groupby(colgroup)[colstat].transform(
             lambda x: x.shift(len_shift).rolling(i).std())
 
-        created_cols.append('rolling_mean_' + str(i))
-        created_cols.append('rolling_std_' + str(i))
+        col_new.append('rolling_mean_' + str(i))
+        col_new.append('rolling_std_' + str(i))
 
     # Rollings
     # with sliding shift
@@ -179,27 +173,27 @@ def pd_ts_rolling(df, col, pars):
             col_name = 'rolling_mean_tmp_' + str(len_shift) + '_' + str(len_window)
             df[col_name] = df.groupby(['id'])[dep_col].transform(
                 lambda x: x.shift(len_shift).rolling(len_window).mean())
-            created_cols.append(col_name)
+            col_new.append(col_name)
 
     for col_name in id_cols:
-        created_cols.append(col_name)
+        col_new.append(col_name)
 
-    return df[created_cols], cat_cols
+    return df[col_new], cat_cols
 
 
-def pd_ts_lag(df, col, pars, id_cols=None, dep_col=None):
-    created_cols = []
+def pd_ts_lag(df, col, pars):
+    col_new = []
     cat_cols     = []
 
     lag_days = [col for col in range(28, 28 + 15)]
     for lag_day in lag_days:
-        created_cols.append('lag_' + str(lag_day))
+        col_new.append('lag_' + str(lag_day))
         df['lag_' + str(lag_day)] = df.groupby(['id'])[dep_col].transform(lambda x: x.shift(lag_day))
 
     for col_name in id_cols:
-        created_cols.append(col_name)
+        col_new.append(col_name)
 
-    return df[created_cols], cat_cols
+    return df[col_new], cat_cols
 
 
 def pd_ts_generic(df, col=None, pars=None, ):
@@ -238,8 +232,6 @@ def pd_ts_generic(df, col=None, pars=None, ):
 def pd_ts_template(df, col, pars):
     """
        'colnum' : ['sales1' 'units' ]
-
-
       'pars_function_list' :  [
        { 'name': 'deltapy.transform::robust_scaler',                 'pars': {'drop':["Close_1"]} },
        { 'name': 'deltapy.transform::standard_scaler',               'pars': {'drop':["Close_1"]} },
@@ -253,8 +245,8 @@ def pd_ts_template(df, col, pars):
 
     df = df[col]
     coldate = pars['coldate']
-    colnum = pars['colnum']
-    colcat = pars['colcat']
+    colnum  = pars['colnum']
+    colcat  = pars['colcat']
 
     colgroups = pars['colgroup']
     colgstat = pars['colstat']
@@ -281,8 +273,120 @@ def pd_ts_template(df, col, pars):
     return df1
 
 
-#########################################################################################
-#########################################################################################
+def pd_ts_deltapy2(df=None, col=None, pars={}, ):
+    """
+       Delta py
+       pars : {  'name' :  "robust_scaler",
+                 'pars'  :  {}
+       }
+    """
+    prefix = 'colts_deltapy'
+
+    ###### Custom code ################################################################
+    dfin = df.fillna(method='ffill')
+    model_name = pars['name']
+    model_pars = pars.get('pars', {})
+
+    if 'path_pipeline' in pars:  #### Prediction time
+        model = load(pars['path_pipeline'] + f"/{prefix}_model.pkl")
+        pars = load(pars['path_pipeline'] + f"/{prefix}_pars.pkl")
+
+    else:  ### Training time  : Dynamic function load
+        from util_feature import load_function_uri
+        ##### transform.robust_scaler(df, drop=["Close_1"])
+        model = load_function_uri2(model_name)
+
+    ##### Transform Data  ############################################################
+    df_out = model(dfin, **model_pars)
+
+    # Extract only returns one value, so no columns to loop over.
+    model_name2 = model_name.replace("::", "-")
+    if 'extract' in model_name:
+        col_out = "0_" + model_name
+    else:
+        col_out = [coli + "_" + model_name for coli in df_out.columns]
+        df_out.columns = col_out
+        df_out.index = df_out.index
+    col_new = col_out
+
+    ###### Export #####################################################################
+    if 'path_features_store' in pars and 'path_pipeline_export' in pars:
+        save_features(df_out, 'df_' + prefix, pars['path_features_store'])
+        save(model, pars['path_pipeline_export'] + f"/{prefix}_model.pkl")
+        save(col_new, pars['path_pipeline_export'] + f"/{prefix}.pkl")
+        save(pars, pars['path_pipeline_export'] + f"/{prefix}_pars.pkl")
+
+    col_pars = {'prefix': prefix, 'path': pars.get('path_pipeline_export', pars.get('path_pipeline', None))}
+    col_pars['cols_new'] = {
+        prefix: col_new  ### list of columns
+    }
+    return df_out, col_pars
+
+
+def pd_ts_tsfresh_features(df, col, pars):
+    """
+
+    :param df:
+    :param cols:
+    :return:
+    """
+
+    df_cols = df.columns.tolist()
+    selected_cols = [x for x in df_cols if re.match("d_[0-9]", x)]
+    single_row_df_T = df[selected_cols].T
+    single_row_df_T["time"] = range(0, len(single_row_df_T.index))
+    single_row_df_T["id"] = range(0, len(single_row_df_T.index))
+    single_row_df_T.rename(columns={single_row_df_T.columns[0]: "val"}, inplace=True)
+
+    X_feat = extract_features(single_row_df_T, column_id='id', column_sort='time')
+
+    feat_col_names = X_feat.columns.tolist()
+    feat_col_names_mapping = {}
+    for feat_col_name in feat_col_names:
+        feat_col_names_mapping[feat_col_name] = feat_col_name.replace('"', '').replace(',', '')
+
+    X_feat = X_feat.rename(columns=feat_col_names_mapping)
+    X_feat_T = X_feat.T
+
+    for col in cols:
+        X_feat_T[col] = np.repeat(df[col].tolist()[0], len(X_feat_T.index))
+    # X_feat_T["item_id"] = np.repeat(df["item_id"].tolist()[0], len(X_feat_T.index))
+    # X_feat_T["id"] = np.repeat(df["id"].tolist()[0], len(X_feat_T.index))
+    # X_feat_T["cat_id"] = np.repeat(df["cat_id"].tolist()[0], len(X_feat_T.index))
+    # X_feat_T["dept_id"] = np.repeat(df["dept_id"].tolist()[0], len(X_feat_T.index))
+    # X_feat_T["store_id"] = np.repeat(df["store_id"].tolist()[0], len(X_feat_T.index))
+    # X_feat_T["state_id"] = np.repeat(df["state_id"].tolist()[0], len(X_feat_T.index))
+    X_feat_T["variable"] = X_feat_T.index
+
+    df["variable"] = pd.Series(["demand"])
+    X_feat_T = X_feat_T.append(df, ignore_index=True)
+    return X_feat_T.set_index(cols + ['variable']).rename_axis(['day'], axis=1).stack().unstack(
+        'variable').reset_index()
+
+
+def pd_ts_difference(df, cols, pars=None):
+    lag  - pars.get('lag', 1)
+    df = df[cols]
+    for col in cols :
+       df2[col] = df[col].diff(lag=lag)
+
+    return df
+
+
+
+
+########################################################################################################################
+########################################################################################################################
+def test_get_sampledata():
+    df = pd.read_csv("https://github.com/firmai/random-assets-two/raw/master/numpy/tsla.csv")
+    df["Close_1"] = df["Close"].shift(-1)
+    with pd.option_context('mode.use_inf_as_na', True):
+        df = df.dropna()
+    df["Date"] = pd.to_datetime(df["Date"])
+    df         = df.set_index("Date")
+    return df
+
+
 def test_get_methods(df):
     functions_methods = [
         {'name': 'deltapy.transform::robust_scaler', 'pars': {'drop': ["Close_1"]}},
@@ -369,145 +473,8 @@ def test_get_methods(df):
     return functions_methods
 
 
-"""
-The code below extracts all the available features on an example dataset file.
-
-import tsfel
-import pandas as pd
-
-# load dataset
-df = pd.read_csv('Dataset.txt')
-
-# Retrieves a pre-defined feature configuration file to extract all available features
-cfg = tsfel.get_features_by_domain()
-
-# Extract features
-X = tsfel.time_series_features_extractor(cfg, df)
-Available features
-Statistical domain
-Features	Computational Cost
-ECDF	1
-ECDF Percentile	1
-ECDF Percentile Count	1
-ECDF Slope	1
-Histogram	1
-Interquartile range	1
-Kurtosis	1
-Max	1
-Mean	1
-Mean absolute deviation	1
-Median	1
-Median absolute deviation	1
-Min	1
-Root mean square	1
-Skewness	1
-Standard deviation	1
-Variance	1
-Temporal domain
-Features	Computational Cost
-Absolute energy	1
-Area under the curve	1
-Autocorrelation	1
-Centroid	1
-Entropy	1
-Mean absolute diff	1
-Mean diff	1
-Median absolute diff	1
-Median diff	1
-Negative turning points	1
-Peak to peak distance	1
-Positive turning points	1
-Signal distance	1
-Slope	1
-Sum absolute diff	1
-Total energy	1
-Zero crossing rate	1
-Neighbourhood peaks	1
-Spectral domain
-Features	Computational Cost
-FFT mean coefficient	1
-Fundamental frequency	1
-Human range energy	2
-LPCC	1
-MFCC	1
-Max power spectrum	1
-Maximum frequency	1
-Median frequency	1
-Power bandwidth	1
-Spectral centroid	2
-Spectral decrease	1
-Spectral distance	1
-Spectral entropy	1
-Spectral kurtosis	2
-Spectral positive turning points	1
-Spectral roll-off	1
-Spectral roll-on	1
-Spectral skewness	2
-Spectral slope	1
-Spectral spread	2
-Spectral variation	1
-Wavelet absolute mean	2
-Wavelet energy	2
-Wavelet standard deviation	2
-Wavelet entropy	2
-Wavelet variance	2
-Citing
-
-
-"""
-
-
-def pd_ts_deltapy2(df=None, col=None, pars={}, ):
-    """
-       pars : {  'name' :  "robust_scaler",
-                 'pars'  :  {}
-       }
-    """
-    prefix = 'colts_deltapy'
-
-    ###### Custom code ################################################################
-    dfin = df.fillna(method='ffill')
-    model_name = pars['name']
-    model_pars = pars.get('pars', {})
-
-    if 'path_pipeline' in pars:  #### Prediction time
-        model = load(pars['path_pipeline'] + f"/{prefix}_model.pkl")
-        pars = load(pars['path_pipeline'] + f"/{prefix}_pars.pkl")
-
-    else:  ### Training time  : Dynamic function load
-        from util_feature import load_function_uri
-        ##### transform.robust_scaler(df, drop=["Close_1"])
-        model = load_function_uri2(model_name)
-
-    ##### Transform Data  ############################################################
-    df_out = model(dfin, **model_pars)
-
-    # Extract only returns one value, so no columns to loop over.
-    model_name2 = model_name.replace("::", "-")
-    if 'extract' in model_name:
-        col_out = "0_" + model_name
-    else:
-        col_out = [coli + "_" + model_name for coli in df_out.columns]
-        df_out.columns = col_out
-        df_out.index = df_out.index
-    col_new = col_out
-
-    ###### Export #####################################################################
-    if 'path_features_store' in pars and 'path_pipeline_export' in pars:
-        save_features(df_out, 'df_' + prefix, pars['path_features_store'])
-        save(model, pars['path_pipeline_export'] + f"/{prefix}_model.pkl")
-        save(col_new, pars['path_pipeline_export'] + f"/{prefix}.pkl")
-        save(pars, pars['path_pipeline_export'] + f"/{prefix}_pars.pkl")
-
-    col_pars = {'prefix': prefix, 'path': pars.get('path_pipeline_export', pars.get('path_pipeline', None))}
-    col_pars['cols_new'] = {
-        prefix: col_new  ### list of columns
-    }
-    return df_out, col_pars
-
-
 def test_prepro_1():
-    df = get_sampledata();
+    df = test_get_sampledata();
     df.head()
     functions_methods = test_get_methods(df)
 
@@ -515,7 +482,7 @@ def test_prepro_1():
         pars = {'name': model['name'],
                 'pars': model['pars']
                 }
-        # print("[TESTING]",pars['name'],"...")
+
         df_input = copy.deepcopy(df)
         if 'a_chi' in pars['name']:
             # Normalize the input for the chi
@@ -529,32 +496,9 @@ def test_prepro_1():
         df_out, col_pars = pd_ts_generic(df=df_input, pars=pars)
 
 
-def pd_ts_date2(df, col, pars):
-    """
-        Parse and Split the date.
-
-    """
-    log("##### Coldate processing   ##########################################")
-    from utils import util_date
-    coldate = col
-    dfdate = None
-    for coldate_i in coldate:
-        dfdate_i = util_date.pd_datestring_split(df[[coldate_i]], coldate_i, fmt="auto", return_val="split")
-        dfdate = pd.concat((dfdate, dfdate_i), axis=1) if dfdate is not None else dfdate_i
-        # if 'path_features_store' in pars :
-        #    path_features_store = pars['path_features_store']
-        #    #save_features(dfdate_i, 'dfdate_' + coldate_i, path_features_store)
-
-    col_pars = {}
-    col_pars['cols_new'] = {
-        # 'colcross_single'     :  col ,    ###list
-        'dfdate': list(dfdate.columns)  ### list
-    }
-    return dfdate, col_pars
-
 
 def test_prepro_all():
-    df = get_sampledata();
+    df = test_get_sampledata();
     df.head()
 
     df_out = transform.robust_scaler(df, drop=["Close_1"])
@@ -654,123 +598,6 @@ def test_prepro_all():
     extract.stetson_k(df["Close"])
 
 
-###########################################################################################
-###########################################################################################
-def pd_ts_basic(df, coldate='date_t', **kw):
-    df['date_t'] = pd.to_datetime(df[coldate])
-    df['year'] = df['date_t'].dt.year
-    df['month'] = df['date_t'].dt.month
-    df['week'] = df['date_t'].dt.week
-    df['day'] = df['date_t'].dt.day
-    df['dayofweek'] = df['date_t'].dt.dayofweek
-    return df[['year', 'month', 'week', 'day', 'dayofweek']]
-
-
-def pd_ts_identity(df, input_raw_path=None, dir_out=None, features_group_name=None, auxiliary_csv_path=None,
-                   drop_cols=None, index_cols=None, merge_cols_mapping=None, cat_cols=None, id_cols=None, dep_col=None,
-                   coldate=None, max_rows=10):
-    df_drop_cols = [x for x in df.columns.tolist() if x in drop_cols]
-    df = df.drop(df_drop_cols, axis=1)
-    return df, cat_cols
-
-
-def pd_ts_rolling2(df, input_raw_path=None, dir_out=None, features_group_name=None, auxiliary_csv_path=None,
-                   drop_cols=None, index_cols=None, merge_cols_mapping=None, cat_cols=None, id_cols=None, dep_col=None,
-                   coldate=None, max_rows=10):
-    cat_cols = []
-    created_cols = []
-
-    len_shift = 28
-    for i in [7, 14, 30, 60, 180]:
-        print('Rolling period:', i)
-        df['rolling_mean_' + str(i)] = df.groupby(['id'])[dep_col].transform(
-            lambda x: x.shift(len_shift).rolling(i).mean())
-        df['rolling_std_' + str(i)] = df.groupby(['id'])[dep_col].transform(
-            lambda x: x.shift(len_shift).rolling(i).std())
-        created_cols.append('rolling_mean_' + str(i))
-        created_cols.append('rolling_std_' + str(i))
-
-    # Rollings
-    # with sliding shift
-    for len_shift in [1, 7, 14]:
-        print('Shifting period:', len_shift)
-        for len_window in [7, 14, 30, 60]:
-            col_name = 'rolling_mean_tmp_' + str(len_shift) + '_' + str(len_window)
-            df[col_name] = df.groupby(['id'])[dep_col].transform(
-                lambda x: x.shift(len_shift).rolling(len_window).mean())
-            created_cols.append(col_name)
-
-    for col_name in id_cols:
-        created_cols.append(col_name)
-
-    return df[created_cols], cat_cols
-
-
-def pd_ts_lag2(df, input_raw_path=None, dir_out=None, features_group_name=None, auxiliary_csv_path=None, drop_cols=None,
-               index_cols=None, merge_cols_mapping=None, cat_cols=None, id_cols=None, dep_col=None, coldate=None,
-               max_rows=10):
-    created_cols = []
-    cat_cols = []
-
-    lag_days = [col for col in range(28, 28 + 15)]
-    for lag_day in lag_days:
-        created_cols.append('lag_' + str(lag_day))
-        df['lag_' + str(lag_day)] = df.groupby(['id'])[dep_col].transform(lambda x: x.shift(lag_day))
-
-    for col_name in id_cols:
-        created_cols.append(col_name)
-
-    return df[created_cols], cat_cols
-
-
-def pd_tsfresh_features_single_row(df_single_row, cols):
-    """
-
-    :param df_single_row:
-    :param cols:
-    :return:
-    """
-
-    df_cols = df_single_row.columns.tolist()
-    selected_cols = [x for x in df_cols if re.match("d_[0-9]", x)]
-    single_row_df_T = df_single_row[selected_cols].T
-    single_row_df_T["time"] = range(0, len(single_row_df_T.index))
-    single_row_df_T["id"] = range(0, len(single_row_df_T.index))
-    single_row_df_T.rename(columns={single_row_df_T.columns[0]: "val"}, inplace=True)
-
-    X_feat = extract_features(single_row_df_T, column_id='id', column_sort='time')
-
-    feat_col_names = X_feat.columns.tolist()
-    feat_col_names_mapping = {}
-    for feat_col_name in feat_col_names:
-        feat_col_names_mapping[feat_col_name] = feat_col_name.replace('"', '').replace(',', '')
-
-    X_feat = X_feat.rename(columns=feat_col_names_mapping)
-    X_feat_T = X_feat.T
-
-    for col in cols:
-        X_feat_T[col] = np.repeat(df_single_row[col].tolist()[0], len(X_feat_T.index))
-    # X_feat_T["item_id"] = np.repeat(df_single_row["item_id"].tolist()[0], len(X_feat_T.index))
-    # X_feat_T["id"] = np.repeat(df_single_row["id"].tolist()[0], len(X_feat_T.index))
-    # X_feat_T["cat_id"] = np.repeat(df_single_row["cat_id"].tolist()[0], len(X_feat_T.index))
-    # X_feat_T["dept_id"] = np.repeat(df_single_row["dept_id"].tolist()[0], len(X_feat_T.index))
-    # X_feat_T["store_id"] = np.repeat(df_single_row["store_id"].tolist()[0], len(X_feat_T.index))
-    # X_feat_T["state_id"] = np.repeat(df_single_row["state_id"].tolist()[0], len(X_feat_T.index))
-    X_feat_T["variable"] = X_feat_T.index
-
-    df_single_row["variable"] = pd.Series(["demand"])
-    X_feat_T = X_feat_T.append(df_single_row, ignore_index=True)
-    return X_feat_T.set_index(cols + ['variable']).rename_axis(['day'], axis=1).stack().unstack(
-        'variable').reset_index()
-
-
-def pd_ts_detrend(df1, col):
-    df = pd.read_csv(df1)
-    df[col] = df[col].diff()
-
-    print(df)
-    return df
-
 
 def test_function1():
     time_eng = pd_ts_date2('all_stocks_2006-01-01_to_2018-01-01.csv', ['Date'])
@@ -781,12 +608,125 @@ def test_function1():
     trendless = pd_ts_detrend('all_stocks_2006-01-01_to_2018-01-01.csv', 'Close')
 
 
+
+
+
 ########################################################################################################################
 if __name__ == "__main__":
-
     import fire
-
     fire.Fire()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+The code below extracts all the available features on an example dataset file.
+
+import tsfel
+import pandas as pd
+
+# load dataset
+df = pd.read_csv('Dataset.txt')
+
+# Retrieves a pre-defined feature configuration file to extract all available features
+cfg = tsfel.get_features_by_domain()
+
+# Extract features
+X = tsfel.time_series_features_extractor(cfg, df)
+Available features
+Statistical domain
+Features    Computational Cost
+ECDF    1
+ECDF Percentile 1
+ECDF Percentile Count   1
+ECDF Slope  1
+Histogram   1
+Interquartile range 1
+Kurtosis    1
+Max 1
+Mean    1
+Mean absolute deviation 1
+Median  1
+Median absolute deviation   1
+Min 1
+Root mean square    1
+Skewness    1
+Standard deviation  1
+Variance    1
+Temporal domain
+Features    Computational Cost
+Absolute energy 1
+Area under the curve    1
+Autocorrelation 1
+Centroid    1
+Entropy 1
+Mean absolute diff  1
+Mean diff   1
+Median absolute diff    1
+Median diff 1
+Negative turning points 1
+Peak to peak distance   1
+Positive turning points 1
+Signal distance 1
+Slope   1
+Sum absolute diff   1
+Total energy    1
+Zero crossing rate  1
+Neighbourhood peaks 1
+Spectral domain
+Features    Computational Cost
+FFT mean coefficient    1
+Fundamental frequency   1
+Human range energy  2
+LPCC    1
+MFCC    1
+Max power spectrum  1
+Maximum frequency   1
+Median frequency    1
+Power bandwidth 1
+Spectral centroid   2
+Spectral decrease   1
+Spectral distance   1
+Spectral entropy    1
+Spectral kurtosis   2
+Spectral positive turning points    1
+Spectral roll-off   1
+Spectral roll-on    1
+Spectral skewness   2
+Spectral slope  1
+Spectral spread 2
+Spectral variation  1
+Wavelet absolute mean   2
+Wavelet energy  2
+Wavelet standard deviation  2
+Wavelet entropy 2
+Wavelet variance    2
+Citing
+
+
+"""
+
+
+
+
+
+
 
 """
 
