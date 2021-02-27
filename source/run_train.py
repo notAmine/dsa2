@@ -262,7 +262,6 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     model_dict['data_pars']['cols_model'] = sum([  cols[colgroup] for colgroup in model_dict['data_pars']['cols_model_group'] ]   , [])
 
 
-
     #### Col Group to model input : Sparse, continuous, .... (ie Neural Network
     ## 'coldense' = [ 'colnum' ]     'colsparse' = ['colcat' ]
     ##
