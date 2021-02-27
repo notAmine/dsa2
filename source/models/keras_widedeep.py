@@ -229,6 +229,159 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     # log(data_pars)
     data_type = data_pars.get('type', 'ram')
     if data_type == "ram":
+        # n_wide_features = data_pars.get('n_wide_features', None)
+        # n_deep_features = data_pars.get('n_deep_features', None)
+
+        cols_model_input_groupname = ['cols_wide_input', 'cols_deep_input', 'cols_deep_input' ]
+
+        if task_type == "predict":
+            d = data_pars[task_type]
+            Xtrain = d["X"]
+            ### dict  colgroup ---> list of colname
+            cols_model_input_group     = data_pars['cols_model_input_group']
+
+
+            Xtuple_train = []
+            for cols_groupname in cols_model_input_groupname :
+                Xtuple_train.append( Xtrain[cols_groupname] )
+            return Xtuple_train
+
+
+        if task_type == "eval":
+            d = data_pars[task_type]
+
+            Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
+
+            ### dict  colgroup ---> list of colname
+            cols_model_input_group     = data_pars['cols_model_input_group']
+
+            Xtuple_train = []
+            for cols_groupname in cols_model_input_groupname :
+                Xtuple_train.append( Xtrain[cols_groupname] )
+
+            return Xtuple_train, ytrain
+
+
+        if task_type == "train":
+            d = data_pars[task_type]
+
+            Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
+
+            ### dict  colgroup ---> list of colname
+            cols_model_input_group     = data_pars['cols_model_input_group']
+
+            Xtuple_train = []
+            for cols_groupname in cols_model_input_groupname :
+                Xtuple_train.append( Xtrain[cols_groupname] )
+
+            Xtuple_test = []
+            for cols_groupname in cols_model_input_groupname :
+                Xtuple_test.append( Xtest[cols_groupname] )
+
+            return Xtuple_train, ytrain, Xtuple_test, ytest
+
+
+
+    elif data_type == "file":
+        raise Exception(f' {data_type} data_type Not implemented ')
+
+    raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
+
+
+
+def test(config=''):
+    """
+        Group of columns for the input model
+
+         cols_input_group = [
+
+         ]
+
+
+          for cols in cols_input_group,
+
+
+    :param config:
+    :return:
+    """
+    global model, session
+
+    X = pd.DataFrame( np.random.rand(100,30), columns= [ 'col_' +str(i) for i in range(20)] )
+    y = pd.DataFrame( np.random.binomial(n=1, p=0.5, size=[100]), columns = ['coly'] )
+
+
+    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, random_state=2021, stratify=y)
+    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
+
+    early_stopping = EarlyStopping(monitor='loss', patience=3)
+    model_ckpt     = ModelCheckpoint(filepath='', save_best_only=True, monitor='loss')
+    callbacks      = [early_stopping, model_ckpt]
+
+    n_features      = X_train.shape[1]  # number of features
+    n_wide_features = 20
+    n_deep_features = n_features - n_wide_features
+
+    ##### Generate column actual names from
+    colg_input = {
+      'cols_wide_input':   ['colnum', 'colcat_onehot' ],
+      'cols_deep_input':   ['colnum', 'colcat_onehot' ],
+    }
+    cols_model_input_group = {}
+    for colg, colist in colg_input.items() :
+        cols_model_input_group[colg] = []
+        for colg_i in colist :
+          cols_model_input_group[colg].extend( cols_family[colg_i] )
+
+
+    cols_wide_input = list(X.columns)[:n_wide_features]  ##
+
+    cols_wide_input = list(X.columns)[:n_wide_features]  ##
+
+
+    model_pars = {'model_class': 'WideAndDeep',
+                  'model_pars': {'n_wide_cross': n_wide_features,
+                                 'n_wide':       n_deep_features},
+                 }
+    data_pars = {'train': {'Xtrain': X_train,
+                           'ytrain': y_train,
+                           'Xtest': X_test,
+                           'ytest': y_test},
+                 'eval': {'X': X_valid,
+                          'y': y_valid},
+                 'predict': {'X': X_valid},
+
+
+                 'cols_model_input_group' :cols_model_input_group
+
+                 'n_features': n_features,
+                 'n_wide_features': n_wide_features,
+                 'n_deep_features': n_deep_features,
+                }
+    compute_pars = { 'compute_pars' : { 'epochs': 2,
+                    'callbacks': callbacks} }
+
+    test_helper(model_pars, data_pars, compute_pars)
+
+
+
+
+
+def get_dataset2(data_pars=None, task_type="train", **kw):
+    """
+      "ram"  :
+      "file" :
+
+    n_wide_features = data_pars.get('n_wide_features', None)
+    n_deep_features = data_pars.get('n_deep_features', None)
+
+    Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
+    Xtest_A, Xtest_B, Xtest_C    = Xtest[:, :n_wide_features], Xtest[:, -n_deep_features:], Xtest[:, -n_deep_features:]
+
+
+    """
+    # log(data_pars)
+    data_type = data_pars.get('type', 'ram')
+    if data_type == "ram":
         n_wide_features = data_pars.get('n_wide_features', None)
         n_deep_features = data_pars.get('n_deep_features', None)
 
@@ -271,6 +424,8 @@ def get_dataset(data_pars=None, task_type="train", **kw):
         raise Exception(f' {data_type} data_type Not implemented ')
 
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
+
+
 
 
 def get_params_sklearn(deep=False):
@@ -326,7 +481,7 @@ def test_helper(model_pars, data_pars, compute_pars):
 
 
 #######################################################################################
-def test(config=''):
+def test2(config=''):
     global model, session
 
     X = np.random.rand(100,30)
@@ -361,9 +516,8 @@ def test(config=''):
     compute_pars = { 'compute_pars' : { 'epochs': 2,
                     'callbacks': callbacks} }
 
-
     test_helper(model_pars, data_pars, compute_pars)
-    
+
 
 
 
