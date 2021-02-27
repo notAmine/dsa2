@@ -600,12 +600,13 @@ def test_prepro_all():
 
 
 def test_function1():
-    time_eng = pd_ts_date2('all_stocks_2006-01-01_to_2018-01-01.csv', ['Date'])
+    df = test_get_sampledata()
 
-    onehot = pd_ts_onehot('all_stocks_2006-01-01_to_2018-01-01.csv', 'Name')
+    time_eng = pd_ts_date(df, ['Date'], pars = {})
 
-    print('\n\n\n TESTING pd_ts_detrend \n')
-    trendless = pd_ts_detrend('all_stocks_2006-01-01_to_2018-01-01.csv', 'Close')
+    onehot = pd_ts_onehot(df, ['Name'], {})
+
+    trendless = pd_ts_difference(df, ['Close'], {})
 
 
 
