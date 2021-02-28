@@ -32,11 +32,11 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/")
 root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
 print(root)
 
-DEBUG+ True
+DEBUG= True
 
 
 ####################################################################################################
-from util_feature import (load, save_list, load_function_uri, load_function_uri2, save, 
+from util_feature import (load, save_list, load_function_uri,  save,
                           save_features, load_features)
 
 
@@ -83,18 +83,18 @@ def pd_ts_date(df, col, pars=None):
 
     dfdate  =  None    
     df2     = pd.DataFrame()
-    for coldate_i in coldate:
-        df2[coldate_i]               = pd.to_datetime(df[coldate_i], errors='coerce')
-        if 'day'  in col_add : df2[coldate_i + '_day']      = df2[coldate_i].dt.day
-        if 'month'  in col_add : df2[coldate_i + '_month']    = df2[coldate_i].dt.month
-        if 'year'  in col_add : df2[coldate_i + '_year']     = df2[coldate_i].dt.year
-        if 'day'  in col_add : df2[coldate_i + '_hour']     = df2[coldate_i].dt.hour
-        if 'day'  in col_add : df2[coldate_i + '_minute']   = df2[coldate_i].dt.minute
-        if 'day'  in col_add : df2[coldate_i + '_weekday']  = df2[coldate_i].dt.weekday
-        if 'day'  in col_add : df2[coldate_i + '_dayyear']  = df2[coldate_i].dt.dayofyear
-        if 'day'  in col_add : df2[coldate_i + '_weekyear'] = df2[coldate_i].dt.weekofyear
-        dfdate = pd.concat((dfall, df2 )) if dfate is not None else df2  
-        del dfdate[coldate_i]  ### delete col
+    for coli in coldate:
+        df2[coli]               = pd.to_datetime(df[coli], errors='coerce')
+        if 'day'  in col_add      : df2[coli + '_day']      = df2[coli].dt.day
+        if 'month'  in col_add    : df2[coli + '_month']    = df2[coli].dt.month
+        if 'year'  in col_add     : df2[coli + '_year']     = df2[coli].dt.year
+        if 'hour'  in col_add     : df2[coli + '_hour']     = df2[coli].dt.hour
+        if 'minute'  in col_add   : df2[coli + '_minute']   = df2[coli].dt.minute
+        if 'weekday'  in col_add  : df2[coli + '_weekday']  = df2[coli].dt.weekday
+        if 'dayyear'  in col_add  : df2[coli + '_dayyear']  = df2[coli].dt.dayofyear
+        if 'weekyear'  in col_add : df2[coli + '_weekyear'] = df2[coli].dt.weekofyear
+        dfdate = pd.concat((dfdate, df2 )) if dfdate is not None else df2
+        del dfdate[coli]  ### delete col
 
     ##### output  ##########################################
     col_pars = {}
