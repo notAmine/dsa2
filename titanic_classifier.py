@@ -6,8 +6,6 @@
   python titanic_classifier.py  predict    --config  config1
 
 
-
-
 """
 import warnings, copy, os, sys
 warnings.filterwarnings("ignore")
