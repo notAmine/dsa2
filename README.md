@@ -32,6 +32,7 @@ Preprocessors Check
 
 
 ### Basic usage 
+    cd dsa2
     python  titanic_classifier.py  preprocess    --nsample 1000
     python  titanic_classifier.py  train         --nsample 2000
     python  titanic_classifier.py  predict
