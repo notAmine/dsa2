@@ -75,10 +75,10 @@ except:
 
 ###########################################################################################
 ###########################################################################################
-def pd_ts_date(df, col, pars=None):
+def pd_ts_date(df: pd.DataFrame, cols: list=None, pars: dict=None):
 
-    df      = df[col]
-    coldate = [col] if isinstance(col, str) else col
+    df      = df[cols]
+    coldate = [cols] if isinstance(cols, str) else cols
     col_add = pars.get('col_add', ['day', ',month'])
 
     dfdate  =  None    
@@ -107,7 +107,7 @@ def pd_ts_date(df, col, pars=None):
 
 
 
-def pd_ts_groupby(df, col, pars):
+def pd_ts_groupby(df: pd.DataFrame, cols: list=None, pars: dict=None):
     """
         Generates features by groupBy over category
         groupby(shop_id) ---> per each date,  mean, max, min ...
@@ -131,7 +131,7 @@ def pd_ts_groupby(df, col, pars):
     return dfall
 
 
-def pd_ts_onehot(df, col, pars=None):
+def pd_ts_onehot(df: pd.DataFrame, cols: list=None, pars: dict=None):
     """
        category to oneHot (ie week, weekday, shop, ..)
     :param df:
@@ -139,13 +139,13 @@ def pd_ts_onehot(df, col, pars=None):
     :param pars:
     :return:
     """
-    df_onehot = pd.get_dummies(df[col])
+    df_onehot = pd.get_dummies(df[cols])
     # df = pd.concat([df, dummy_cols], axis=1)
     return df_onehot
 
 
 
-def pd_ts_autoregressive(df, col, pars):
+def pd_ts_autoregressive(df: pd.DataFrame, cols: list=None, pars: dict=None):
     """
         Using past data for same column ; Rolling
         item_id sales -->  per each date, Moving Average, Min, Max over 1month, ...
@@ -155,18 +155,20 @@ def pd_ts_autoregressive(df, col, pars):
 
 
 
-def pd_ts_rolling(df, col, pars):
+def pd_ts_rolling(df: pd.DataFrame, cols: list=None, pars: dict=None):
     """
       Rolling statistics
 
     """
     cat_cols     = []
     col_new      = []
-    colgroup     = pars['col_groupby']
+    colgroup     = pars.get('col_groupby', ['id'])
     colstat      = pars['col_stat']
+    lag_list     = pars.get('lag_list', [7, 14, 30, 60, 180])
+    id_cols      = []
 
     len_shift = 28
-    for i in [7, 14, 30, 60, 180]:
+    for i in lag_list:
         print('Rolling period:', i)
         df['rolling_mean_' + str(i)] = df.groupby(colgroup)[colstat].transform(
             lambda x: x.shift(len_shift).rolling(i).mean())
@@ -193,14 +195,17 @@ def pd_ts_rolling(df, col, pars):
     return df[col_new], cat_cols
 
 
-def pd_ts_lag(df, col, pars):
+def pd_ts_lag(df: pd.DataFrame, cols: list=None, pars: dict=None):
     col_new = []
     cat_cols     = []
+    id_cols = []
+    colgroupby = []
+    dep_col = []
 
     lag_days = [col for col in range(28, 28 + 15)]
     for lag_day in lag_days:
         col_new.append('lag_' + str(lag_day))
-        df['lag_' + str(lag_day)] = df.groupby(['id'])[dep_col].transform(lambda x: x.shift(lag_day))
+        df['lag_' + str(lag_day)] = df.groupby(colgroupby)[dep_col].transform(lambda x: x.shift(lag_day))
 
     for col_name in id_cols:
         col_new.append(col_name)
@@ -209,17 +214,17 @@ def pd_ts_lag(df, col, pars):
 
 
 
-def pd_ts_difference(df, cols, pars=None):
-    lag  - pars.get('lag', 1)
+def pd_ts_difference(df: pd.DataFrame, cols: list=None, pars: dict=None):
+    lag  = pars.get('lag', 1)
     df = df[cols]
     for col in cols :
-       df2[col] = df[col].diff(lag=lag)
+       df[col] = df[col].diff(lag=lag)
 
     return df
 
 
 
-def pd_ts_tsfresh_features(df, col, pars):
+def pd_ts_tsfresh_features(df: pd.DataFrame, cols: list=None, pars: dict=None):
     """
 
     :param df:
@@ -260,7 +265,7 @@ def pd_ts_tsfresh_features(df, col, pars):
         'variable').reset_index()
 
 
-def pd_ts_deltapy_generic(df, col=None, pars=None, ):
+def pd_ts_deltapy_generic(df: pd.DataFrame, cols: list=None, pars: dict=None ):
     """
        { 'name': 'deltapy.transform::robust_scaler',                 'pars': {'drop':["Close_1"]} },
 
@@ -269,7 +274,7 @@ def pd_ts_deltapy_generic(df, col=None, pars=None, ):
     model_name = pars['name']
     model_pars = pars.get('pars', {})
 
-    dfin = df[col]
+    dfin = df[cols]
     dfin = dfin.fillna(method='ffill')
 
     if 'a_chi' in model_name:
@@ -293,7 +298,7 @@ def pd_ts_deltapy_generic(df, col=None, pars=None, ):
     return df_out
 
 
-def pd_ts_deltapy2(df=None, col=None, pars={}, ):
+def pd_ts_deltapy2(df: pd.DataFrame, cols: list=None, pars: dict=None ):
     """
        Delta py
        pars : {  'name' :  "robust_scaler",
@@ -314,7 +319,7 @@ def pd_ts_deltapy2(df=None, col=None, pars={}, ):
     else:  ### Training time  : Dynamic function load
         from util_feature import load_function_uri
         ##### transform.robust_scaler(df, drop=["Close_1"])
-        model = load_function_uri2(model_name)
+        model = load_function_uri(model_name)
 
     ##### Transform Data  ############################################################
     df_out = model(dfin, **model_pars)
@@ -353,7 +358,7 @@ def pd_ts_deltapy2(df=None, col=None, pars={}, ):
 ########################################################################################################################
 ########################################################################################################################
 
-def pd_ts_custom(df, col, pars):
+def pd_ts_custom(df: pd.DataFrame, cols: list=None, pars: dict=None):
     """   Generic template for feature generation
        'colnum' : ['sales1' 'units' ]
       'pars_function_list' :  [
@@ -434,6 +439,7 @@ def test_deltapy_get_method(df):
 
         {'name': 'deltapy.interact::lowess',
          'pars': {'cols': ["Open", "Volume"], 'y': df["Close"], 'f': 0.25, 'iter': 3}},
+
         {'name': 'deltapy.interact::autoregression', 'pars': {}},
         {'name': 'deltapy.interact::muldiv', 'pars': {'feature_list': ["Close", "Open"]}},
         {'name': 'deltapy.interact::decision_tree_disc', 'pars': {'cols': ["Close"]}},
@@ -499,7 +505,7 @@ def test_deltapy_get_method(df):
 
 
 def test_deltapy_all2():
-    df          = test_get_sampledata();
+    df          = test_get_sampledata()
     prepro_list = test_deltapy_get_method(df)
 
     for model in prepro_list:
