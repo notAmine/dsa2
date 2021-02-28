@@ -32,6 +32,9 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/")
 root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
 print(root)
 
+DEBUG+ True
+
+
 ####################################################################################################
 from util_feature import (load, save_list, load_function_uri, load_function_uri2, save, 
                           save_features, load_features)
@@ -40,7 +43,14 @@ from util_feature import (load, save_list, load_function_uri, load_function_uri2
 def log(*s, n=0, m=0):
     sspace = "#" * n
     sjump = "\n" * m
-    ### Implement pseudo Logging
+    print(*s, fluhs=True)
+
+
+def logd(*s, n=0, m=0):
+    if DEBUG :
+        sspace = "#" * n
+        sjump = "\n" * m
+        print(*s, fluhs=True)
 
 
 ####################################################################################################
@@ -62,20 +72,22 @@ except:
 
 
 
+
 ###########################################################################################
 ###########################################################################################
 def pd_ts_date(df, col, pars=None):
 
     df      = df[col]
     coldate = [col] if isinstance(col, str) else col
-    dfdate  =  None
     col_add = pars.get('col_add', ['day', ',month'])
+
+    dfdate  =  None    
     df2     = pd.DataFrame()
     for coldate_i in coldate:
         df2[coldate_i]               = pd.to_datetime(df[coldate_i], errors='coerce')
         if 'day'  in col_add : df2[coldate_i + '_day']      = df2[coldate_i].dt.day
         if 'month'  in col_add : df2[coldate_i + '_month']    = df2[coldate_i].dt.month
-        if 'day'  in col_add : df2[coldate_i + '_year']     = df2[coldate_i].dt.year
+        if 'year'  in col_add : df2[coldate_i + '_year']     = df2[coldate_i].dt.year
         if 'day'  in col_add : df2[coldate_i + '_hour']     = df2[coldate_i].dt.hour
         if 'day'  in col_add : df2[coldate_i + '_minute']   = df2[coldate_i].dt.minute
         if 'day'  in col_add : df2[coldate_i + '_weekday']  = df2[coldate_i].dt.weekday
@@ -104,8 +116,8 @@ def pd_ts_groupby(df, col, pars):
         groupby(key_lis).agg( col_stat )
 
     """
-    colgroup = pars.get('colgroup')    #### list of list of columns for aggregation
-    colstat  = pars.get('colstat')     ####  column whwere : sales, amount, 
+    colgroup  = pars.get('colgroupby')    #### list of list of columns for aggregation
+    colstat   = pars.get('colstat')     ####  column whwere : sales, amount, 
     calc_list = pars.get('calc_list', {'mean'})   ### what kind of stats
     
     colgroup_merge = [ colj for colgroupi in colgroup for colj in colgroupi ]   #### Flatten 
@@ -127,10 +139,10 @@ def pd_ts_onehot(df, col, pars=None):
     :param pars:
     :return:
     """
-    dummy_cols = pd.get_dummies(df[col])
-    df = pd.concat([df, dummy_cols], axis=1)
+    df_onehot = pd.get_dummies(df[col])
+    # df = pd.concat([df, dummy_cols], axis=1)
+    return df_onehot
 
-    return df
 
 
 def pd_ts_autoregressive(df, col, pars):
@@ -196,7 +208,59 @@ def pd_ts_lag(df, col, pars):
     return df[col_new], cat_cols
 
 
-def pd_ts_generic(df, col=None, pars=None, ):
+
+def pd_ts_difference(df, cols, pars=None):
+    lag  - pars.get('lag', 1)
+    df = df[cols]
+    for col in cols :
+       df2[col] = df[col].diff(lag=lag)
+
+    return df
+
+
+
+def pd_ts_tsfresh_features(df, col, pars):
+    """
+
+    :param df:
+    :param cols:
+    :return:
+    """
+
+    df_cols                 = df.columns.tolist()
+    selected_cols           = [x for x in df_cols if re.match("d_[0-9]", x)]
+    single_row_df_T         = df[selected_cols].T
+    single_row_df_T["time"] = range(0, len(single_row_df_T.index))
+    single_row_df_T["id"]   = range(0, len(single_row_df_T.index))
+    single_row_df_T.rename(columns={single_row_df_T.columns[0]: "val"}, inplace=True)
+
+    X_feat = extract_features(single_row_df_T, column_id='id', column_sort='time')
+
+    feat_col_names = X_feat.columns.tolist()
+    feat_col_names_mapping = {}
+    for feat_col_name in feat_col_names:
+        feat_col_names_mapping[feat_col_name] = feat_col_name.replace('"', '').replace(',', '')
+
+    X_feat = X_feat.rename(columns=feat_col_names_mapping)
+    X_feat_T = X_feat.T
+
+    for col in cols:
+        X_feat_T[col] = np.repeat(df[col].tolist()[0], len(X_feat_T.index))
+    # X_feat_T["item_id"] = np.repeat(df["item_id"].tolist()[0], len(X_feat_T.index))
+    # X_feat_T["id"] = np.repeat(df["id"].tolist()[0], len(X_feat_T.index))
+    # X_feat_T["cat_id"] = np.repeat(df["cat_id"].tolist()[0], len(X_feat_T.index))
+    # X_feat_T["dept_id"] = np.repeat(df["dept_id"].tolist()[0], len(X_feat_T.index))
+    # X_feat_T["store_id"] = np.repeat(df["store_id"].tolist()[0], len(X_feat_T.index))
+    # X_feat_T["state_id"] = np.repeat(df["state_id"].tolist()[0], len(X_feat_T.index))
+    X_feat_T["variable"] = X_feat_T.index
+
+    df["variable"] = pd.Series(["demand"])
+    X_feat_T = X_feat_T.append(df, ignore_index=True)
+    return X_feat_T.set_index(cols + ['variable']).rename_axis(['day'], axis=1).stack().unstack(
+        'variable').reset_index()
+
+
+def pd_ts_deltapy_generic(df, col=None, pars=None, ):
     """
        { 'name': 'deltapy.transform::robust_scaler',                 'pars': {'drop':["Close_1"]} },
 
@@ -227,50 +291,6 @@ def pd_ts_generic(df, col=None, pars=None, ):
         df_out.index   = df.index
 
     return df_out
-
-
-def pd_ts_template(df, col, pars):
-    """
-       'colnum' : ['sales1' 'units' ]
-      'pars_function_list' :  [
-       { 'name': 'deltapy.transform::robust_scaler',                 'pars': {'drop':["Close_1"]} },
-       { 'name': 'deltapy.transform::standard_scaler',               'pars': {'drop':["Close_1"]} },
-       ]e
-
-    :param df:
-    :param col:
-    :param pars:
-    :return:
-    """
-
-    df = df[col]
-    coldate = pars['coldate']
-    colnum  = pars['colnum']
-    colcat  = pars['colcat']
-
-    colgroups = pars['colgroup']
-    colgstat = pars['colstat']
-
-    ### Only dates
-    df1 = pd_ts_date(df, coldate, pars)
-    coldate1 = list(df1.columns)
-
-    ### Initial features
-    df1 = df1.join(df, on=coldate, how='left')
-
-    ### Groupby features
-    df2 = pd_ts_groupby(df, col, pars)
-    df1 = df1.join(df2, on=coldate, how='left')
-
-    ### Numerical features
-    colnum2 = list(df2.columns) + colnum
-    df1 = df1.set_index(coldate1)
-
-    for pars_function_dict_i in pars.get('pars_function_list', []):
-        dfi = pd_ts_generic(df1, col=colnum2, pars=pars_function_dict_i)
-        df1 = df1.join(dfi, on=coldate, how='left')
-
-    return df1
 
 
 def pd_ts_deltapy2(df=None, col=None, pars={}, ):
@@ -323,62 +343,67 @@ def pd_ts_deltapy2(df=None, col=None, pars={}, ):
     return df_out, col_pars
 
 
-def pd_ts_tsfresh_features(df, col, pars):
-    """
+
+
+
+
+
+
+
+########################################################################################################################
+########################################################################################################################
+
+def pd_ts_custom(df, col, pars):
+    """   Generic template for feature generation
+       'colnum' : ['sales1' 'units' ]
+      'pars_function_list' :  [
+       { 'name': 'deltapy.transform::robust_scaler',                 'pars': {'drop':["Close_1"]} },
+       { 'name': 'deltapy.transform::standard_scaler',               'pars': {'drop':["Close_1"]} },
+       ]e
 
     :param df:
-    :param cols:
+    :param col:
+    :param pars:
     :return:
     """
 
-    df_cols = df.columns.tolist()
-    selected_cols = [x for x in df_cols if re.match("d_[0-9]", x)]
-    single_row_df_T = df[selected_cols].T
-    single_row_df_T["time"] = range(0, len(single_row_df_T.index))
-    single_row_df_T["id"] = range(0, len(single_row_df_T.index))
-    single_row_df_T.rename(columns={single_row_df_T.columns[0]: "val"}, inplace=True)
+    df      = df[col]
+    coldate = pars['coldate']
+    colnum  = pars['colnum']
+    colcat  = pars['colcat']
 
-    X_feat = extract_features(single_row_df_T, column_id='id', column_sort='time')
+    colgroups = pars['colgroup']
+    colgstat  = pars['colstat']
 
-    feat_col_names = X_feat.columns.tolist()
-    feat_col_names_mapping = {}
-    for feat_col_name in feat_col_names:
-        feat_col_names_mapping[feat_col_name] = feat_col_name.replace('"', '').replace(',', '')
+    log("### Only dates")
+    df1 = pd_ts_date(df, coldate, pars)
+    coldate1 = list(df1.columns)
 
-    X_feat = X_feat.rename(columns=feat_col_names_mapping)
-    X_feat_T = X_feat.T
+    log("### Initial features")
+    df1 = df1.join(df, on=coldate, how='left')
 
-    for col in cols:
-        X_feat_T[col] = np.repeat(df[col].tolist()[0], len(X_feat_T.index))
-    # X_feat_T["item_id"] = np.repeat(df["item_id"].tolist()[0], len(X_feat_T.index))
-    # X_feat_T["id"] = np.repeat(df["id"].tolist()[0], len(X_feat_T.index))
-    # X_feat_T["cat_id"] = np.repeat(df["cat_id"].tolist()[0], len(X_feat_T.index))
-    # X_feat_T["dept_id"] = np.repeat(df["dept_id"].tolist()[0], len(X_feat_T.index))
-    # X_feat_T["store_id"] = np.repeat(df["store_id"].tolist()[0], len(X_feat_T.index))
-    # X_feat_T["state_id"] = np.repeat(df["state_id"].tolist()[0], len(X_feat_T.index))
-    X_feat_T["variable"] = X_feat_T.index
+    log("### Groupby features")
+    df2 = pd_ts_groupby(df, col, pars)
+    df1 = df1.join(df2, on=coldate, how='left')
 
-    df["variable"] = pd.Series(["demand"])
-    X_feat_T = X_feat_T.append(df, ignore_index=True)
-    return X_feat_T.set_index(cols + ['variable']).rename_axis(['day'], axis=1).stack().unstack(
-        'variable').reset_index()
+    log("### Numerical features")
+    colnum2 = list(df2.columns) + colnum
+    df1     = df1.set_index(coldate1)
 
+    log("### Deltapy features")
+    for pars_function_dict_i in pars.get('pars_function_list', []):
+        dfi = pd_ts_deltapy_generic(df1, col=colnum2, pars=pars_function_dict_i)
+        df1 = df1.join(dfi, on=coldate, how='left')
 
-def pd_ts_difference(df, cols, pars=None):
-    lag  - pars.get('lag', 1)
-    df = df[cols]
-    for col in cols :
-       df2[col] = df[col].diff(lag=lag)
-
-    return df
+    return df1
 
 
 
 
 ########################################################################################################################
 ########################################################################################################################
-def test_get_sampledata():
-    df = pd.read_csv("https://github.com/firmai/random-assets-two/raw/master/numpy/tsla.csv")
+def test_get_sampledata(url="https://github.com/firmai/random-assets-two/raw/master/numpy/tsla.csv"):
+    df = pd.read_csv(url)
     df["Close_1"] = df["Close"].shift(-1)
     with pd.option_context('mode.use_inf_as_na', True):
         df = df.dropna()
@@ -387,8 +412,8 @@ def test_get_sampledata():
     return df
 
 
-def test_get_methods(df):
-    functions_methods = [
+def test_deltapy_get_method(df):
+    prepro_list = [
         {'name': 'deltapy.transform::robust_scaler', 'pars': {'drop': ["Close_1"]}},
         {'name': 'deltapy.transform::standard_scaler', 'pars': {'drop': ["Close_1"]}},
         {'name': 'deltapy.transform::fast_fracdiff', 'pars': {'cols': ["Close", "Open"], 'd': 0.5}},
@@ -470,34 +495,31 @@ def test_get_methods(df):
         {'name': 'deltapy.extract::stetson_k', 'pars': {}}
     ]
 
-    return functions_methods
+    return prepro_list
 
 
-def test_prepro_1():
-    df = test_get_sampledata();
-    df.head()
-    functions_methods = test_get_methods(df)
+def test_deltapy_all2():
+    df          = test_get_sampledata();
+    prepro_list = test_deltapy_get_method(df)
 
-    for model in functions_methods:
+    for model in prepro_list:
         pars = {'name': model['name'],
                 'pars': model['pars']
                 }
 
         df_input = copy.deepcopy(df)
         if 'a_chi' in pars['name']:
-            # Normalize the input for the chi
-            # print("    [INFO] Chi model...")
+            # Normalize the input for the chi, CHi model
             df_input = (df_input - df_input.min()) / (df_input.max() - df_input.min())
 
-        if 'extract' in pars['name']:
-            # print("    [INFO] Extract model...")
+        elif 'extract' in pars['name']:
             df_input = df_input["Close"]
 
-        df_out, col_pars = pd_ts_generic(df=df_input, pars=pars)
+        df_out, col_pars = pd_ts_deltapy_generic(df=df_input, pars=pars)
 
 
 
-def test_prepro_all():
+def test_deltapy_all():
     df = test_get_sampledata();
     df.head()
 
@@ -588,6 +610,7 @@ def test_prepro_all():
     extract.find_freq(df["Close"])
     extract.flux_perc(df["Close"])
     extract.range_cum_s(df["Close"])
+
     '''
     From https://github.com/firmai/deltapy#extraction example, It seems like the second argument of the 
     function must be: struct_param = {"Volume":df["Volume"].values, "Open": df["Open"].values}
@@ -599,13 +622,10 @@ def test_prepro_all():
 
 
 
-def test_function1():
-    df = test_get_sampledata()
-
-    time_eng = pd_ts_date(df, ['Date'], pars = {})
-
-    onehot = pd_ts_onehot(df, ['Name'], {})
-
+def test_prepro_v1():
+    df         = test_get_sampledata()
+    time_eng  = pd_ts_date(df, ['Date'], pars = {})
+    onehot    = pd_ts_onehot(df, ['Name'], {})
     trendless = pd_ts_difference(df, ['Close'], {})
 
 
