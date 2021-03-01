@@ -584,7 +584,7 @@ def test_all_example():
 
         ### Find error
         try :
-          with open("log_check.txt", mode='r') as fp
+          with open("log_check.txt", mode='r') as fp :
             lines = fp.readlines()
 
           ss = "\n".join(lines)
