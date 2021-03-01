@@ -574,7 +574,7 @@ def test_all_example():
     log_file = "2>&1 | tee   log_check.txt"
     path = os.getcwd()
     path = path.replace("\\", "//")
-    test_list = [f"python {path}/example/{t}   train   {log_file}"  for t in flist]
+    test_list = [f"python {path}/{t}   train   {log_file}"  for t in flist]
     log("Used", test_list)
 
     for cmd in test_list:
@@ -589,7 +589,7 @@ def test_all_example():
 
           ss = "\n".join(lines)
 
-          if "Traceback (most recent call last)" in ss:
+          if "Traceback (most recent call last)" in ss  or "Errno" in ss :
              raise Exception("error in file ", cmd,    )  
           # log_remote_push()
           # time.sleep(1)
