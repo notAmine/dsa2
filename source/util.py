@@ -33,10 +33,14 @@ class dict2(object):
         
         
 #############################################################################################        
--
+# pylint: disable=C0321,C0103,E1221,C0301,E1305,E1121,C0302,C0330
+# -*- coding: utf-8 -*-
 """
 https://docs.python-guide.org/writing/logging/
 https://docs.python.org/3/howto/logging-cookbook.html
+
+python util_log.py test_log
+
 
 """
 import logging
@@ -45,16 +49,16 @@ import random
 import socket
 import sys
 from logging.handlers import TimedRotatingFileHandler
-
-# import arrow
 import datetime
 import yaml
 
 ################### Logs #################################################################
-APP_ID = __file__ + "," + str(os.getpid()) + "," + str(socket.gethostname())
+APP_ID  = __file__ + "_" + str(os.getpid()) + "_" + str(socket.gethostname())
 APP_ID2 = str(os.getpid()) + "_" + str(socket.gethostname())
 
 LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logfile.log")
+
+FORMATTER_0 = logging.Formatter("%(message)s")
 FORMATTER_1 = logging.Formatter("%(asctime)s,  %(name)s, %(levelname)s, %(message)s")
 FORMATTER_2 = logging.Formatter("%(asctime)s.%(msecs)03dZ %(levelname)s %(message)s")
 FORMATTER_3 = logging.Formatter("%(asctime)s  %(levelname)s %(message)s")
@@ -95,10 +99,13 @@ class logger_class(object):
         logger.log(*s, level=1)
 
     """
-    def __init__(self, config_file=None) :
+    def __init__(self, config_file=None, verbose=True) :
         self.config     = self.load_config(config_file)
-        self.logger     = logger_setup( **self.config )
-        self.level_max  = self.config.get('level_max', 1)
+        if verbose: print(self.config)
+        d = self.config['logger_config']
+        self.logger     = logger_setup( **d )
+        self.level_max  = self.config.get('verbosity_level', 1)
+
 
     def load_config(self, config_file_path=None) :
         try :
@@ -109,7 +116,8 @@ class logger_class(object):
                 return yaml.load(f)
 
         except Exception as e :
-            return {}
+            return {}  ## Default parameters
+
 
     def log(self,*s, level=1) :
         if level <= self.level_max : 
@@ -121,10 +129,11 @@ class logger_class(object):
             self.logger.debug(*s)
 
 
+
 ##########################################################################################
 ##########################################################################################
-def logger_setup(logger_name=None, log_file=None, formatter=FORMATTER_1, isrotate=False, 
-    isconsole_output=True, logging_level=logging.DEBUG,):
+def logger_setup(logger_name=None, log_file=None, formatter='FORMATTER_0', isrotate=False, 
+    isconsole_output=True, logging_level='info',):
     """
     my_logger = util_log.logger_setup("my module name", log_file="")
     APP_ID    = util_log.create_appid(__file__ )
@@ -132,6 +141,8 @@ def logger_setup(logger_name=None, log_file=None, formatter=FORMATTER_1, isrotat
       my_logger.info(",".join([str(x) for x in argv]))
   
    """
+    logging_level = {  'info':logging.INFO, 'debug' : logging.DEBUG }[logging_level]
+    formatter     = {'FORMATTER_0': FORMATTER_0, 'FORMATTER_1': FORMATTER_1}.get(formatter, formatter)
 
     if logger_name is None:
         logger = logging.getLogger()  # Gets the root logger
@@ -148,7 +159,7 @@ def logger_setup(logger_name=None, log_file=None, formatter=FORMATTER_1, isrotat
             logger_handler_file(formatter=formatter, log_file_used=log_file, isrotate=isrotate)
         )
 
-    # with this pattern, it's rarely necessary to propagate the error up to parent
+    # with this pattern, rarely necessary to propagate the error up to parent
     logger.propagate = False
     return logger
 
@@ -188,7 +199,36 @@ def logger_setup2(name=__name__, level=None):
     return logger
 
 
-        
+
+
+###########################################################################################################
+def test_log():
+    logger =logger_class(verbose=True)
+
+    def log(*s):
+       logger.log(*s, level=1)
+
+    def log2(*s):
+       logger.log(*s, level=2)
+
+    def log3(*s):
+       logger.log(*s, level=3)
+
+    log( "level 1"  )
+    log2( "level 2"  )
+    log3( "level 3"  )
+
+
+
+
+###########################################################################################################
+###########################################################################################################
+if __name__ == "__main__":
+    import fire
+    fire.Fire()
+    
+
+
         
         
         
