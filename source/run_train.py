@@ -84,7 +84,7 @@ def map_model(model_name):
 
     ##### Local folder
     model_file = model_name.split(":")[0]
-    if  'optuna' in model_name : model_file = 'model_optuna'
+    if  'optuna' in model_name : model_file = 'optuna_lightgbm'
 
     try :
        ##  'models.model_bayesian_pyro'   'model_widedeep'
