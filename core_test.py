@@ -568,7 +568,7 @@ def test_all_example():
     
     block_list =  []  # [ "core_run.py", "core_test.py"  ]
     flist = glob.glob("example/*.py")
-    
+
     flist = flist + glob.glob("example/*/*.py")
     flist = [ t for t in flist if t not in block_list ]  
 
