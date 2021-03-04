@@ -163,9 +163,6 @@ def config1(path_model_out="") :
      #,{"uri":  "source/prepro_text.py::pd_coltext_wordfreq",   "pars": {}, "cols_family": "colcat",   "cols_out": "col_text",  "type": "" },                
 
     
-
-
-
     #### Time Series 
     #,{'uri': 'source/prepro_tseries.py::pd_ts_autoregressive' , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
     #,{'uri': 'source/prepro_tseries.py::pd_ts_basic'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
