@@ -45,6 +45,18 @@ from util_feature import  (save,  load, save_features, os_get_function_name,
 import util_feature
 
 
+def _pd_colnum(df, col, pars):
+    colnum = col
+    for x in colnum:
+        df[x] = df[x].astype("float32")
+    return df
+
+
+def _pd_colnum_fill_na_median(df, col, pars):
+    for quant_col in col:
+        df[quant_col].fillna((df[quant_col].median()), inplace=True)
+
+
 ####################################################################################################
 ####################################################################################################
 def pd_col_atemplate(df: pd.DataFrame, col: list=None, pars: dict=None):
@@ -141,18 +153,6 @@ def pd_coly(df: pd.DataFrame, col: list=None, pars: dict=None):
         save_features(df[coly], 'dfy', path_features_store)
 
     return df,col
-
-
-def pd_colnum(df, col, pars):
-    colnum = col
-    for x in colnum:
-        df[x] = df[x].astype("float32")
-    log(df.dtypes)
-
-
-def pd_colnum_fill_na_median(df, col, pars):
-    for quant_col in col:
-        df[quant_col].fillna((df[quant_col].median()), inplace=True)
 
 
 def pd_colnum_normalize(df: pd.DataFrame, col: list=None, pars: dict=None):
