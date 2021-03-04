@@ -151,6 +151,7 @@ def config1(path_model_out="") :
                         'pars_resample':    {'sampling_strategy' : 'auto', 'random_state':0}, 
                         "coly": "Survived"} , 
                         'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+
     ,{'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {'ymin': -9999999999.0, 'ymax': 999999999.0} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
     #,{'uri': 'source/prepro_sampler.py::pd_augmentation_sdv'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
@@ -158,7 +159,7 @@ def config1(path_model_out="") :
 
     #### Text        
      ,{"uri":  "source/prepro_text.py::pd_coltext",   "pars": {'dimpca':1, "word_minfreq":2}, "cols_family": "coltext",   "cols_out": "col_text",  "type": "" }
-     ,{"uri":  "source/prepro_text.py::pd_coltext_clean",   "pars": {}, "cols_family": "coltext",   "cols_out": "col_text",  "type": "" }
+     #,{"uri":  "source/prepro_text.py::pd_coltext_clean",   "pars": {}, "cols_family": "coltext",   "cols_out": "col_text",  "type": "" }
      ,{"uri":  "source/prepro_text.py::pd_coltext_universal_google",   "pars": {'model_uri': "https://tfhub.dev/google/universal-sentence-encoder-multilingual/3"}, "cols_family": "coltext",   "cols_out": "col_text",  "type": "" }
      #,{"uri":  "source/prepro_text.py::pd_coltext_wordfreq",   "pars": {}, "cols_family": "colcat",   "cols_out": "col_text",  "type": "" },                
 
