@@ -691,6 +691,10 @@ def pd_col_genetic_transform(df: pd.DataFrame, col: list=None, pars: dict=None):
 
 ######################################################################################
 def test():
+    """
+      python example/prepro.py test
+    :return:
+    """
     from util_feature import test_get_classification_data
     dfX, dfy = test_get_classification_data()
     cols     = list(dfX.columsn)
