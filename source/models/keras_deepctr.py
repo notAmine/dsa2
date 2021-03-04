@@ -166,12 +166,20 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
     global model, session
     session = None  # Session type for compute
-    Xtrain, ytrain, Xval, yval = get_dataset(data_pars, task_type="train")
+    #Xtrain, ytrain, Xval, yval = get_dataset(data_pars, task_type="train")
+
+
+    Xtrain, ytrain, Xval, yval, col_dict = get_dataset(data_pars, task_type="train")
+
 
     # if VERBOSE: log(Xtrain.shape, model.model)
 
     cpars = compute_pars.get("compute_pars", {})
     assert 'epochs' in cpars, 'epoch'
+
+    if 'early_stopping' in compute_pars :
+        cpars['callbacks'] = [ EarlyStopping(monitor='loss', patience=1) ]
+
 
     hist = model.model.fit(Xtrain, ytrain,
                            validation_data=(Xval, yval), **cpars)
@@ -293,41 +301,159 @@ def get_dataset(data_pars=None, task_type="train", **kw):
             d = data_pars[task_type]
             return d["X"], d["y"]
 
+
+
+
         if task_type == "train":
             d = data_pars[task_type]
-            return d["Xtrain"], d["ytrain"], d["Xval"], d["yval"]
+
+            #### run_preprocessor --->   Model feeding  in run_train.py ? Line 253
+            name = data_pars['target_data_type']   #######  WDL,MLR, ...
+            cols_family = {}
+            cols_family['coldense']  = data_pars[ "cols_model_type" ]['coldense']
+            cols_family['colsparse'] = data_pars[ "cols_model_type" ]['colsparse']
+
+
+            if name == 'MLR':
+                X_train,  y_train, region_feat_col, base_feat_col = get_xy_random2(d['Xtrain'], d['ytrain'], cols_family)
+                X_test,  y_test, region_feat_col, base_feat_col   = get_xy_random2(d['Xval'], d['yval'], cols_family )
+                col_dict = {  'linear_feat_col' : region_feat_col,
+                              'dnn_feat_col'  :   base_feat_col 
+                           }
+
+            elif name in ['WDL', 'FNN', 'DCN', 'DCNMix', 'FLEN', 'DeepFM', 'xDeepFM', 'AutoInt', 'FNN', 'ONN',
+                          'NFM', 'FiBiNET', 'FGCNN', 'AFM', 'CCPM', 'PNN' ]:
+                X_train, y_train, linear_feat_col, dnn_feat_col = get_xy_random2(d['Xtrain'], d['ytrain'], cols_family)
+                X_test, y_test,   linear_feat_col, dnn_feat_col = get_xy_random2(d['Xval'], d['yval'], cols_family )
+                col_dict = {  'linear_feat_col' : linear_feat_col,
+                              'dnn_feat_col'    : dnn_feat_col
+                           }
+
+            elif name in ['DIN', 'DIEN', 'DSIN']:
+                ##### Complicated to after
+                if name=="DIN" : x, y, dnn_feat_col, behavior_feat_list = get_xy_fd2()
+                if name=="DIEN": x, y, dnn_feat_col, behavior_feat_list = get_xy_fd2(use_neg=True)
+                if name=="DSIN": x, y, dnn_feat_col, behavior_feat_list = get_xy_fd2(hash_flag=True, use_session=True)
+
+
+            return X_train, y_train, X_test, y_test, col_dict
+
+
 
     elif data_type == "file":
         raise Exception(f' {data_type} data_type Not implemented ')
 
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
-
-def get_params_sklearn(deep=False):
-    return model.model.get_params(deep=deep)
-
-
-def get_params(param_pars={}, **kw):
-    import json
-    # from jsoncomment import JsonComment ; json = JsonComment()
-    pp = param_pars
-    choice = pp['choice']
-    config_mode = pp['config_mode']
-    data_path = pp['data_path']
-
-    if choice == "json":
-        cf = json.load(open(data_path, mode='r'))
-        cf = cf[config_mode]
-        return cf['model_pars'], cf['data_pars'], cf['compute_pars'], cf['out_pars']
-
-    else:
-        raise Exception(f"Not support choice {choice} yet")
-
 ########################################################################################################################
 
 
 ########################################################################################################################
-def get_xy_random():
+def get_xy_random2(X, y, cols_family={}):
+    # X = np.random.rand(100,30)
+    # y = np.random.binomial(n=1, p=0.5, size=[100])
+
+    ## PREPROCESSING STEPS
+    # change into dataframe
+    target = 'y'
+    cols      = [str(i) for i in range(X.shape[1])]  # define column pd dataframe, need to be string type
+    data      = pd.DataFrame(X, columns=cols)  # need to convert into df, following the step from documentation
+    #data['y'] = y
+
+    # define which feature columns sparse or dense type
+    # since our data categorize as Dense Features, we define the sparse features as empty list
+    #cols_sparse_features = []
+    #cols_dense_features  = [str(i) for i in range(X.shape[1])]
+
+    cols_sparse_features = cols_family['colsparse']
+    cols_dense_features  = cols_family['coldense']
+
+
+    # convert feature type into SparseFeat or DenseFeat type, adjusting from DeepCTR library
+    sparse_feat_l = [SparseFeat(feat, vocabulary_size=data[feat].nunique(), embedding_dim=4)
+                     for i,feat in enumerate(cols_sparse_features)]
+                    
+    dense_feat_l       = [DenseFeat(feat, dimension=1) for feat in cols_dense_features]
+    feature_col        = sparse_feat_l + dense_feat_l
+
+    linear_feat_col = feature_col  # containing all the features used by linear part of the model
+    dnn_feat_col    = feature_col  # containing all the features used by deep part of the model
+    feature_names    = get_feature_names(linear_feat_col + dnn_feat_col)
+
+    train_model_input  = {name: data[name] for name in feature_names}
+    X_train, y_train   = train_model_input, y.values
+
+    return X_train, y_train, linear_feat_col, dnn_feat_col
+
+
+def test(config=''):
+    global model, session
+
+    # model list succeed on running
+    model_l = ['WDL', 'FNN', 'MLR', 'DCN', 'DCNMix', 'DIEN', 'DIN', 'DSIN', 'FLEN', 'DeepFM', 'xDeepFM', 'AutoInt', 
+               'FNN', 'ONN', 'NFM', 'AFM', 'FiBiNET', 'PNN', 'FGCNN']
+
+    # iterate to test each model on the list model
+    for name in model_l:
+
+        # get dataset for testing
+        linear_feat_col, dnn_feat_col  = None, None
+        behavior_feat_list             = None
+        region_feat_col, base_feat_col = None, None  # only for MLR model
+
+        # Note: ModelCheckpoint error when used
+        # model_ckpt = ModelCheckpoint(filepath='', save_best_only=True, monitor='loss')
+
+
+        # X = np.random.rand(100,30)
+        # y = np.random.binomial(n=1, p=0.5, size=[100])
+
+        cols_sparse_features = []
+        cols_dense_features = [str(i) for i in range(30)]
+
+        m = {
+          'model_pars' : {'model_name': name,
+                       'col_model' : {
+                          'linear_feat_col'    : linear_feat_col,
+                          'dnn_feat_col'       : dnn_feat_col,
+                          'behavior_feat_list' : behavior_feat_list,
+                          'region_feat_col'    : region_feat_col,
+                          'base_feat_col'      : base_feat_col,
+                       }, 
+                       'task'                  : 'task',
+                       'model_pars': {'optimizer': keras.optimizers.Adam(),
+                                     'loss': 'binary_crossentropy',
+                                     'metrics': ['binary_crossentropy'] }
+                     },
+
+
+        'data_pars' : {'cols_model_type': {'coldense':   cols_dense_features ,
+                                           'colsparse' : cols_sparse_features, }
+
+                      'train': {'Xtrain': X_train,
+                               'ytrain' : y_train,
+                               'Xval'   : X_val,
+                               'yval'   : y_val},
+                      },
+
+
+        'compute_pars' : {
+                          'early_stopping': True,
+                          'compute_pars': {'epochs': 1,              
+                         } }
+        }
+
+        test_helper(name, m['model_pars'], m['data_pars'], m['compute_pars'])
+        # log('Model architecture:')
+        # log(model.summary())
+
+
+
+
+#################################################################################################
+
+
+def get_xy_random(cols_dense_features, cols_sparse_features):
     X = np.random.rand(100,30)
     y = np.random.binomial(n=1, p=0.5, size=[100])
 
@@ -344,7 +470,7 @@ def get_xy_random():
 
     # convert feature type into SparseFeat or DenseFeat type, adjusting from DeepCTR library
     sparse_feat_l = [SparseFeat(feat, vocabulary_size=data[feat].nunique(), embedding_dim=4)
-                    for i,feat in enumerate(cols_sparse_features)]
+                     for i,feat in enumerate(cols_sparse_features)]
                     
     dense_feat_l       = [DenseFeat(feat, dimension=1) for feat in cols_dense_features]
     feature_col        = sparse_feat_l + dense_feat_l
@@ -353,8 +479,12 @@ def get_xy_random():
     dnn_feat_col    = feature_col  # containing all the features used by deep part of the model
     feature_names      = get_feature_names(linear_feat_col + dnn_feat_col)
 
+
+
+
     train_full, test   = train_test_split(data, random_state=2021, stratify=data['y'])
     train, val         = train_test_split(train_full, random_state=2021, stratify=train_full['y'])
+
 
     train_model_input  = {name:train[name] for name in feature_names}
     val_model_input    = {name:val[name] for name in feature_names}
@@ -366,6 +496,10 @@ def get_xy_random():
     X_val, y_val       = val_model_input, val[target].values
     X_test, y_test     = test_model_input, test[target].values
     return X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col
+
+
+
+
 
 
 def get_xy_fd(use_neg=False, hash_flag=False, use_session=False):
@@ -529,7 +663,9 @@ def get_xy_dataset(data_sample=None):
     return X_train, X_val, X_test, y_train, y_val, y_test, linear_feat_col, dnn_feat_col
 
 
-def test(config=''):
+
+
+def test0(config=''):
     global model, session
 
     # model list succeed on running
@@ -663,6 +799,25 @@ def test_helper(model_name, model_pars, data_pars, compute_pars):
 
 
 
+def get_params_sklearn(deep=False):
+    return model.model.get_params(deep=deep)
+
+
+def get_params(param_pars={}, **kw):
+    import json
+    # from jsoncomment import JsonComment ; json = JsonComment()
+    pp = param_pars
+    choice = pp['choice']
+    config_mode = pp['config_mode']
+    data_path = pp['data_path']
+
+    if choice == "json":
+        cf = json.load(open(data_path, mode='r'))
+        cf = cf[config_mode]
+        return cf['model_pars'], cf['data_pars'], cf['compute_pars'], cf['out_pars']
+
+    else:
+        raise Exception(f"Not support choice {choice} yet")
 
 
 
