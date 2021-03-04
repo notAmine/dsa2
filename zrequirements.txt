@@ -28,3 +28,4 @@ mljar-supervised
 #explainerdashboard
 # petastorm
 pandas-profiling
+category_encoders
