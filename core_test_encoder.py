@@ -114,11 +114,9 @@ def config1(path_model_out="") :
 
     ### colnum : continuous
       ,{'uri': 'source/prepro.py::pd_colnum_quantile_norm',       'pars': {'colsparse' :  [] }, 'cols_family': 'colnum',     'cols_out': 'colnum_quantile_norm', 'type': ''}
-      ,{'uri': 'source/prepro.py::pd_colnum_normalize'          , 'pars': {'pipe_list': [ {'name': 'fillna', 'naval' : 0.0 }, {'name': 'minmax'} ]} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
       ,{'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {'path_pipeline': False}, 'cols_family': 'colnum', 'cols_out': 'colnum_onehot',  'type': ''}
       ,{'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {'path_pipeline': False}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''}
-      #,{'uri': 'source/prepro.py::pd_colnum'                    , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-            
+
 
     ### colcat :Category
       ,{'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat', 'cols_out': 'colcat_onehot',  'type': ''}
