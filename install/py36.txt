@@ -21,6 +21,8 @@ sympy
 #numba==0.48.0
 # fastparquet
 nltk
+category_encoders
+
 
 ##########################################
 # tensorflow_text>=2.0.0rc0
