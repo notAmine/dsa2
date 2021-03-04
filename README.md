@@ -36,6 +36,11 @@ Preprocessors Check
     python  titanic_classifier.py  train         --nsample 2000
     python  titanic_classifier.py  predict
 
+### Documentation 
+https://github.com/arita37/dsa2/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentation
+
+![image](https://user-images.githubusercontent.com/18707623/109985723-6923c000-7d48-11eb-9008-33eddc464a83.png)
+
 
 
 ### How to train a new dataset ?
