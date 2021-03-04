@@ -43,6 +43,15 @@ https://github.com/arita37/dsa2/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentat
 
 
 
+### Tutorial
+https://github.com/arita37/dsa2/issues?q=is%3Aissue+is%3Aopen+label%3ATutorial
+
+![image](https://user-images.githubusercontent.com/18707623/109986014-b43dd300-7d48-11eb-8c36-c286b13e80cf.png)
+
+
+
+
+
 ### How to train a new dataset ?
 
      https://github.com/arita37/dsa2/issues/200
