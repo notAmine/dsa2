@@ -304,7 +304,7 @@ def pd_col_myfun(df, col: list=None, pars: dict=None):
         pars     = {} if pars is None else  pars
 
     #### Do something #################################################################
-    df_new         = df[cols]  ### Do nithi
+    df_new         = df[col]  ### Do nithi
     df_new.columns = [  coli + "_myfun"  for coli in df_new.columns ]
     cols_new       = list(df_new.columns)
     prepro   = None
