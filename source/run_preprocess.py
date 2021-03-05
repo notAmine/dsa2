@@ -193,7 +193,7 @@ def preprocess(path_train_X="", path_train_y="", path_pipeline_export="", cols_g
        pars['coly'] = cols_group['coly']
        pars['dfy']  = dfi_all[ 'coly' ]  ### add dfy by default
 
-       ### Input columns or prevously Computed Columns ( colnum_bin )
+       ### Input columns or prevously Computed Columns ( colnum_bin ), prevent duplicates
        cols_list  = cols_group[cols_name] if cols_name in cols_group else list(dfi_all[cols_name].columns)
        df_        = df[ cols_list]        if cols_name in cols_group else dfi_all[cols_name]
        #cols_list  = list(dfi_all[cols_name].columns)

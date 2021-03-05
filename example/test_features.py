@@ -138,8 +138,8 @@ cols_input_type_2 = {
 
 
 
-
-
+##################################################################################################
+##### category, numerics
 def config1(path_model_out="") :
     """
        Contains all needed informations 
@@ -156,8 +156,8 @@ def config1(path_model_out="") :
     ### LightGBM API model   #######################################
      'model_class': model_class
     ,'model_pars' : {'objective': 'binary', 'n_estimators':3,  }
-    , 'post_process_fun' : post_process_fun
-    , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,
+    ,'post_process_fun' : post_process_fun
+    ,'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,
 
 
     ### Pipeline for data processing ##############################
@@ -165,10 +165,9 @@ def config1(path_model_out="") :
     ### Filter rows
     #,{'uri': 'source/prepro.py::pd_filter_rows'               , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
-    ###  coly encoding
+    ###  coly processing
     {'uri': 'source/prepro.py::pd_coly',                 'pars': {'ymin': -9999999999.0, 'ymax': 999999999.0, 'y_norm_fun': None}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }        
     ,{'uri': 'source/prepro.py::pd_coly_clean',          'pars': {'y_norm_fun': None}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }
-
 
 
     ### colnum : continuous
@@ -182,8 +181,12 @@ def config1(path_model_out="") :
       ,{'uri': 'source/prepro.py::pd_colcat_minhash',       'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_minhash',     'type': ''}
       ,{'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {'path_pipeline': False}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             }
               
-      #### Bug
-      # ,{'uri': 'source/prepro.py::pd_colcat_encoder_generic',           'pars': {'model_name': 'HashingEncoder', 'model_pars': {}}, 'cols_family': 'colcat',     'cols_out': 'colcat_encoder',     'type': ''}
+
+
+      #### Bug in NA values
+      # ,{'uri': 'source/prepro.py::pd_colcat_encoder_generic',           
+      #   'pars': {'model_name': 'HashingEncoder', 'model_pars': {}}, 'cols_family': 'colcat',     
+      #    'cols_out': 'colcat_encoder',     'type': ''}
 
 
     ### colcat, colnum cross-features
@@ -273,7 +276,6 @@ def pd_col_myfun(df, col: list=None, pars: dict=None):
     pars_new = None
 
 
-
     ######Expor #######################################################################
     if "path_features_store" in pars and "path_pipeline_export" in pars:
        save(prepro,         pars["path_pipeline_export"] + f"/{prefix}_model.pkl" )
@@ -285,7 +287,6 @@ def pd_col_myfun(df, col: list=None, pars: dict=None):
         prefix :  cols_new  ### list
     }
     return df_new, col_pars
-
 
 
 
@@ -322,8 +323,6 @@ def config2(path_model_out="") :
       ,{'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {'path_pipeline': False}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             }
               
 
-
-
     #### Data Over/Under sampling, New data         
     ,{'uri': 'source/prepro_sampler.py::pd_sample_imblearn'   , 
                 'pars': {"model_name": 'SMOTEENN', 
@@ -339,25 +338,6 @@ def config2(path_model_out="") :
      ,{"uri":  "source/prepro_text.py::pd_coltext_universal_google",   "pars": {'model_uri': "https://tfhub.dev/google/universal-sentence-encoder-multilingual/3"}, "cols_family": "coltext",   "cols_out": "col_text",  "type": "" }
 
 
-
-    #### Time Series 
-    #,{'uri': 'source/prepro_tseries.py::pd_ts_autoregressive' , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #,{'uri': 'source/prepro_tseries.py::pd_ts_basic'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #,{'uri': 'source/prepro_tseries.py::pd_ts_date'           , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    
-    #,{'uri': 'source/prepro_tseries.py::pd_ts_detrend'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #,{'uri': 'source/prepro_tseries.py::pd_ts_generic'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #,{'uri': 'source/prepro_tseries.py::pd_ts_groupby'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #,{'uri': 'source/prepro_tseries.py::pd_ts_identity'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #,{'uri': 'source/prepro_tseries.py::pd_ts_lag'            , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #,{'uri': 'source/prepro_tseries.py::pd_ts_onehot'         , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #,{'uri': 'source/prepro_tseries.py::pd_ts_rolling'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-    #,{'uri': 'source/prepro_tseries.py::pd_ts_template'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-
-    
-    #### Example of Custom processor
-    ,{"uri":  THIS_FILEPATH + "::pd_col_myfun",   "pars": {}, "cols_family": "colnum",   "cols_out": "col_myfun",  "type": "" },  
-
     ],
            }
     },
@@ -371,29 +351,14 @@ def config2(path_model_out="") :
       'cols_input_type' : cols_input_type_2,
 
       ### columns for model input    #########################################################
-      #  "colnum", "colnum_bin", "colnum_onehot",   #### Colnum columns
-      #  "colcat", "colcat_bin", "colcat_onehot", "colcat_bin_map",  #### colcat columns
-      #  'colcross', "colcross_pair_onehot" #### colcross columns
-      #  'coldate','coltext',
       'cols_model_group': [ # 'colnum', 
-                            'colnum_bin',
-                            # 'colnum_onehot',
-                            #'colnum_quantile_norm'
-
-
-                            # 'colcat_bin',
-                            # 'colcat_onehot',
-                            # 'colcat_minhash',
-
-                            # 'coltext_universal_google'
-                            # 'col_genetic',
-
+                            'colcat_bin',
                           ],
 
       #### Separate Category Sparse from Continuous (DLearning input)
       'cols_model_type': {
          'continuous' : [ 'colnum',   ],
-         'discreate'  : [ 'colcat_bin', 'colnum_bin',  'colcat_minhash',  'colcat_onehot', 'colnum_onehot'    ]
+         'discreate'  : [ 'colcat_bin',   ]
       }   
 
 
@@ -409,37 +374,90 @@ def config2(path_model_out="") :
 
 
 
-def pd_col_myfun(df, col: list=None, pars: dict=None):
+
+
+
+
+##################################################################################################
+##### Time Series
+def config3(path_model_out="") :
     """
-         Example of custom Processor
+       Contains all needed informations 
     """
-    from source.util_feature import save, load
-    prefix = "col_myfun`"
-    if "path_pipeline" in pars :   #### Inference time LOAD previous pars
-        prepro   = load(pars["path_pipeline"] + f"/{prefix}_model.pkl" )
-        pars     = load(pars["path_pipeline"] + f"/{prefix}_pars.pkl" )
-        pars     = {} if pars is None else  pars
+    config_name  = os_get_function_name()
+    data_name    = "titanic"         ### in data/input/
+    model_class  = 'LGBMClassifier'  ### ACTUAL Class name for model_sklearn.py
+    n_sample     = 1000
 
-    #### Do something #################################################################
-    df_new         = df[col]  ### Do nithi
-    df_new.columns = [  coli + "_myfun"  for coli in df_new.columns ]
-    cols_new       = list(df_new.columns)
-    prepro   = None
-    pars_new = None
+    def post_process_fun(y):  return  int(y)
+    def pre_process_fun(y):   return  int(y)
+
+    model_dict = {'model_pars': {
+    ### LightGBM API model   #######################################
+     'model_class': model_class
+    ,'model_pars' : {'objective': 'binary', 'n_estimators':5,  }
+
+    , 'post_process_fun' : post_process_fun
+    , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,
 
 
+    ### Pipeline for data processing ##############################
+    'pipe_list': [
+    ###  coly encoding
+    {'uri': 'source/prepro.py::pd_coly',                 'pars': {'ymin': -9999999999.0, 'ymax': 999999999.0, 'y_norm_fun': None}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }        
 
-    ######Expor #######################################################################
-    if "path_features_store" in pars and "path_pipeline_export" in pars:
-       save(prepro,         pars["path_pipeline_export"] + f"/{prefix}_model.pkl" )
-       save(cols_new,       pars["path_pipeline_export"] + f"/{prefix}.pkl" )
-       save(pars_new,       pars["path_pipeline_export"] + f"/{prefix}_pars.pkl" )
+    ### colcat :Category
+      ,{'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {'path_pipeline': False}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             }
 
-    col_pars = {"prefix" : prefix , "path" :   pars.get("path_pipeline_export", pars.get("path_pipeline", None)) }
-    col_pars["cols_new"] = {
-        prefix :  cols_new  ### list
-    }
-    return df_new, col_pars
+              
+    #### Time Series 
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_autoregressive' , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_basic'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_date'           , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_detrend'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_generic'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_groupby'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_identity'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_lag'            , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_onehot'         , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_rolling'        , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_tseries.py::pd_ts_template'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+
+    ],
+           }
+    },
+
+  'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
+                  },
+
+  'data_pars': { 'n_sample' : n_sample,
+
+      #### columns as raw data input
+      'cols_input_type' : cols_input_type_2,
+
+      ### columns for model input    #########################################################
+      'cols_model_group': [ # 'colnum', 
+                            'colcat_bin',
+
+                          ],
+
+      #### Separate Category Sparse from Continuous (DLearning input)
+      'cols_model_type': {
+         'continuous' : [ 'colnum',   ],
+         'discreate'  : [ 'colcat_bin'    ]
+      }   
+
+
+      ### Filter data rows   ###################################################################
+     ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 }
+
+         }
+      }
+
+    ##### Filling Global parameters    #########################################################
+    model_dict        = global_pars_update(model_dict, data_name, config_name )
+    return model_dict
 
 
 
