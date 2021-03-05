@@ -7,6 +7,7 @@ python  example/test_features.py  train       --nsample 200
 
 
 """
+
 import warnings, copy, os, sys
 warnings.filterwarnings('ignore')
 
@@ -291,7 +292,7 @@ def config1(path_model_out="") :
 
 
 
-def pd_col_myfun(df=None, col=None, pars={}):
+def pd_col_myfun(df: pd.DataFrame, col: list=None, pars: dict=None):
     """
          Example of custom Processor
     """
@@ -303,8 +304,8 @@ def pd_col_myfun(df=None, col=None, pars={}):
         pars     = {} if pars is None else  pars
 
     #### Do something #################################################################
-    df_new         = df[col]  ### Do nithi
-    df_new.columns = [  col + "_myfun"  for col in df.columns ]
+    df_new         = df[cols]  ### Do nithi
+    df_new.columns = [  coli + "_myfun"  for coli in df_new.columns ]
     cols_new       = list(df_new.columns)
     prepro   = None
     pars_new = None
