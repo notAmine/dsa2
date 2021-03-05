@@ -107,23 +107,26 @@ def config1(path_model_out="") :
     #,{'uri': 'source/prepro.py::pd_filter_rows'               , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
     ###  coly encoding
-    {'uri': 'source/prepro.py::pd_coly',                 'pars': {'ymin': -9999999999.0, 'ymax': 999999999.0, 'y_norm_fun': None}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }        
-    ,{'uri': 'source/prepro.py::pd_coly_clean',          'pars': {'y_norm_fun': None}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }
-
+    {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }        
+    #,{'uri': 'source/prepro.py::pd_coly_clean'                , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
 
     ### colnum : continuous
-      ,{'uri': 'source/prepro.py::pd_colnum_quantile_norm',       'pars': {'colsparse' :  [] }, 'cols_family': 'colnum',     'cols_out': 'colnum_quantile_norm', 'type': ''}
-      ,{'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {'path_pipeline': False}, 'cols_family': 'colnum', 'cols_out': 'colnum_onehot',  'type': ''}
-      ,{'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {'path_pipeline': False}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''}
+    ,{'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             }
+    ,{'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             }
+    #{'uri': 'source/prepro.py::pd_colnum_quantile_norm',       'pars': {'colsparse' :  [] }, 'cols_family': 'colnum',     'cols_out': 'colnum_quantile_norm',     'type': ''             },
+    #,{'uri': 'source/prepro.py::pd_colnum'                    , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro.py::pd_colnum_normalize'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
 
     ### colcat :Category
-      ,{'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat', 'cols_out': 'colcat_onehot',  'type': ''}
-      ,{'uri': 'source/prepro.py::pd_colcat_minhash',       'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_minhash',     'type': ''}
-      ,{'uri': 'source/prepro.py::pd_colcat_encoder_generic',           'pars': {'model_name': 'HashingEncoder', 'model_pars': {}}, 'cols_family': 'colcat',     'cols_out': 'colcat_encoder',     'type': ''}
-      ,{'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {'path_pipeline': False}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             }
-              
+    ,{'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             }
+    ,{'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             }
+    ,{'uri': 'source/prepro.py::pd_colcat_minhash',       'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_minhash',     'type': ''             }
+    #,{'uri': 'source/prepro.py::pd_colcat_encoder_generic'    , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro.py::pd_colcat_minhash'            , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+
+    
 
     ### colcat, colnum cross-features
     ,{'uri': 'source/prepro.py::pd_colcross',             'pars': {}, 'cols_family': 'colcross',   'cols_out': 'colcross_pair_onehot',  'type': 'cross'}
@@ -146,24 +149,18 @@ def config1(path_model_out="") :
     #,{'uri': 'source/prepro.py::pd_coldate'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
     #### Data Over/Under sampling, New data         
-    ,{'uri': 'source/prepro_sampler.py::pd_sample_imblearn'   , 
-                'pars': {"model_name": 'SMOTEENN', 
-                        'pars_resample':    {'sampling_strategy' : 'auto', 'random_state':0}, 
-                        "coly": "Survived"} , 
-                        'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-
-    ,{'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {'ymin': -9999999999.0, 'ymax': 999999999.0} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_sampler.py::pd_sample_imblearn'   , 'pars': {} , 'cols_family': 'colall' , 'cols_out': 'colall_out' , 'type': '' }
+    #,{'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
     #,{'uri': 'source/prepro_sampler.py::pd_augmentation_sdv'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
 
-
     #### Text        
-     ,{"uri":  "source/prepro_text.py::pd_coltext",   "pars": {'dimpca':1, "word_minfreq":2}, "cols_family": "coltext",   "cols_out": "col_text",  "type": "" }
-     #,{"uri":  "source/prepro_text.py::pd_coltext_clean",   "pars": {}, "cols_family": "coltext",   "cols_out": "col_text",  "type": "" }
-     ,{"uri":  "source/prepro_text.py::pd_coltext_universal_google",   "pars": {'model_uri': "https://tfhub.dev/google/universal-sentence-encoder-multilingual/3"}, "cols_family": "coltext",   "cols_out": "col_text",  "type": "" }
-     #,{"uri":  "source/prepro_text.py::pd_coltext_wordfreq",   "pars": {}, "cols_family": "colcat",   "cols_out": "col_text",  "type": "" },                
-
+    #,{'uri': 'source/prepro_text.py::pd_coltext'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_text.py::pd_coltext_clean'             , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_text.py::pd_coltext_universal_google'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_text.py::pd_coltext_wordfreq'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
     
+
     #### Time Series 
     #,{'uri': 'source/prepro_tseries.py::pd_ts_autoregressive' , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
     #,{'uri': 'source/prepro_tseries.py::pd_ts_basic'          , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
