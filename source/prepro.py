@@ -11,38 +11,33 @@ import sys, gc, os, pandas as pd, json, copy, numpy as np
 ####################################################################################################
 #### Add path for python import
 sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
-
-
-#### Root folder analysis
-root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
-print(root)
-
-
-#### Debuging state (Ture/False)
-DEBUG_=True
+from util_feature import  (save,  load, save_features, os_get_function_name,
+                           params_check)
+import util_feature
 
 ####################################################################################################
 ####################################################################################################
+from util import logger_class
+logger = logger_class()
+
+def log(*s):
+    logger.log(*s, level=1)
+
+def log2(*s):
+    logger.log(*s, level=2)
+
+def log_pd(df, *s, n=0, m=1):
+    sjump = "\n" * m
+    log(sjump,  df.head(n))
+
+
+"""
 def log(*s, n=0, m=1):
     sspace = "#" * n
     sjump = "\n" * m
     ### Implement pseudo Logging
     print(sjump, sspace, s, sspace, flush=True)
-
-def logs(*s):
-    if DEBUG_:
-        print(*s, flush=True)
-
-
-def log_pd(df, *s, n=0, m=1):
-    sjump = "\n" * m
-    ### Implement pseudo Logging
-    print(sjump,  df.head(n), flush=True)
-
-
-from util_feature import  (save,  load, save_features, os_get_function_name,
-                           params_check)
-import util_feature
+"""
 
 
 def _pd_colnum(df, col, pars):
@@ -134,7 +129,7 @@ def pd_coly(df: pd.DataFrame, col: list=None, pars: dict=None):
     df             = df[ df['_isfloat'] > 0 ]
     df[coly]       = df[coly].astype('float64')
     del df['_isfloat']
-    logs("----------df[coly]------------",df[coly])
+    log2("----------df[coly]------------",df[coly])
     ymin, ymax = pars.get('ymin', -9999999999.0), pars.get('ymax', 999999999.0)
     df = df[df[coly] > ymin]
     df = df[df[coly] < ymax]
@@ -686,9 +681,6 @@ def pd_col_genetic_transform(df: pd.DataFrame, col: list=None, pars: dict=None):
 
 
 
-
-
-
 ######################################################################################
 def test():
     """
@@ -697,7 +689,7 @@ def test():
     """
     from util_feature import test_get_classification_data
     dfX, dfy = test_get_classification_data()
-    cols     = list(dfX.columsn)
+    cols     = list(dfX.columns)
     ll       = [ ('pd_colnum_bin', {}  )
                ]
 
@@ -705,7 +697,7 @@ def test():
         try :
            myfun = globals()[fname]
            res   = myfun(dfX, cols, pars)
-           log( f"Success, {fname}, {pars}, {e}")
+           log( f"Success, {fname}, {pars}")
         except Exception as e :
             log( f"Failed, {fname}, {pars}, {e}")
 
