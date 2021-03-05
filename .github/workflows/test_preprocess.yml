@@ -99,8 +99,8 @@ jobs:
     - name: run_all
       run: |
         chmod -R 777 . 
-    #python core_test_encoder.py train  # 2>&1 | tee   /home/runner/work/mlmodels/mlmodels_store/log_dsa2/log_encoder.py
         python example/test_features.py train  # 2>&1 | tee   /home/runner/work/mlmodels/mlmodels_store/log_dsa2/log_encoder.py
+    # python core_test_encoder.py train  # 2>&1 | tee   /home/runner/work/mlmodels/mlmodels_store/log_dsa2/log_encoder.py
 
 
 
