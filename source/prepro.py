@@ -523,7 +523,7 @@ def pd_colcat_encoder_generic(df: pd.DataFrame, col: list=None, pars: dict=None)
     model              = model_class(**pars_model)
     dfcat_encoder      = model.fit_transform(df[col])
 
-    dfcat_encoder.columns = [t + "_cod" for t in dfcat_encoder.columns ]
+    dfcat_encoder.columns = [t + f"_{model_name}" for t in dfcat_encoder.columns ]
     colcat_encoder        = list(dfcat_encoder.columns)
 
 
