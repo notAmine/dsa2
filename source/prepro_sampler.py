@@ -142,8 +142,8 @@ def pd_sample_imblearn(df=None, col=None, pars=None):
     else :     ### Training time
         colX    = col # [col_ for col_ in col if col_ not in coly]
         coly    = pars['coly']
+        train_y = pars['dfy']  ## df[coly] #
         train_X = df[colX].fillna(method='ffill')
-        train_y = df[coly] # pars['dfy']
         gp      = model_resample( **pars_resample)
         X_resample, y_resample = gp.fit_resample(train_X, train_y)
 
