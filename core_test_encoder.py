@@ -146,11 +146,11 @@ def config1(path_model_out="") :
     #,{'uri': 'source/prepro.py::pd_coldate'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
     #### Data Over/Under sampling, New data         
-    ,{'uri': 'source/prepro_sampler.py::pd_sample_imblearn'   , 
-                'pars': {"model_name": 'SMOTEENN', 
-                        'pars_resample':    {'sampling_strategy' : 'auto', 'random_state':0}, 
-                        "coly": "Survived"} , 
-                        'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_sampler.py::pd_sample_imblearn'   , 
+    #            'pars': {"model_name": 'SMOTEENN', 
+    #                    'pars_resample':    {'sampling_strategy' : 'auto', 'random_state':0}, 
+    #                    "coly": "Survived"} , 
+    #                    'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
     ,{'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {'ymin': -9999999999.0, 'ymax': 999999999.0} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
     #,{'uri': 'source/prepro_sampler.py::pd_augmentation_sdv'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
