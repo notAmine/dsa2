@@ -291,6 +291,7 @@ def pd_col_myfun(df, col: list=None, pars: dict=None):
 
 
 
+
 ##################################################################################################
 ##### Text
 def config2(path_model_out="") :
@@ -317,8 +318,8 @@ def config2(path_model_out="") :
     ### Pipeline for data processing ##############################
     'pipe_list': [
     ###  coly encoding
-    {'uri': 'source/prepro.py::pd_coly',                 'pars': {'ymin': -9999999999.0, 'ymax': 999999999.0, 'y_norm_fun': None}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }        
-    ,{'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {'path_pipeline': False}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             }
+    {'uri': 'source/prepro.py::pd_coly',           'pars': {'ymin': -9999999999.0, 'ymax': 999999999.0, 'y_norm_fun': None}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }        
+    ,{'uri': 'source/prepro.py::pd_colcat_bin',    'pars': {'path_pipeline': False}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             }
               
 
     #### Text        
@@ -362,11 +363,15 @@ def config2(path_model_out="") :
 
 
 
-
-
-
 ##################################################################################################
 ##### Sampler
+"""
+
+Need to change the way sampler works ; NOT Good
+
+
+
+"""
 def config3(path_model_out="") :
     """
        Contains all needed informations 
@@ -396,11 +401,11 @@ def config3(path_model_out="") :
               
 
     #### Data Over/Under sampling, New data         
-    ,{'uri': 'source/prepro_sampler.py::pd_sample_imblearn'   , 
-                'pars': {"model_name": 'SMOTEENN', 
-                        'pars_resample':    {'sampling_strategy' : 'auto', 'random_state':0}, 
-                        "coly": "Survived"} , 
-                        'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': 'add_coly'  }
+    #,{'uri': 'source/prepro_sampler.py::pd_sample_imblearn'   , 
+    #            'pars': {"model_name": 'SMOTEENN', 
+    #                    'pars_resample':    {'sampling_strategy' : 'auto', 'random_state':0}, 
+    #                    "coly": "Survived"} , 
+    #                    'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': 'add_coly'  }
     # ,{'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {'ymin': -9999999999.0, 'ymax': 999999999.0} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
     #,{'uri': 'source/prepro_sampler.py::pd_augmentation_sdv'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
@@ -416,7 +421,7 @@ def config3(path_model_out="") :
       #### columns as raw data input
       'cols_input_type' : cols_input_type_2,
 
-      ### columns for model input    #########################################################
+      ### columns for model input    ############################################################
       'cols_model_group': [ # 'colnum', 
                             'colcat_bin',
                           ],
@@ -520,16 +525,6 @@ def config4(path_model_out="") :
     ##### Filling Global parameters    #########################################################
     model_dict        = global_pars_update(model_dict, data_name, config_name )
     return model_dict
-
-
-
-
-
-
-
-
-
-
 
 
 
