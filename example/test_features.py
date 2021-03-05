@@ -136,6 +136,9 @@ cols_input_type_2 = {
 
 
 
+
+
+
 def config1(path_model_out="") :
     """
        Contains all needed informations 
@@ -170,11 +173,9 @@ def config1(path_model_out="") :
 
     ### colnum : continuous
       ,{'uri': 'source/prepro.py::pd_colnum_quantile_norm',       'pars': {'colsparse' :  [] }, 'cols_family': 'colnum',     'cols_out': 'colnum_quantile_norm', 'type': ''}
-      ,{'uri': 'source/prepro.py::pd_colnum_normalize'          , 'pars': {'pipe_list': [ {'name': 'fillna', 'naval' : 0.0 }, {'name': 'minmax'} ]} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
       ,{'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {'path_pipeline': False}, 'cols_family': 'colnum', 'cols_out': 'colnum_onehot',  'type': ''}
       ,{'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {'path_pipeline': False}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''}
-      ,{'uri': 'source/prepro.py::pd_colnum'                    , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
-            
+
 
     ### colcat :Category
       ,{'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat', 'cols_out': 'colcat_onehot',  'type': ''}
@@ -182,8 +183,6 @@ def config1(path_model_out="") :
       ,{'uri': 'source/prepro.py::pd_colcat_encoder_generic',           'pars': {'model_name': 'HashingEncoder', 'model_pars': {}}, 'cols_family': 'colcat',     'cols_out': 'colcat_encoder',     'type': ''}
       ,{'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {'path_pipeline': False}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             }
               
-
-    
 
     ### colcat, colnum cross-features
     ,{'uri': 'source/prepro.py::pd_colcross',             'pars': {}, 'cols_family': 'colcross',   'cols_out': 'colcross_pair_onehot',  'type': 'cross'}
@@ -215,14 +214,11 @@ def config1(path_model_out="") :
     #,{'uri': 'source/prepro_sampler.py::pd_augmentation_sdv'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
 
-
     #### Text        
      ,{"uri":  "source/prepro_text.py::pd_coltext",   "pars": {'dimpca':1, "word_minfreq":2}, "cols_family": "coltext",   "cols_out": "col_text",  "type": "" }
      ,{"uri":  "source/prepro_text.py::pd_coltext_clean",   "pars": {}, "cols_family": "coltext",   "cols_out": "col_text",  "type": "" }
      ,{"uri":  "source/prepro_text.py::pd_coltext_universal_google",   "pars": {'model_uri': "https://tfhub.dev/google/universal-sentence-encoder-multilingual/3"}, "cols_family": "coltext",   "cols_out": "col_text",  "type": "" }
      #,{"uri":  "source/prepro_text.py::pd_coltext_wordfreq",   "pars": {}, "cols_family": "colcat",   "cols_out": "col_text",  "type": "" },                
-
-    
 
 
 
@@ -255,7 +251,6 @@ def config1(path_model_out="") :
 
       #### columns as raw data input
       'cols_input_type' : cols_input_type_2,
-
 
       ### columns for model input    #########################################################
       #  "colnum", "colnum_bin", "colnum_onehot",   #### Colnum columns
@@ -293,7 +288,6 @@ def config1(path_model_out="") :
     ##### Filling Global parameters    #########################################################
     model_dict        = global_pars_update(model_dict, data_name, config_name )
     return model_dict
-
 
 
 
