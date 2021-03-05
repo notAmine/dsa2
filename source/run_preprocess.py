@@ -199,7 +199,7 @@ def preprocess(path_train_X="", path_train_y="", path_pipeline_export="", cols_g
        #cols_list  = list(dfi_all[cols_name].columns)
        #df_        = dfi_all[cols_name]
 
-       dfi, col_pars = pipe_fun(df_, cols_list, pars= pars)
+       dfi, col_pars = pipe_fun(df, cols_list, pars= pars)
 
 
        ### Concatenate colnum, colnum_bin into cols_family_all , dfi_all  ###########################
