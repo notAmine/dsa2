@@ -292,7 +292,7 @@ def config1(path_model_out="") :
 
 
 
-def pd_col_myfun(df: pd.DataFrame, col: list=None, pars: dict=None):
+def pd_col_myfun(df, col: list=None, pars: dict=None):
     """
          Example of custom Processor
     """
