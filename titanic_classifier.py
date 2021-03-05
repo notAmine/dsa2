@@ -187,7 +187,6 @@ def pd_col_myfun(df=None, col=None, pars={}):
     pars_new = None
 
 
-
     ###################################################################################
     if "path_features_store" in pars and "path_pipeline_export" in pars:
        save(prepro,         pars["path_pipeline_export"] + f"/{prefix}_model.pkl" )
