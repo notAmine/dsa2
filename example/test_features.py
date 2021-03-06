@@ -184,9 +184,9 @@ def config1(path_model_out="") :
 
 
       #### Bug in NA values
-      # ,{'uri': 'source/prepro.py::pd_colcat_encoder_generic',           
-      #   'pars': {'model_name': 'HashingEncoder', 'model_pars': {}}, 'cols_family': 'colcat',     
-      #    'cols_out': 'colcat_encoder',     'type': ''}
+      ,{'uri': 'source/prepro.py::pd_colcat_encoder_generic',           
+        'pars': {'model_name': 'HashingEncoder', 'model_pars': {}}, 'cols_family': 'colcat',     
+        'cols_out': 'colcat_encoder2',     'type': ''}
 
 
     ### colcat, colnum cross-features
@@ -259,28 +259,41 @@ def config1(path_model_out="") :
 def pd_col_myfun(df, col: list=None, pars: dict=None):
     """
          Example of custom Processor
+
+         prefix :  ID of this preprocessor.
+         path_pipeline :  Load from trained preprocessor 
+         path_features_store :  Saving intermediate datraframe
+         
+         prepro   : preprocessor model.
+         pars_new : new model 
+
     """
     from source.util_feature import save, load
     prefix = "col_myfun`"
-    if "path_pipeline" in pars :   #### Inference time LOAD previous pars
+    if "path_pipeline" in pars :   #### Predict time, LOAD previous pars
         prepro   = load(pars["path_pipeline"] + f"/{prefix}_model.pkl" )
         pars     = load(pars["path_pipeline"] + f"/{prefix}_pars.pkl" )
         pars     = {} if pars is None else  pars
 
     #### Do something #################################################################
-    df_new         = df[col]  ### Do nithi
+    df_new         = df[col]  ### Do something
     df_new.columns = [  coli + "_myfun"  for coli in df_new.columns ]
     cols_new       = list(df_new.columns)
     prepro   = None
     pars_new = None
 
 
-    ######Expor #######################################################################
+
+
+
+    ######Training time, Export #######################################################
     if "path_features_store" in pars and "path_pipeline_export" in pars:
        save(prepro,         pars["path_pipeline_export"] + f"/{prefix}_model.pkl" )
        save(cols_new,       pars["path_pipeline_export"] + f"/{prefix}.pkl" )
        save(pars_new,       pars["path_pipeline_export"] + f"/{prefix}_pars.pkl" )
 
+
+    ###### New dataframe and colname ##################################################
     col_pars = {"prefix" : prefix , "path" :   pars.get("path_pipeline_export", pars.get("path_pipeline", None)) }
     col_pars["cols_new"] = {
         prefix :  cols_new  ### list

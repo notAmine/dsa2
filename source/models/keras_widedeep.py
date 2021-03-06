@@ -221,17 +221,17 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     data_type = data_pars.get('type', 'ram')
 
     if data_type == "ram":
-        cols_input_groupname = ['cols_wide_input', 'cols_deep_input', 'cols_deep_input' ]
+        cols_input_formodel = ['cols_wide_input', 'cols_deep_input', 'cols_deep_input' ]
         ### dict  colgroup ---> list of colname
-        cols_input_group     = data_pars['cols_model_type2']
+        cols_type     = data_pars['cols_model_type2']
 
         if task_type == "predict":
             d = data_pars[task_type]
             Xtrain       = d["X"]
 
             Xtuple_train = []
-            for cols_groupname in cols_input_groupname :
-                cols_i = cols_input_group[cols_groupname]
+            for cols_groupname in cols_input_formodel :
+                cols_i = cols_type[cols_groupname]
                 Xtuple_train.append( Xtrain[cols_i] )
 
             return Xtuple_train
@@ -242,8 +242,8 @@ def get_dataset(data_pars=None, task_type="train", **kw):
             Xtrain, ytrain  = d["Xtrain"], d["ytrain"]
 
             Xtuple_train = []
-            for cols_groupname in cols_input_groupname :
-                cols_i = cols_input_group[cols_groupname]
+            for cols_groupname in cols_input_formodel :
+                cols_i = cols_type[cols_groupname]
                 Xtuple_train.append( Xtrain[cols_i] )
 
             return Xtuple_train, ytrain
@@ -253,15 +253,17 @@ def get_dataset(data_pars=None, task_type="train", **kw):
             d = data_pars[task_type]
             Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
 
+            cols_input_formodel = ['cols_wide_input', 'cols_deep_input', 'cols_deep_input' ]
+            cols_type           = data_pars['cols_model_type2']   ##3 Sparse, Continuous
             ### dict  colgroup ---> list of df
             Xtuple_train = []
-            for cols_groupname in cols_input_groupname :
-                cols_i = cols_input_group[cols_groupname]
+            for cols_groupname in cols_input_formodel :
+                cols_i = cols_type[cols_groupname]
                 Xtuple_train.append( Xtrain[cols_i] )
 
             Xtuple_test = []
-            for cols_groupname in cols_input_groupname :
-                cols_i = cols_input_group[cols_groupname]
+            for cols_groupname in cols_input_formodel :
+                cols_i = cols_type[cols_groupname]
                 Xtuple_test.append( Xtest[cols_i] )
 
             return Xtuple_train, ytrain, Xtuple_test, ytest
