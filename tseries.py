@@ -9,7 +9,6 @@
 import warnings, copy, os, sys, pandas as pd
 warnings.filterwarnings("ignore")
 
-
 ####################################################################################
 ###### Path ########################################################################
 root_repo      =  os.path.abspath(os.getcwd()).replace("\\", "/") + "/"     ; print(root_repo)
@@ -64,11 +63,15 @@ config_default   = "config1"    ### name of function which contains data configu
 
 cols_input_type_1 = {
      "coly"   :   "sales"
-    ,"colid"  :   "date"   ### used for JOIN tables
+    ,"colid"  :   "id_date"   ### used for JOIN tables, duplicate date
     ,"colcat" :   ["shop", "item" ]
     ,"colnum" :   []
     ,"coltext" :  []
     ,"coldate" :  ['date']
+
+    ### Specific for time sereis
+    ,"coltseries" :  ['date', 'shop', 'item', 'sales']
+
     ,"colcross" : [ ]
 }
 
@@ -109,8 +112,8 @@ def config1() :
         #### Example of Custom processor
         {"uri":  THIS_FILEPATH + "::pd_dsa2_custom",
             "pars": {'coldate': 'date'},
-            "cols_family": "coldate",
-            "cols_out": "coldate_features1",  "type": "" },
+            "cols_family": "col_tseries",
+            "cols_out": "tseries_feat",  "type": "" },
 
         ],
                }
@@ -131,7 +134,7 @@ def config1() :
           "cols_model_group": [ "date",
                                
                                ### example of custom
-                               "col_myfun"
+                               "tseries_myfun"
                               ]
 
       #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
@@ -160,7 +163,7 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
     ,{"uri":  THIS_FILEPATH + "::pd_dsa2_custom",   "pars": {'coldate': 'date'}, "cols_family": "coldate",   "cols_out": "coldate_features1",  "type": "" },
 
     """
-    prefix = "coldate_myfun"
+    prefix = "tseries_myfun"
     #### Inference time LOAD previous pars  ###########################################
     from prepro import prepro_load, prepro_save
     prepro, pars_saved, cols_saved = prepro_load(prefix, pars)
@@ -214,19 +217,16 @@ from core_run import  data_profile
 from core_run import preprocess
 
 
-
 ##################################################################################
 ########## Train #################################################################
 # def train(config=None, nsample=None):
 from core_run import train
 
 
-
 ####################################################################################
 ####### Inference ##################################################################
 # predict(config="", nsample=10000)
 from core_run import predict
-
 
 
 ###########################################################################################################
