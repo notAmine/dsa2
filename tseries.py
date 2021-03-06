@@ -2,14 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 ### Usage:
-  python titanic_classifier.py  train      --config  config1
-  python titanic_classifier.py  predict    --config  config1
-
-python  titanic_classifier.py  data_profile
-python  titanic_classifier.py  preprocess  --nsample 100
-python  titanic_classifier.py  train       --nsample 200
-python  titanic_classifier.py  predict
-
+  python tseries_demand.py  train      --config  config1
+  python tseries_demand.py  predict    --config  config1
 
 """
 import warnings, copy, os, sys, pandas as pd
@@ -69,10 +63,10 @@ config_default   = "config1"    ### name of function which contains data configu
 
 
 cols_input_type_1 = {
-     "coly"   :   "Survived"
-    ,"colid"  :   ""
-    ,"colcat" :   ["Sex", "Embarked" ]
-    ,"colnum" :   ["Pclass", "Age","SibSp", "Parch","Fare"]
+     "coly"   :   "sales"
+    ,"colid"  :   "date"   ### used for JOIN tables
+    ,"colcat" :   ["shop", "item" ]
+    ,"colnum" :   []
     ,"coltext" :  []
     ,"coldate" :  ['date']
     ,"colcross" : [ ]
@@ -83,9 +77,9 @@ cols_input_type_1 = {
 def config1() :
     """
        ONE SINGLE DICT Contains all needed informations for
-       used for titanic classification task
+       used for tseries_demand classification task
     """
-    data_name    = "titanic"         ### in data/input/
+    data_name    = "tseries_demand"         ### in data/input/
     model_class  = "LGBMRegressor"  ### ACTUAL Class name for model_sklearn.py
     n_sample     = 1000
 
@@ -122,7 +116,7 @@ def config1() :
                }
         },
 
-      "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
+      "compute_pars": { "metric_list": ["accuracy_score" ]
                         # ,"mlflow_pars" : {}   ### Not empty --> use mlflow
                       },
 
@@ -134,9 +128,6 @@ def config1() :
 
 
           ### Model Input :  Merge family of columns   #############################################
-          #  "colnum", "colnum_bin", "colnum_onehot", "colnum_binmap",  #### Colnum columns
-          #  "colcat", "colcat_bin", "colcat_onehot", "colcat_bin_map",  #### colcat columns
-          #  "colcross_single_onehot_select", "colcross_pair_onehot",  "colcross_pair",  #### colcross columns  "coldate", "coltext",
           "cols_model_group": [ "date",
                                
                                ### example of custom
@@ -178,7 +169,6 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
     from source.prepro_tseries import pd_ts_date, pd_ts_rolling
     if prepro is None :   ###  Training time
         dfy, coly  = pars['dfy'], pars['coly']
-
         coldate = pars['coldate']
         df = df.set_index(coldate)
 
@@ -216,7 +206,6 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
 ########## Profile data #############################################################
 from core_run import  data_profile
 # def data_profile(path_data="", path_output="", n_sample= 5000):
-
 
 
 ###################################################################################
