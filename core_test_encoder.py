@@ -10,7 +10,6 @@ python  core_test_encoder.py  predict
 
 
 """
-
 import warnings, copy, os, sys
 warnings.filterwarnings('ignore')
 
