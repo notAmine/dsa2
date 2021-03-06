@@ -8,7 +8,7 @@ python  example/test_features.py  train       --nsample 500 --config config1
 
 """
 
-import warnings, copy, os, sys
+import warnings, copy, os, sys, pandas as pd
 warnings.filterwarnings('ignore')
 
 ####################################################################################
@@ -137,8 +137,8 @@ cols_input_type_2 = {
 
 
 
-
-##################################################################################################
+############################################################################################################
+############################################################################################################
 ##### category, numerics
 def config1(path_model_out="") :
     """
@@ -166,7 +166,7 @@ def config1(path_model_out="") :
     #,{'uri': 'source/prepro.py::pd_filter_rows'               , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
     ###  coly processing
-    {'uri': 'source/prepro.py::pd_coly',                 'pars': {'ymin': -9999999999.0, 'ymax': 999999999.0, 'y_norm_fun': None}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }        
+    {'uri': 'source/prepro.py::pd_coly',                 'pars': {'ymin': -9999999999.0, 'ymax': 999999999.0, 'y_norm_fun': None}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }
     ,{'uri': 'source/prepro.py::pd_coly_clean',          'pars': {'y_norm_fun': None}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }
 
 
@@ -180,14 +180,12 @@ def config1(path_model_out="") :
       ,{'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat', 'cols_out': 'colcat_onehot',  'type': ''}
       ,{'uri': 'source/prepro.py::pd_colcat_minhash',       'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_minhash',     'type': ''}
       ,{'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {'path_pipeline': False}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             }
-              
 
 
-      #### Bug in NA values
-      ,{'uri': 'source/prepro.py::pd_colcat_encoder_generic',           
-        'pars': {'model_name': 'HashingEncoder', 'model_pars': {}}, 'cols_family': 'colcat',     
+    #### Bug in NA values
+      ,{'uri': 'source/prepro.py::pd_colcat_encoder_generic',
+        'pars': {'model_name': 'HashingEncoder', 'model_pars': {'verbose':1, 'return_df': True }}, 'cols_family': 'colcat',
         'cols_out': 'colcat_encoder2',     'type': ''}
-
 
     ### colcat, colnum cross-features
     ,{'uri': 'source/prepro.py::pd_colcross',             'pars': {}, 'cols_family': 'colcross',   'cols_out': 'colcross_pair_onehot',  'type': 'cross'}
@@ -206,11 +204,11 @@ def config1(path_model_out="") :
             'cols_family': 'colgen',     'cols_out': 'col_genetic',  'type': 'add_coly'   #### Need to add target coly
           }
 
-    #### Date        
+    #### Date
     #,{'uri': 'source/prepro.py::pd_coldate'                   , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
 
     #### Example of Custom processor
-    ,{"uri":  THIS_FILEPATH + "::pd_col_myfun",   "pars": {}, "cols_family": "colnum",   "cols_out": "col_myfun",  "type": "" },  
+    ,{"uri":  THIS_FILEPATH + "::pd_col_amyfun",   "pars": {}, "cols_family": "colnum",   "cols_out": "col_myfun",  "type": "" },
 
     ],
            }
@@ -228,7 +226,7 @@ def config1(path_model_out="") :
       #  "colnum", "colnum_bin", "colnum_onehot",   #### Colnum columns
       #  "colcat", "colcat_bin", "colcat_onehot", "colcat_bin_map",  #### colcat columns
       #  'colcross', "colcross_pair_onehot" #### colcross columns
-      'cols_model_group': [ # 'colnum', 
+      'cols_model_group': [ # 'colnum',
                             'colnum_bin',
                             'colnum_onehot',
                             'colnum_quantile_norm',
@@ -242,7 +240,7 @@ def config1(path_model_out="") :
       'cols_model_type': {
          'continuous' : [ 'colnum',   ],
          'discreate'  : [ 'colcat_bin', 'colnum_bin',   ]
-      }   
+      }
 
       ### Filter data rows   ###################################################################
      ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 }
@@ -256,58 +254,12 @@ def config1(path_model_out="") :
 
 
 
-def pd_col_myfun(df, col: list=None, pars: dict=None):
-    """ Example of custom Processor
-
-         prefix :  ID of this preprocessor.
-         path_pipeline :  Load from trained preprocessor 
-         path_features_store :  Saving intermediate datraframe
-         
-         prepro   : preprocessor model.
-         pars_new : new model 
-
-    """
-    from source.util_feature import save, load
-    prefix = "col_myfun`"
-
-    #### At Predict time, LOAD previous pars   ############################################
-    if "path_pipeline" in pars :   
-        prepro   = load(pars["path_pipeline"] + f"/{prefix}_model.pkl" )
-        pars     = load(pars["path_pipeline"] + f"/{prefix}_pars.pkl" )
-        pars     = {} if pars is None else  pars
-
-    #### Do something #################################################################
-    df_new         = df[col]  ### Do something
-    df_new.columns = [ coli + f"_{prefix}"  for coli in df_new.columns ]
-    cols_new       = list(df_new.columns)
-    prepro   = None
-    pars_new = None
 
 
 
 
-
-
-
-    ######At Training time, Export #######################################################
-    if "path_features_store" in pars and "path_pipeline_export" in pars:
-       save(prepro,         pars["path_pipeline_export"] + f"/{prefix}_model.pkl" )
-       save(cols_new,       pars["path_pipeline_export"] + f"/{prefix}.pkl" )
-       save(pars_new,       pars["path_pipeline_export"] + f"/{prefix}_pars.pkl" )
-
-
-    ###### Return New dataframe and colname #############################################
-    col_pars = {"prefix" : prefix , "path" :   pars.get("path_pipeline_export", pars.get("path_pipeline", None)) }
-    col_pars["cols_new"] = {
-        prefix :  cols_new  ### list
-    }
-    return df_new, col_pars
-
-
-
-
-
-##################################################################################################
+############################################################################################################
+############################################################################################################
 ##### Text
 def config2(path_model_out="") :
     """
@@ -317,7 +269,6 @@ def config2(path_model_out="") :
     data_name    = "titanic"         ### in data/input/
     model_class  = 'LGBMClassifier'  ### ACTUAL Class name for model_sklearn.py
     n_sample     = 1000
-
     def post_process_fun(y):  return  int(y)
     def pre_process_fun(y):   return  int(y)
 
@@ -329,13 +280,11 @@ def config2(path_model_out="") :
     , 'post_process_fun' : post_process_fun
     , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,
 
-
     ### Pipeline for data processing ##############################
     'pipe_list': [
     ###  coly encoding
     {'uri': 'source/prepro.py::pd_coly',           'pars': {'ymin': -9999999999.0, 'ymax': 999999999.0, 'y_norm_fun': None}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }        
     ,{'uri': 'source/prepro.py::pd_colcat_bin',    'pars': {'path_pipeline': False}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             }
-              
 
     #### Text        
      ,{"uri":  "source/prepro_text.py::pd_coltext",   "pars": {'dimpca':1, "word_minfreq":2}, "cols_family": "coltext",   "cols_out": "col_text",  "type": "" }
@@ -346,8 +295,7 @@ def config2(path_model_out="") :
            }
     },
 
-  'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
-                  },
+  'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']  },
 
   'data_pars': { 'n_sample' : n_sample,
 
@@ -365,7 +313,6 @@ def config2(path_model_out="") :
          'discreate'  : [ 'colcat_bin',   ]
       }   
 
-
       ### Filter data rows   ###################################################################
      ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 }
 
@@ -378,7 +325,8 @@ def config2(path_model_out="") :
 
 
 
-##################################################################################################
+############################################################################################################
+############################################################################################################
 ##### Sampler
 """
 
@@ -466,7 +414,7 @@ def config3(path_model_out="") :
 ##### Time Series
 def config4(path_model_out="") :
     """
-       Contains all needed informations 
+
     """
     config_name  = os_get_function_name()
     data_name    = "titanic"         ### in data/input/
@@ -521,7 +469,6 @@ def config4(path_model_out="") :
       ### columns for model input    #########################################################
       'cols_model_group': [ # 'colnum', 
                             'colcat_bin',
-
                           ],
 
       #### Separate Category Sparse from Continuous (DLearning input)
@@ -540,6 +487,117 @@ def config4(path_model_out="") :
     ##### Filling Global parameters    #########################################################
     model_dict        = global_pars_update(model_dict, data_name, config_name )
     return model_dict
+
+
+
+def config9(path_model_out="") :
+    """
+       python  example/test_features.py  train       --nsample 500 --config config1
+    """
+    config_name  = os_get_function_name()
+    data_name    = "titanic"         ### in data/input/
+    model_class  = 'LGBMClassifier'  ### ACTUAL Class name for model_sklearn.py
+    n_sample     = 1000
+
+    def post_process_fun(y):  return  int(y)
+    def pre_process_fun(y):   return  int(y)
+
+    model_dict = {'model_pars': {
+    ### LightGBM API model   #######################################
+     'model_class': model_class
+    ,'model_pars' : {'objective': 'binary', 'n_estimators':3,  }
+    ,'post_process_fun' : post_process_fun
+    ,'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,
+
+
+    ### Pipeline for data processing ##############################
+    'pipe_list': [
+    ###  coly processing
+    {'uri': 'source/prepro.py::pd_coly',          'pars': {'y_norm_fun': None}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }
+    ,{'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {'path_pipeline': False}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             }
+
+
+      #### Bug in NA values
+      ,{'uri': 'source/prepro.py::pd_colcat_encoder_generic',
+        'pars': {'model_name': 'HashingEncoder',
+        'model_pars': {'verbose':1, 'return_df': True }},
+        'cols_family': 'colcat',
+        'cols_out': 'colcat_encoder2',     'type': ''}
+
+
+
+    #### Example of Custom processor
+    ,{"uri":  THIS_FILEPATH + "::pd_col_amyfun",   "pars": {}, "cols_family": "colnum",   "cols_out": "col_myfun",  "type": "" },
+
+    ],
+           }
+    },
+
+  'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']                  },
+
+  'data_pars': { 'n_sample' : n_sample,
+      'cols_input_type' : cols_input_type_2,
+
+      'cols_model_group': [ 'colnum',
+                            'colcat_bin',
+                            'col_myfun'
+                          ],
+      #### Separate Category Sparse from Continuous (DLearning input)
+      'cols_model_type': {
+         'continuous' : [ 'colnum',   ],
+         'discreate'  : [ 'colcat_bin',    ]
+      }
+
+      ### Filter data rows   ###################################################################
+     ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 }
+         }
+      }
+
+    ##### Filling Global parameters    #########################################################
+    model_dict        = global_pars_update(model_dict, data_name, config_name )
+    return model_dict
+
+
+
+def pd_col_amyfun(df: pd.DataFrame, col: list=None, pars: dict=None):
+    """
+    Example of custom Processor
+    Used at prediction time
+        "path_pipeline"  :
+
+    Training time :
+        "path_features_store" :  to store intermediate dataframe
+        "path_pipeline_export":  to store pipeline  for later usage
+
+    """
+    prefix = "myfun"
+    #### Inference time LOAD previous pars  ###########################################
+    from prepro import prepro_load, prepro_save
+    prepro, pars_saved, cols_saved = prepro_load(prefix, pars)
+
+    #### Do something #################################################################
+    if prepro is None :   ###  Training time
+        dfy, coly  = pars['dfy'], pars['coly']
+        def prepro(df, a=0): return df    ### model
+        pars['pars_prepro'] = {'a': 5}   ### new params
+
+    else :  ### predict time
+        pars = pars_saved  ##merge
+
+    ### Transform features ###################################
+    df_new         = prepro(df[col], **pars['pars_prepro'] )  ### Do Nothing
+    df_new.columns = [  col + f"_{prefix}"  for col in df.columns ]
+    cols_new       = list(df_new.columns)
+
+
+
+
+
+    ###################################################################################
+    ###### Training time save all #####################################################
+    df_new, col_pars = prepro_save(prefix, pars, df_new, cols_new, prepro)
+    return df_new, col_pars
+
 
 
 
@@ -567,10 +625,6 @@ from core_run import predict
 
 ###########################################################################################################
 ###########################################################################################################
-"""
-
-
-"""
 if __name__ == "__main__":
     import fire
     fire.Fire()

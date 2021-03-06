@@ -201,6 +201,11 @@ def preprocess(path_train_X="", path_train_y="", path_pipeline_export="", cols_g
 
        dfi, col_pars = pipe_fun(df_, cols_list, pars= pars)
 
+       ## Check Index are matching for Later JOIN: Issues with Sampler, re-index !!!!!!
+       if 'sampler' not in pipe_i['uri'] :
+          dfi.index = df_.index
+          # assert dfi.index == df_.index, "df.index are not matching"
+
 
        ### Concatenate colnum, colnum_bin into cols_family_all , dfi_all  ###########################
        for colj, colist in  col_pars['cols_new'].items() :
