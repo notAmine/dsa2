@@ -316,8 +316,8 @@ def test(config=''):
 
     ###### Keras has 1 tuple input    ###########################
     colg_input = {
-      'cols_wide_input':   ['colnum', 'colcat_onehot' ],
-      'cols_deep_input':   ['colnum', 'colcat_onehot' ],
+      'cols_wide_input':   ['colnum', 'colcat' ],
+      'cols_deep_input':   ['colnum', 'colcat' ],
     }
 
 
@@ -338,8 +338,8 @@ def test(config=''):
     data_pars = {'n_sample': n_sample,
                   'cols_input_type': cols_input_type_1,
 
-                  'cols_model_group': ['colnum_bin',
-                                       'colcat_bin',
+                  'cols_model_group': ['colnum',
+                                       'colcat',
                                        # 'coltext',
                                        # 'coldate',
                                        # 'colcross_pair'
