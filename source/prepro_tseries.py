@@ -75,16 +75,6 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
     Usage :
     ,{"uri":  THIS_FILEPATH + "::pd_dsa2_custom",   "pars": {'coldate': 'date'}, "cols_family": "coldate",   "cols_out": "coldate_features1",  "type": "" },
 
-
-
-
-    Used at prediction time
-        "path_pipeline"  :
-
-    Training time :
-        "path_features_store" :  to store intermediate dataframe
-        "path_pipeline_export":  to store pipeline  for later usage
-
     """
     prefix = "coldate_myfun"
     #### Inference time LOAD previous pars  ###########################################
@@ -101,13 +91,13 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
 
         #### time features
         dfi, coli = pd_ts_date(df, cols=[coldate], pars={'col_add':['day', 'month', 'year', 'weekday']})
-        dfnew     = dfi
+        df_new     = dfi
 
         #### Rolling features
-        dfi, coli = pd_ts_rolling(df,  cols= ['date', 'item', 'store', 'sales'], 
+        dfi, coli = pd_ts_rolling(df,  cols= ['date', 'item', 'store', 'sales'],
                                   pars= {'col_groupby' : ['store','item'],
-                                         'col_stat':     'sales', 'lag_list': [7, 30]})            
-        dfnew = pd.concat([dfnew dfi], axis=1)
+                                         'col_stat':     'sales', 'lag_list': [7, 30]})
+        df_new = pd.concat([df_new , dfi], axis=1)
 
 
     else :  ### predict time
