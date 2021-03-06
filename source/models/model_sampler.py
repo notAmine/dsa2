@@ -86,6 +86,17 @@ class Model(object):
         if model_pars is None:
             self.model = None
         else:
+
+                
+            model = {'TVAE' : TVAE, 'CTGAN' : CTGAN, 'PAR' : PAR}[model_name]
+            if model_name == 'PAR':
+                model = model(entity_columns = pars['entity_columns'],
+                              context_columns = pars['context_columns'],
+                              sequence_index = pars['sequence_index'])
+            else:
+                model = model(primary_key=primary_key)   
+
+
             model_class = globals()[model_pars['model_class']]
             self.model = model_class(**model_pars['model_pars'])
             if VERBOSE: log(model_class, self.model)
