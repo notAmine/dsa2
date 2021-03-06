@@ -277,9 +277,7 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 def test(config=''):
     """
         Group of columns for the input model
-           cols_input_group = [
-
-          ]
+           cols_input_group = [ ]
           for cols in cols_input_group,
 
 
@@ -303,49 +301,66 @@ def test(config=''):
     n_wide_features = 20
     n_deep_features = n_features - n_wide_features
 
+
+    #############################################################
     ##### Generate column actual names from
+    colnum = [ 'col_0', 'col_1']
+    colcat = [ 'col_2', 'col_3']
+
+    cols_input_type_1 = {
+        'colnum' : colnum,
+        'colcat' : colcat
+    }
+
+    ###### Keras has 1 tuple input    ###########################
     colg_input = {
       'cols_wide_input':   ['colnum', 'colcat_onehot' ],
       'cols_deep_input':   ['colnum', 'colcat_onehot' ],
     }
 
 
-    cols_family = {
-        'colnum' : [],
-        'colcat' : []
-    }
-
-    cols_model_input_group = {}
+    cols_model_type2= {}
     for colg, colist in colg_input.items() :
-        cols_model_input_group[colg] = []
+        cols_model_type2[colg] = []
         for colg_i in colist :
-          cols_model_input_group[colg].extend( cols_family[colg_i] )
+          cols_model_type2[colg].extend( cols_input_type_1[colg_i] )
 
 
+    ##################################################################################
     model_pars = {'model_class': 'WideAndDeep',
                   'model_pars': {'n_wide_cross': n_wide_features,
                                  'n_wide':       n_deep_features},
                  }
 
-    data_pars = {'train': {'Xtrain': X_train,
+    n_sample = 100
+    data_pars = {'n_sample': n_sample,
+                  'cols_input_type': cols_input_type_1,
+
+                  'cols_model_group': ['colnum_bin',
+                                       'colcat_bin',
+                                       # 'coltext',
+                                       # 'coldate',
+                                       # 'colcross_pair'
+                                       ],
+
+                  'cols_model_type2' : cols_model_type2
+
+
+        ### Filter data rows   #######################3############################
+        , 'filter_pars': {'ymax': 2, 'ymin': -1}
+                  }
+    data_pars['train'] ={'Xtrain': X_train,
                            'ytrain': y_train,
                            'Xtest': X_test,
-                           'ytest': y_test},
-                 'eval': {'X': X_valid,
-                          'y': y_valid},
-                 'predict': {'X': X_valid},
-
-
-                 'cols_model_input_group' :cols_model_input_group,
-
-                 'n_features': n_features,
-                 'n_wide_features': n_wide_features,
-                 'n_deep_features': n_deep_features,
-                }
+                           'ytest': y_test}
+    data_pars['eval'] =  {'X': X_valid,
+                          'y': y_valid}
+    data_pars['predict'] = {'X': X_valid}
 
     compute_pars = { 'compute_pars' : { 'epochs': 2,
                     'callbacks': callbacks} }
 
+    ######## Run ###########################################
     test_helper(model_pars, data_pars, compute_pars)
 
 
