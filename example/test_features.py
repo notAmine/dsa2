@@ -587,7 +587,7 @@ def pd_col_amyfun(df: pd.DataFrame, col: list=None, pars: dict=None):
     ### Transform features ###################################
     df_new         = prepro(df[col], **pars['pars_prepro'] )  ### Do Nothing
     df_new.index   = df.index  ### Impt for JOIN
-    df_new.columns = [  col + f"_{prefix}"  for col in df.columns ]
+    df_new.columns = [  col + f"_{prefix}"  for col in df_new.columns ]
     cols_new       = list(df_new.columns)
 
 

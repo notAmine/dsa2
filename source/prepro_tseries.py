@@ -22,8 +22,7 @@
 """
 import warnings, os, sys, re
 warnings.filterwarnings('ignore')
-import pandas as pd, numpy as np, copy
-import pdb
+import pandas as pd, numpy as np, copy, pdb
 
 ####################################################################################################
 #### Add path for python import
@@ -34,12 +33,9 @@ root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
 print(root)
 
 DEBUG= True
-
-
 ####################################################################################################
 from util_feature import (load, save_list, load_function_uri,  save,
                           save_features, load_features)
-
 
 def log(*s, n=0, m=0):
     sspace = "#" * n
@@ -69,6 +65,65 @@ except:
     from tsfresh.utilities.dataframe_functions import roll_time_series
     from deltapy import transform, interact, mapper, extract
     import pandasvault, datetime as dt
+
+
+###########################################################################################
+###########################################################################################
+def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
+    """
+    Example of custom Processor Combining
+    Usage :
+    ,{"uri":  THIS_FILEPATH + "::pd_dsa2_custom",   "pars": {'coldate': 'date'}, "cols_family": "coldate",   "cols_out": "coldate_features1",  "type": "" },
+
+
+
+
+    Used at prediction time
+        "path_pipeline"  :
+
+    Training time :
+        "path_features_store" :  to store intermediate dataframe
+        "path_pipeline_export":  to store pipeline  for later usage
+
+    """
+    prefix = "coldate_myfun"
+    #### Inference time LOAD previous pars  ###########################################
+    from prepro import prepro_load, prepro_save
+    prepro, pars_saved, cols_saved = prepro_load(prefix, pars)
+
+    #### Do something #################################################################
+    from source.prepro_tseries import pd_ts_date, pd_ts_rolling
+    if prepro is None :   ###  Training time
+        dfy, coly  = pars['dfy'], pars['coly']
+
+        coldate = pars['coldate']
+        df = df.set_index(coldate)
+
+        #### time features
+        dfi, coli = pd_ts_date(df, cols=[coldate], pars={'col_add':['day', 'month', 'year', 'weekday']})
+        dfnew     = dfi
+
+        #### Rolling features
+        dfi, coli = pd_ts_rolling(df,  cols= ['date', 'item', 'store', 'sales'], 
+                                  pars= {'col_groupby' : ['store','item'],
+                                         'col_stat':     'sales', 'lag_list': [7, 30]})            
+        dfnew = pd.concat([dfnew dfi], axis=1)
+
+
+    else :  ### predict time
+        pars = pars_saved  ##merge
+
+    ### Transform features ###################################
+    df_new.index   = df.index  ### Impt for JOIN
+    df_new.columns = [col + f"_{prefix}"  for col in df_new.columns ]
+    cols_new       = list(df_new.columns)
+
+    ###################################################################################
+    ###### Training time save all #####################################################
+    df_new, col_pars = prepro_save(prefix, pars, df_new, cols_new, prepro)
+    return df_new, col_pars
+
+
 
 
 
@@ -163,12 +218,15 @@ def pd_ts_rolling(df: pd.DataFrame, cols: list=None, pars: dict=None):
     """
     cat_cols     = []
     col_new      = []
+    id_cols      = []
     colgroup     = pars.get('col_groupby', ['id'])
     colstat      = pars['col_stat']
     lag_list     = pars.get('lag_list', [7, 14, 30, 60, 180])
-    id_cols      = []
+    len_shift    = pars.get('len_shift', 28)
 
-    len_shift = 28
+    len_shift_list   = pars.get('len_shift_list' , [1,7,14])
+    len_window_list  = pars.get('len_window_list', [7, 14, 30, 60])
+
     for i in lag_list:
         print('Rolling period:', i)
         df['rolling_mean_' + str(i)] = df.groupby(colgroup)[colstat].transform(
@@ -180,12 +238,12 @@ def pd_ts_rolling(df: pd.DataFrame, cols: list=None, pars: dict=None):
         col_new.append('rolling_mean_' + str(i))
         col_new.append('rolling_std_' + str(i))
 
-    # Rollings
-    # with sliding shift
-    for len_shift in [1, 7, 14]:
+
+    # Rollings with sliding shift
+    for len_shift in len_shift_list:
         print('Shifting period:', len_shift)
-        for len_window in [7, 14, 30, 60]:
-            col_name = 'rolling_mean_tmp_' + str(len_shift) + '_' + str(len_window)
+        for len_window in len_window_list:
+            col_name = f'rolling_mean_tmp_{len_shift}_{len_window}'
             df[col_name] = df.groupby(colgroup)[colstat].transform(
                 lambda x: x.shift(len_shift).rolling(len_window).mean())
             col_new.append(col_name)
@@ -194,6 +252,7 @@ def pd_ts_rolling(df: pd.DataFrame, cols: list=None, pars: dict=None):
         col_new.append(col_name)
 
     return df[col_new], cat_cols
+
 
 
 def pd_ts_lag(df: pd.DataFrame, cols: list=None, pars: dict=None):
