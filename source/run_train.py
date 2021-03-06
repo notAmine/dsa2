@@ -26,6 +26,24 @@ DEBUG = True
 from util_feature import   load, save_list, load_function_uri, save
 from run_preprocess import  preprocess, preprocess_load
 
+
+"""
+### bug with logger
+from util import logger_class
+logger = logger_class()
+
+def log(*s):
+    logger.log(*s, level=1)
+
+def log2(*s):
+    logger.log(*s, level=2)
+
+def log_pd(df, *s, n=0, m=1):
+    sjump = "\n" * m
+    log(sjump,  df.head(n))
+"""
+
+
 def log(*s, n=0, m=0):
     sspace = "#" * n
     sjump = "\n" * m
@@ -33,12 +51,13 @@ def log(*s, n=0, m=0):
     print(sjump, sspace, s, sspace, flush=True)
 
 
-def log_debug(*s, n=0, m=0):
+def log2(*s, n=0, m=0):
     if DEBUG :
         sspace = "#" * n
         sjump = "\n" * m
         ### Implement pseudo Logging
         print(sjump, sspace, s, sspace, flush=True)
+
 
 def save_features(df, name, path):
     if path is not None :
@@ -84,7 +103,7 @@ def map_model(model_name):
 
     ##### Local folder
     model_file = model_name.split(":")[0]
-    if  'optuna' in model_name : model_file = 'model_optuna'
+    if  'optuna' in model_name : model_file = 'optuna_lightgbm'
 
     try :
        ##  'models.model_bayesian_pyro'   'model_widedeep'
@@ -100,6 +119,24 @@ def map_model(model_name):
     return modelx
 
 
+def mlflow_register(dfXy, model_dict: dict, stats: dict, mlflow_pars:dict ):
+    log("#### Using mlflow #########################################################")
+    # def register(run_name, params, metrics, signature, model_class, tracking_uri= "sqlite:///local.db"):
+    from run_mlflow import register
+    from mlflow.models.signature import infer_signature
+
+    train_signature = dfXy[model_dict['data_pars']['cols_model']]
+    y_signature     = dfXy[model_dict['data_pars']['coly']]
+    signature       = infer_signature(train_signature, y_signature)
+
+    register( run_name    = model_dict['global_pars']['config_name'],
+             params       = model_dict['global_pars'],
+             metrics      = stats["metrics_test"],
+             signature    = signature,
+             model_class  = model_dict['model_pars']["model_class"],
+             tracking_uri = mlflow_pars.get( 'tracking_db', "sqlite:///mlflow_local.db")
+            )
+
 
 def train(model_dict, dfX, cols_family, post_process_fun):
     """  Train the model using model_dict, save model, save prediction
@@ -114,7 +151,11 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     model_name, model_path   = model_pars['model_class'], model_dict['global_pars']['path_train_model']
     metric_list              = compute_pars['metric_list']
 
-    log("#### Data preparation #########################################################")
+    assert  'cols_model_type2' in data_pars, 'Missing cols_model_type2, split of columns by data type '
+    log2(data_pars['cols_model_type2'])
+
+
+    log("#### Model Input preparation #########################################################")
     log(dfX.shape)
     dfX    = dfX.sample(frac=1.0)
     itrain = int(0.6 * len(dfX))
@@ -123,6 +164,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     coly   = data_pars['coly']
     log('Model colsX',colsX)
     log('Model coly', coly)
+    log('Model column type: ',data_pars['cols_model_type2'])
 
     data_pars['data_type'] = 'ram'
     data_pars['train'] = {'Xtrain' : dfX[colsX].iloc[:itrain, :],
@@ -133,9 +175,6 @@ def train(model_dict, dfX, cols_family, post_process_fun):
                           'Xval'   : dfX[colsX].iloc[ival:, :],
                           'yval'   : dfX[coly].iloc[ival:],
                           }
-
-    assert  'cols_model_type2' in data_pars, 'Missing cols_model_type2, split of columns by data type '
-    log_debug(data_pars['cols_model_type2'])
 
 
     log("#### Init, Train ############################################################")
@@ -216,9 +255,6 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     """
     model_dict  = model_dict_load(model_dict, config_path, config_name, verbose=True)
 
-    mlflow_pars = model_dict.get('compute_pars', {}).get('mlflow_pars', None)
-
-
     m           = model_dict['global_pars']
     path_data_train   = m['path_data_train']
     path_train_X      = m.get('path_train_X', path_data_train + "/features.zip") #.zip
@@ -232,15 +268,12 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     log(path_output)
 
 
-    log("#### load input column family  ##################################################")
-    try :
-        cols_group = model_dict['data_pars']['cols_input_type']  ### the model config file
-    except :
-        cols_group = json.load(open(path_data_train + "/cols_group.json", mode='r'))
+    log("#### load raw data column family  ###############################################")
+    cols_group = model_dict['data_pars']['cols_input_type']  ### Raw
     log(cols_group)
 
 
-    log("#### Preprocess  ################################################################")        
+    log("#### Preprocess  ################################################################")
     preprocess_pars = model_dict['model_pars']['pre_process_pars']
      
     if mode == "run_preprocess" :
@@ -257,42 +290,29 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
                                           preprocess_pars,  path_features_store=path_features_store)
 
 
-    ### Actual column names for label y and Input X (colnum , colcat) 
+    log("#### Extract column names  #####################################################")
+    ### Actual column names for Model Input :  label y and Input X (colnum , colcat)
     model_dict['data_pars']['coly']       = cols['coly']
     model_dict['data_pars']['cols_model'] = sum([  cols[colgroup] for colgroup in model_dict['data_pars']['cols_model_group'] ]   , [])
 
 
-    #### Col Group to model input : Sparse, continuous, .... (ie Neural Network
+    #### Col Group by column type : Sparse, continuous, .... (ie Neural Network feed Input
     ## 'coldense' = [ 'colnum' ]     'colsparse' = ['colcat' ]
-    ##
     model_dict['data_pars']['cols_model_type2'] = {}
     for colg, colg_list in model_dict['data_pars'].get('cols_model_type', {}).items() :
         model_dict['data_pars']['cols_model_type2'][colg] = sum([  cols[colgroup] for colgroup in colg_list ]   , [])
 
 
-   
     log("#### Train model: #############################################################")
     log(str(model_dict)[:1000])
     post_process_fun      = model_dict['model_pars']['post_process_fun']
     dfXy, dfXytest,stats  = train(model_dict, dfXy, cols, post_process_fun)
 
+
+    log("#### Register model ##########################################################")
+    mlflow_pars = model_dict.get('compute_pars', {}).get('mlflow_pars', None)
     if mlflow_pars is not None:
-        log("#### Using mlflow #########################################################")
-        # def register(run_name, params, metrics, signature, model_class, tracking_uri= "sqlite:///local.db"):
-        from run_mlflow import register
-        from mlflow.models.signature import infer_signature
-
-        train_signature = dfXy[model_dict['data_pars']['cols_model']]
-        y_signature     = dfXy[model_dict['data_pars']['coly']]
-        signature       = infer_signature(train_signature, y_signature)
-
-        register( run_name    = model_dict['global_pars']['config_name'],
-                 params       = model_dict['global_pars'],
-                 metrics      = stats["metrics_test"],
-                 signature    = signature,
-                 model_class  = model_dict['model_pars']["model_class"],
-                 tracking_uri = mlflow_pars.get( 'tracking_db', "sqlite:///mlflow_local.db")
-                )
+        mlflow_register(dfXy, model_dict, stats, mlflow_pars)
 
 
     if return_mode == 'dict' :
