@@ -25,7 +25,20 @@ DEBUG = True
 ####################################################################################################
 from util_feature import   load, save_list, load_function_uri, save
 from run_preprocess import  preprocess, preprocess_load
+from util import logger_class
+logger = logger_class()
 
+"""
+def log(*s):
+    logger.log(*s, level=1)
+
+def log2(*s):
+    logger.log(*s, level=2)
+
+def log_pd(df, *s, n=0, m=1):
+    sjump = "\n" * m
+    log(sjump,  df.head(n))
+"""
 
 
 def log(*s, n=0, m=0):
@@ -41,6 +54,7 @@ def log_debug(*s, n=0, m=0):
         sjump = "\n" * m
         ### Implement pseudo Logging
         print(sjump, sspace, s, sspace, flush=True)
+
 
 def save_features(df, name, path):
     if path is not None :
@@ -135,7 +149,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     metric_list              = compute_pars['metric_list']
 
     assert  'cols_model_type2' in data_pars, 'Missing cols_model_type2, split of columns by data type '
-    log_debug(data_pars['cols_model_type2'])
+    log2(data_pars['cols_model_type2'])
 
 
     log("#### Model Input preparation #########################################################")
