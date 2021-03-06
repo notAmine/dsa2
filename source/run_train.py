@@ -25,10 +25,13 @@ DEBUG = True
 ####################################################################################################
 from util_feature import   load, save_list, load_function_uri, save
 from run_preprocess import  preprocess, preprocess_load
+
+
+"""
+### bug with logger
 from util import logger_class
 logger = logger_class()
 
-"""
 def log(*s):
     logger.log(*s, level=1)
 
@@ -48,7 +51,7 @@ def log(*s, n=0, m=0):
     print(sjump, sspace, s, sspace, flush=True)
 
 
-def log_debug(*s, n=0, m=0):
+def log2(*s, n=0, m=0):
     if DEBUG :
         sspace = "#" * n
         sjump = "\n" * m
