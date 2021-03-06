@@ -41,10 +41,8 @@ def init(*kw, **kwargs):
 def Modelcustom(n_wide_cross, n_wide, n_feat=8, m_EMBEDDING=10, loss='mse', metric = 'mean_squared_error'):
 
         #### Wide model with the functional API
-        # col_wide_cross          = layers.Input(shape=(n_wide_cross,))
-        col_wide_cross          = layers.Input(shape=(4,))
-        # col_wide                = layers.Input(shape=(n_wide,))
-        col_wide                = layers.Input(shape=(4,))
+        col_wide_cross          = layers.Input(shape=(n_wide_cross,))
+        col_wide                = layers.Input(shape=(n_wide,))
         merged_layer            = layers.concatenate([col_wide_cross, col_wide])
         merged_layer            = layers.Dense(15, activation='relu')(merged_layer)
         predictions             = layers.Dense(1)(merged_layer)
@@ -55,10 +53,8 @@ def Modelcustom(n_wide_cross, n_wide, n_feat=8, m_EMBEDDING=10, loss='mse', metr
 
 
         #### Deep model with the Functional API
-        # deep_inputs             = layers.Input(shape=(n_wide,))
-        deep_inputs             = layers.Input(shape=(4,))
-        # embedding               = layers.Embedding(n_feat, m_EMBEDDING, input_length= n_wide)(deep_inputs)
-        embedding               = layers.Embedding(n_feat, m_EMBEDDING, input_length= 4)(deep_inputs)
+        deep_inputs             = layers.Input(shape=(n_wide,))
+        embedding               = layers.Embedding(n_feat, m_EMBEDDING, input_length= n_wide)(deep_inputs)
         embedding               = layers.Flatten()(embedding)
 
         merged_layer            = layers.Dense(15, activation='relu')(embedding)
@@ -87,6 +83,10 @@ class Model(object):
             self.model = None
         else:
             model_class = model_pars['model_class']  # globals() removed
+
+            n_wide = calc( data_pars)
+            n_deep = calc( data_pars)
+
             self.model  = Modelcustom(**model_pars['model_pars'])
             if VERBOSE: log(model_class, self.model)
             self.model.summary()
@@ -268,7 +268,7 @@ def get_dataset(data_pars=None, task_type="train", **kw):
             Xtuple_test = []
             for cols_groupname in cols_input_formodel :
                 cols_i = cols_type[cols_groupname]
-                Xtuple_test.append( Xtest[cols_i] )
+                Xtuple_test.append( np.array(Xtest[cols_i] ))
 
             return Xtuple_train, ytrain, Xtuple_test, ytest
 
@@ -331,11 +331,18 @@ def test(config=''):
         for colg_i in colist :
           cols_model_type2[colg].extend( cols_input_type_1[colg_i] )
 
+    print(cols_model_type2)
+
 
     ##################################################################################
+    # model_pars = {'model_class': 'WideAndDeep',
+    #               'model_pars': {'n_wide_cross': n_wide_features,
+    #                              'n_wide':       n_deep_features},
+    #              }
+
     model_pars = {'model_class': 'WideAndDeep',
-                  'model_pars': {'n_wide_cross': n_wide_features,
-                                 'n_wide':       n_deep_features},
+                  'model_pars': {'n_wide_cross': len(cols_model_type2['cols_wide_input']),
+                                 'n_wide':       len(cols_model_type2['cols_deep_input'])},
                  }
 
     n_sample = 100
