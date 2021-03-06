@@ -41,8 +41,10 @@ def init(*kw, **kwargs):
 def Modelcustom(n_wide_cross, n_wide, n_feat=8, m_EMBEDDING=10, loss='mse', metric = 'mean_squared_error'):
 
         #### Wide model with the functional API
-        col_wide_cross          = layers.Input(shape=(n_wide_cross,))
-        col_wide                = layers.Input(shape=(n_wide,))
+        # col_wide_cross          = layers.Input(shape=(n_wide_cross,))
+        col_wide_cross          = layers.Input(shape=(4,))
+        # col_wide                = layers.Input(shape=(n_wide,))
+        col_wide                = layers.Input(shape=(4,))
         merged_layer            = layers.concatenate([col_wide_cross, col_wide])
         merged_layer            = layers.Dense(15, activation='relu')(merged_layer)
         predictions             = layers.Dense(1)(merged_layer)
@@ -53,8 +55,10 @@ def Modelcustom(n_wide_cross, n_wide, n_feat=8, m_EMBEDDING=10, loss='mse', metr
 
 
         #### Deep model with the Functional API
-        deep_inputs             = layers.Input(shape=(n_wide,))
-        embedding               = layers.Embedding(n_feat, m_EMBEDDING, input_length= n_wide)(deep_inputs)
+        # deep_inputs             = layers.Input(shape=(n_wide,))
+        deep_inputs             = layers.Input(shape=(4,))
+        # embedding               = layers.Embedding(n_feat, m_EMBEDDING, input_length= n_wide)(deep_inputs)
+        embedding               = layers.Embedding(n_feat, m_EMBEDDING, input_length= 4)(deep_inputs)
         embedding               = layers.Flatten()(embedding)
 
         merged_layer            = layers.Dense(15, activation='relu')(embedding)
@@ -239,7 +243,7 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
         if task_type == "eval":
             d = data_pars[task_type]
-            Xtrain, ytrain  = d["Xtrain"], d["ytrain"]
+            Xtrain, ytrain  = d["X"], d["y"]
 
             Xtuple_train = []
             for cols_groupname in cols_input_formodel :
@@ -259,7 +263,7 @@ def get_dataset(data_pars=None, task_type="train", **kw):
             Xtuple_train = []
             for cols_groupname in cols_input_formodel :
                 cols_i = cols_type[cols_groupname]
-                Xtuple_train.append( Xtrain[cols_i] )
+                Xtuple_train.append( np.array(Xtrain[cols_i] ))
 
             Xtuple_test = []
             for cols_groupname in cols_input_formodel :
@@ -288,7 +292,7 @@ def test(config=''):
     """
     global model, session
 
-    X = pd.DataFrame( np.random.rand(100,30), columns= [ 'col_' +str(i) for i in range(20)] )
+    X = pd.DataFrame( np.random.rand(100,30), columns= [ 'col_' +str(i) for i in range(30)] )
     y = pd.DataFrame( np.random.binomial(n=1, p=0.5, size=[100]), columns = ['coly'] )
 
 
@@ -296,7 +300,7 @@ def test(config=''):
     X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
 
     early_stopping = EarlyStopping(monitor='loss', patience=3)
-    model_ckpt     = ModelCheckpoint(filepath='', save_best_only=True, monitor='loss')
+    model_ckpt     = ModelCheckpoint(filepath='/home/hari/model_.pth', save_best_only=True, monitor='loss')
     callbacks      = [early_stopping, model_ckpt]
 
     n_features      = X_train.shape[1]  # number of features
