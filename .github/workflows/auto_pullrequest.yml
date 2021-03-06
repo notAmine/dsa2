@@ -26,8 +26,8 @@ jobs:
            git config --local user.email "noelkev0@gmail.com" &&  git config --local user.name "arita37"
            git config --global hub.protocol ssh
            bin/hub pull-request --base arita37:main   --head arita37:multi  -m "Auto Sync multi "  & \
-           bin/hub pull-request --base soheil-star01:multi  --head arita37:dev   -m "Auto Sync arita37/multi"  & \
-           bin/hub pull-request --base mysterious588:multi  --head arita37:dev   -m "Auto Sync arita37/multi"  & \
+           bin/hub pull-request --base MinahilRaza:multi  --head arita37:dev   -m "Auto Sync arita37/multi"  & \
+           bin/hub pull-request --base Ahmed3bbas:multi  --head arita37:dev   -m "Auto Sync arita37/multi"  & \
 
       env:
            GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
