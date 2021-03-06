@@ -20,9 +20,8 @@
        item_id sales -->  per each date, Moving Average, Min, Max over 1month, ...
 
 """
-import warnings, os, sys, re
+import warnings, os, sys, re,  pandas as pd, numpy as np, copy, pdb
 warnings.filterwarnings('ignore')
-import pandas as pd, numpy as np, copy, pdb
 
 ####################################################################################################
 #### Add path for python import
@@ -49,7 +48,6 @@ def logd(*s, n=0, m=0):
         sjump = "\n" * m
         print(*s, fluhs=True)
 
-
 ####################################################################################################
 try:
     from tsfresh import extract_relevant_features, extract_features
@@ -69,14 +67,14 @@ except:
 
 ###########################################################################################
 ###########################################################################################
-def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
+def pd_prepro_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
     """
     Example of custom Processor Combining
     Usage :
     ,{"uri":  THIS_FILEPATH + "::pd_dsa2_custom",   "pars": {'coldate': 'date'}, "cols_family": "coldate",   "cols_out": "coldate_features1",  "type": "" },
 
     """
-    prefix = "coldate_myfun"
+    prefix = "coltseries_custom"
     #### Inference time LOAD previous pars  ###########################################
     from prepro import prepro_load, prepro_save
     prepro, pars_saved, cols_saved = prepro_load(prefix, pars)
@@ -114,8 +112,63 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
     return df_new, col_pars
 
 
+def pd_prepro_custom2(df: pd.DataFrame, cols: list=None, pars: dict=None):
+    """   Generic template for feature generation
+       'colnum' : ['sales1' 'units' ]
+      'pars_function_list' :  [
+       { 'name': 'deltapy.transform::robust_scaler',                 'pars': {'drop':["Close_1"]} },
+       { 'name': 'deltapy.transform::standard_scaler',               'pars': {'drop':["Close_1"]} },
+       ]e
+
+    :param df:
+    :param col:
+    :param pars:
+    :return:
+    """
+    prefix = "coltseries_custom2"
+    #### Inference time LOAD previous pars  ###########################################
+    from prepro import prepro_load, prepro_save
+    prepro, pars_saved, cols_saved = prepro_load(prefix, pars)
+
+    #### Do something #################################################################    
+    df      = df[col]
+    coldate = pars['coldate']
+    colnum  = pars['colnum']
+    colcat  = pars['colcat']
+
+    colgroups = pars['colgroup']
+    colgstat  = pars['colstat']
+
+    log("### Only dates")
+    df1 = pd_ts_date(df, coldate, pars)
+    coldate1 = list(df1.columns)
+
+    log("### Initial features")
+    df1 = df1.join(df, on=coldate, how='left')
+
+    log("### Groupby features")
+    df2 = pd_ts_groupby(df, col, pars)
+    df1 = df1.join(df2, on=coldate, how='left')
+
+    log("### Numerical features")
+    colnum2 = list(df2.columns) + colnum
+    df1     = df1.set_index(coldate1)
+
+    log("### Deltapy features")
+    for pars_function_dict_i in pars.get('pars_function_list', []):
+        dfi = pd_ts_deltapy_generic(df1, col=colnum2, pars=pars_function_dict_i)
+        df1 = df1.join(dfi, on=coldate, how='left')
+
+    df_new = df1
 
 
+    ### Transform features ###################################
+    df_new.columns = [col + f"_{prefix}"  for col in df_new.columns ]
+    cols_new       = list(df_new.columns)
+
+    ###### Training time save all #####################################################
+    df_new, col_pars = prepro_save(prefix, pars, df_new, cols_new, prepro)
+    return df_new, col_pars
 
 
 
@@ -149,8 +202,6 @@ def pd_ts_date(df: pd.DataFrame, cols: list=None, pars: dict=None):
         'dfdate': list(dfdate.columns)  ### list
     }
     return dfdate, col_pars
-
-
 
 
 def pd_ts_groupby(df: pd.DataFrame, cols: list=None, pars: dict=None):
@@ -273,7 +324,6 @@ def pd_ts_difference(df: pd.DataFrame, cols: list=None, pars: dict=None):
     return df
 
 
-
 # def pd_ts_tsfresh_features(df: pd.DataFrame, cols: list=None, pars: dict=None):
     # """
     #
@@ -358,111 +408,8 @@ def pd_ts_deltapy_generic(df: pd.DataFrame, cols: list=None, pars: dict=None ):
     return df_out
 
 
-def pd_ts_deltapy2(df: pd.DataFrame, cols: list=None, pars: dict=None ):
-    """
-       Delta py
-       pars : {  'name' :  "robust_scaler",
-                 'pars'  :  {}
-       }
-    """
-    prefix = 'colts_deltapy'
-
-    ###### Custom code ################################################################
-    dfin = df.fillna(method='ffill')
-    model_name = pars['name']
-    model_pars = pars.get('pars', {})
-
-    if 'path_pipeline' in pars:  #### Prediction time
-        model = load(pars['path_pipeline'] + f"/{prefix}_model.pkl")
-        pars = load(pars['path_pipeline'] + f"/{prefix}_pars.pkl")
-
-    else:  ### Training time  : Dynamic function load
-        from util_feature import load_function_uri
-        ##### transform.robust_scaler(df, drop=["Close_1"])
-        model = load_function_uri(model_name)
-
-    ##### Transform Data  ############################################################
-    df_out = model(dfin, **model_pars)
-
-    # Extract only returns one value, so no columns to loop over.
-    model_name2 = model_name.replace("::", "-")
-    if 'extract' in model_name:
-        col_out = "0_" + model_name
-    else:
-        col_out = [coli + "_" + model_name for coli in df_out.columns]
-        df_out.columns = col_out
-        df_out.index = df_out.index
-    col_new = col_out
-
-    ###### Export #####################################################################
-    if 'path_features_store' in pars and 'path_pipeline_export' in pars:
-        save_features(df_out, 'df_' + prefix, pars['path_features_store'])
-        save(model, pars['path_pipeline_export'] + f"/{prefix}_model.pkl")
-        save(col_new, pars['path_pipeline_export'] + f"/{prefix}.pkl")
-        save(pars, pars['path_pipeline_export'] + f"/{prefix}_pars.pkl")
-
-    col_pars = {'prefix': prefix, 'path': pars.get('path_pipeline_export', pars.get('path_pipeline', None))}
-    col_pars['cols_new'] = {
-        prefix: col_new  ### list of columns
-    }
-    return df_out, col_pars
-
-
-
-
-
-
-
-
-
 ########################################################################################################################
 ########################################################################################################################
-
-def pd_ts_custom(df: pd.DataFrame, cols: list=None, pars: dict=None):
-    """   Generic template for feature generation
-       'colnum' : ['sales1' 'units' ]
-      'pars_function_list' :  [
-       { 'name': 'deltapy.transform::robust_scaler',                 'pars': {'drop':["Close_1"]} },
-       { 'name': 'deltapy.transform::standard_scaler',               'pars': {'drop':["Close_1"]} },
-       ]e
-
-    :param df:
-    :param col:
-    :param pars:
-    :return:
-    """
-
-    df      = df[col]
-    coldate = pars['coldate']
-    colnum  = pars['colnum']
-    colcat  = pars['colcat']
-
-    colgroups = pars['colgroup']
-    colgstat  = pars['colstat']
-
-    log("### Only dates")
-    df1 = pd_ts_date(df, coldate, pars)
-    coldate1 = list(df1.columns)
-
-    log("### Initial features")
-    df1 = df1.join(df, on=coldate, how='left')
-
-    log("### Groupby features")
-    df2 = pd_ts_groupby(df, col, pars)
-    df1 = df1.join(df2, on=coldate, how='left')
-
-    log("### Numerical features")
-    colnum2 = list(df2.columns) + colnum
-    df1     = df1.set_index(coldate1)
-
-    log("### Deltapy features")
-    for pars_function_dict_i in pars.get('pars_function_list', []):
-        dfi = pd_ts_deltapy_generic(df1, col=colnum2, pars=pars_function_dict_i)
-        df1 = df1.join(dfi, on=coldate, how='left')
-
-    return df1
-
-
 
 
 ########################################################################################################################
@@ -696,8 +643,6 @@ def test_prepro_v1():
 
 
 
-
-
 ########################################################################################################################
 if __name__ == "__main__":
     import fire
@@ -709,7 +654,6 @@ if __name__ == "__main__":
 
 def m5_dataset():
     """
-
      https://www.kaggle.com/ratan123/m5-forecasting-lightgbm-with-timeseries-splits
 
 
@@ -815,23 +759,23 @@ def m5_dataset():
     def simple_fe(df):
         
         # demand features
-        df['lag_t28'] = df.groupby(['id'])['demand'].transform(lambda x: x.shift(28))
-        df['lag_t29'] = df.groupby(['id'])['demand'].transform(lambda x: x.shift(29))
-        df['lag_t30'] = df.groupby(['id'])['demand'].transform(lambda x: x.shift(30))
-        df['rolling_mean_t7'] = df.groupby(['id'])['demand'].transform(lambda x: x.shift(28).rolling(7).mean())
-        df['rolling_std_t7'] = df.groupby(['id'])['demand'].transform(lambda x: x.shift(28).rolling(7).std())
-        df['rolling_mean_t30'] = df.groupby(['id'])['demand'].transform(lambda x: x.shift(28).rolling(30).mean())
-        df['rolling_mean_t90'] = df.groupby(['id'])['demand'].transform(lambda x: x.shift(28).rolling(90).mean())
+        df['lag_t28']           = df.groupby(['id'])['demand'].transform(lambda x: x.shift(28))
+        df['lag_t29']           = df.groupby(['id'])['demand'].transform(lambda x: x.shift(29))
+        df['lag_t30']           = df.groupby(['id'])['demand'].transform(lambda x: x.shift(30))
+        df['rolling_mean_t7']   = df.groupby(['id'])['demand'].transform(lambda x: x.shift(28).rolling(7).mean())
+        df['rolling_std_t7']    = df.groupby(['id'])['demand'].transform(lambda x: x.shift(28).rolling(7).std())
+        df['rolling_mean_t30']  = df.groupby(['id'])['demand'].transform(lambda x: x.shift(28).rolling(30).mean())
+        df['rolling_mean_t90']  = df.groupby(['id'])['demand'].transform(lambda x: x.shift(28).rolling(90).mean())
         df['rolling_mean_t180'] = df.groupby(['id'])['demand'].transform(lambda x: x.shift(28).rolling(180).mean())
-        df['rolling_std_t30'] = df.groupby(['id'])['demand'].transform(lambda x: x.shift(28).rolling(30).std())
+        df['rolling_std_t30']   = df.groupby(['id'])['demand'].transform(lambda x: x.shift(28).rolling(30).std())
         
         # price features
-        df['lag_price_t1'] = df.groupby(['id'])['sell_price'].transform(lambda x: x.shift(1))
-        df['price_change_t1'] = (df['lag_price_t1'] - df['sell_price']) / (df['lag_price_t1'])
+        df['lag_price_t1']           = df.groupby(['id'])['sell_price'].transform(lambda x: x.shift(1))
+        df['price_change_t1']        = (df['lag_price_t1'] - df['sell_price']) / (df['lag_price_t1'])
         df['rolling_price_max_t365'] = df.groupby(['id'])['sell_price'].transform(lambda x: x.shift(1).rolling(365).max())
-        df['price_change_t365'] = (df['rolling_price_max_t365'] - df['sell_price']) / (df['rolling_price_max_t365'])
-        df['rolling_price_std_t7'] = df.groupby(['id'])['sell_price'].transform(lambda x: x.rolling(7).std())
-        df['rolling_price_std_t30'] = df.groupby(['id'])['sell_price'].transform(lambda x: x.rolling(30).std())
+        df['price_change_t365']      = (df['rolling_price_max_t365'] - df['sell_price']) / (df['rolling_price_max_t365'])
+        df['rolling_price_std_t7']   = df.groupby(['id'])['sell_price'].transform(lambda x: x.rolling(7).std())
+        df['rolling_price_std_t30']  = df.groupby(['id'])['sell_price'].transform(lambda x: x.rolling(30).std())
         df.drop(['rolling_price_max_t365', 'lag_price_t1'], inplace = True, axis = 1)
         
         # time features
@@ -866,15 +810,15 @@ def m5_dataset():
     mean_score = []
     for fold_n, (train_index, valid_index) in enumerate(splits):
         print('Fold:',fold_n+1)
-        X_train, X_valid = x[columns].iloc[train_index], x[columns].iloc[valid_index]
-        y_train, y_valid = y.iloc[train_index], y.iloc[valid_index]
-        dtrain = lgb.dfset(X_train, label=y_train)
-        dvalid = lgb.dfset(X_valid, label=y_valid)
-        clf = lgb.train(params, dtrain, 2500, valid_sets = [dtrain, dvalid],early_stopping_rounds = 50, verbose_eval=100)
+        X_train, X_valid                          = x[columns].iloc[train_index], x[columns].iloc[valid_index]
+        y_train, y_valid                          = y.iloc[train_index], y.iloc[valid_index]
+        dtrain                                    = lgb.dfset(X_train, label=y_train)
+        dvalid                                    = lgb.dfset(X_valid, label=y_valid)
+        clf                                       = lgb.train(params, dtrain, 2500, valid_sets = [dtrain, dvalid],early_stopping_rounds = 50, verbose_eval=100)
         feature_importances[f'fold_{fold_n + 1}'] = clf.feature_importance()
-        y_pred_valid = clf.predict(X_valid,num_iteration=clf.best_iteration)
-        y_oof[valid_index] = y_pred_valid
-        val_score = np.sqrt(metrics.mean_squared_error(y_pred_valid, y_valid))
+        y_pred_valid                              = clf.predict(X_valid,num_iteration=clf.best_iteration)
+        y_oof[valid_index]                        = y_pred_valid
+        val_score                                 = np.sqrt(metrics.mean_squared_error(y_pred_valid, y_valid))
         print(f'val rmse score is {val_score}')
         mean_score.append(val_score)
         y_preds += clf.predict(test[columns], num_iteration=clf.best_iteration)/n_fold
