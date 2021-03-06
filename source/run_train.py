@@ -26,6 +26,8 @@ DEBUG = True
 from util_feature import   load, save_list, load_function_uri, save
 from run_preprocess import  preprocess, preprocess_load
 
+
+
 def log(*s, n=0, m=0):
     sspace = "#" * n
     sjump = "\n" * m
@@ -236,7 +238,6 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     """
     model_dict  = model_dict_load(model_dict, config_path, config_name, verbose=True)
 
-
     m           = model_dict['global_pars']
     path_data_train   = m['path_data_train']
     path_train_X      = m.get('path_train_X', path_data_train + "/features.zip") #.zip
@@ -250,8 +251,8 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     log(path_output)
 
 
-    log("#### load input column family  ##################################################")
-    cols_group = model_dict['data_pars']['cols_input_type']  ### the model config file
+    log("#### load raw data column family  ###############################################")
+    cols_group = model_dict['data_pars']['cols_input_type']  ### Raw
     log(cols_group)
 
 
@@ -285,7 +286,6 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
         model_dict['data_pars']['cols_model_type2'][colg] = sum([  cols[colgroup] for colgroup in colg_list ]   , [])
 
 
-   
     log("#### Train model: #############################################################")
     log(str(model_dict)[:1000])
     post_process_fun      = model_dict['model_pars']['post_process_fun']

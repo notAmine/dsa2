@@ -141,11 +141,11 @@ def config1() :
       "data_pars": { "n_sample" : n_sample,
           "download_pars" : None,
 
-          ### Raw data column input ################################################################
+          ### Raw data:  column input ##############################################################
           "cols_input_type" : cols_input_type_1,
 
 
-          ### family of columns for MODEL  #########################################################
+          ### Model Input :  Merge family of columns   #############################################
           #  "colnum", "colnum_bin", "colnum_onehot", "colnum_binmap",  #### Colnum columns
           #  "colcat", "colcat_bin", "colcat_onehot", "colcat_bin_map",  #### colcat columns
           #  "colcross_single_onehot_select", "colcross_pair_onehot",  "colcross_pair",  #### colcross columns  "coldate", "coltext",
@@ -159,11 +159,11 @@ def config1() :
                                "col_myfun"
                               ]
 
-      #### Separate Category Sparse from Continuous : Aribitrary name is OK (!)
+      #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
      ,'cols_model_type': {
          'continuous'   : [ 'colnum',   ],
-         'sparse'       : [ 'colcat_bin', 'colnum_bin',    "colcross_pair",  ],
-         'my_split_23'  : [ 'colnum_bin', 'col_myfun'   ],
+         'sparse'       : [ 'colcat_bin', 'colnum_bin',  ],
+         'my_split_23'  : [ 'colnum_bin',   ],
       }   
 
           ### Filter data rows   ##################################################################
