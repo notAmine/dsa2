@@ -21,13 +21,6 @@ Main isssue is the number of rows change  !!!!
 2 usage :
     Afte preprocessing, over sample, under-sample.
     
-    
-
-
-
-
-
-
 
 
 """
@@ -69,9 +62,6 @@ def log_pd(df, *s, n=0, m=1):
 from util_feature import  save, load_function_uri, load, save_features, params_check
 ####################################################################################################
 ####################################################################################################
-
-
-
 def pd_export(df, col, pars):
     """
        Export in train folder for next training
@@ -130,8 +120,8 @@ def pd_sample_imblearn(df=None, col=None, pars=None):
     """
         Over-sample
     """
-    params_check(pars, ['model_name', 'pars_resample', 'coly', 'dfy'])
-    prefix = 'col_sampling'
+    params_check(pars, ['model_name', 'pars_resample', 'coly']) # , 'dfy'
+    prefix = '_sample_imblearn'
 
     ######################################################################################
     from imblearn.over_sampling import SMOTE
@@ -141,7 +131,7 @@ def pd_sample_imblearn(df=None, col=None, pars=None):
     # model_resample = { 'SMOTE' : SMOTE, 'SMOTEENN': SMOTEENN }[  pars.get("model_name", 'SMOTEENN') ]
     model_resample = locals()[  pars.get("model_name", 'SMOTEENN')  ]
     pars_resample  = pars.get('pars_resample',
-                             {'sampling_strategy' : 'auto', 'random_state':0, 'n_jobs': 2})
+                             {'sampling_strategy' : 'auto', 'random_state':0}) # , 'n_jobs': 2
 
     if 'path_pipeline' in pars :   #### Inference time
         return df, {'col_new': col }
@@ -149,15 +139,15 @@ def pd_sample_imblearn(df=None, col=None, pars=None):
     else :     ### Training time
         colX    = col # [col_ for col_ in col if col_ not in coly]
         coly    = pars['coly']
+        train_y = pars['dfy']  ## df[coly] #
         train_X = df[colX].fillna(method='ffill')
-        train_y = pars['dfy']
         gp      = model_resample( **pars_resample)
         X_resample, y_resample = gp.fit_resample(train_X, train_y)
 
-        df2       = pd.DataFrame(X_resample, columns = col, index=train_X.index)
+        col_new   = [ t + f"_{prefix}" for t in col ] 
+        df2       = pd.DataFrame(X_resample, columns = col_new) # , index=train_X.index
         df2[coly] = y_resample
 
-    col_new = col
     ###################################################################################
     if 'path_features_store' in pars and 'path_pipeline_export' in pars:
        save_features(df2, prefix.replace("col_", "df_"), pars['path_features_store'])

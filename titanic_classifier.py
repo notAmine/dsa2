@@ -5,7 +5,10 @@
   python titanic_classifier.py  train      --config  config1
   python titanic_classifier.py  predict    --config  config1
 
-
+python  titanic_classifier.py  data_profile
+python  titanic_classifier.py  preprocess  --nsample 100
+python  titanic_classifier.py  train       --nsample 200
+python  titanic_classifier.py  predict
 
 
 """
@@ -20,8 +23,6 @@ THIS_FILEPATH  =  os.path.abspath(__file__)
 sys.path.append(root_repo)
 from source.util_feature import save,os_get_function_name
 
-
-
 def global_pars_update(model_dict,  data_name, config_name):
     print("config_name", config_name)
     dir_data  = root_repo + "/data/"  ; print("dir_data", dir_data)
@@ -34,7 +35,7 @@ def global_pars_update(model_dict,  data_name, config_name):
     m["path_data_preprocess"] = dir_data + f"/input/{data_name}/train/"
 
     #### train input path
-    dir_data_url              = "https://github.com/arita37/dsa2_data/tree/main/"  #### Remote Data directory
+    dir_data_url              = "https://github.com/arita37/dsa2_data/tree/master/"  #### Remote Data directory
     m["path_data_train"]      = dir_data_url + f"/input/{data_name}/train/"
     m["path_data_test"]       = dir_data_url + f"/input/{data_name}/test/"
     #m["path_data_val"]       = dir_data + f"/input/{data_name}/test/"
@@ -61,13 +62,11 @@ def global_pars_update(model_dict,  data_name, config_name):
     return model_dict
 
 
-
 ####################################################################################
 ##### Params########################################################################
 config_default   = "config1"    ### name of function which contains data configuration
 
 
-# data_name    = "titanic"     ### in data/input/
 cols_input_type_1 = {
      "coly"   :   "Survived"
     ,"colid"  :   "PassengerId"
@@ -131,23 +130,22 @@ def config1() :
         #### Example of Custom processor
         {"uri":  THIS_FILEPATH + "::pd_col_myfun",   "pars": {}, "cols_family": "colnum",   "cols_out": "col_myfun",  "type": "" },                
 
-
         ],
                }
         },
 
       "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
-
                         # ,"mlflow_pars" : {}   ### Not empty --> use mlflow
                       },
 
       "data_pars": { "n_sample" : n_sample,
-
           "download_pars" : None,
 
-
+          ### Raw data:  column input ##############################################################
           "cols_input_type" : cols_input_type_1,
-          ### family of columns for MODEL  #########################################################
+
+
+          ### Model Input :  Merge family of columns   #############################################
           #  "colnum", "colnum_bin", "colnum_onehot", "colnum_binmap",  #### Colnum columns
           #  "colcat", "colcat_bin", "colcat_onehot", "colcat_bin_map",  #### colcat columns
           #  "colcross_single_onehot_select", "colcross_pair_onehot",  "colcross_pair",  #### colcross columns  "coldate", "coltext",
@@ -160,6 +158,13 @@ def config1() :
                                ### example of custom
                                "col_myfun"
                               ]
+
+      #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
+     ,'cols_model_type': {
+         'continuous'   : [ 'colnum',   ],
+         'sparse'       : [ 'colcat_bin', 'colnum_bin',  ],
+         'my_split_23'  : [ 'colnum_bin',   ],
+      }   
 
           ### Filter data rows   ##################################################################
          ,"filter_pars": { "ymax" : 2 ,"ymin" : -1 }
@@ -190,7 +195,6 @@ def pd_col_myfun(df=None, col=None, pars={}):
 
     prepro   = None
     pars_new = None
-
 
 
     ###################################################################################
@@ -329,15 +333,6 @@ except : pass
 
 ###########################################################################################################
 ###########################################################################################################
-"""
-python  titanic_classifier.py  data_profile
-python  titanic_classifier.py  preprocess  --nsample 100
-python  titanic_classifier.py  train       --nsample 200
-python  titanic_classifier.py  predict
-
-
-"""
-
 if __name__ == "__main__":
     d = { "data_profile": data_profile,  "train" : train, "predict" : predict, "config" : config_default }
     import fire
