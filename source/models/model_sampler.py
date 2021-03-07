@@ -3,28 +3,20 @@
 """
 Genreate  train_data  ---> New train data by sampling
 
-
 Transformation for ALL Columns :
    Increase samples, Reduce Samples.
 
 Main isssue is the number of rows change  !!!!
-
   cannot merge with others
 
   --> store as train data
 
-
   train data ---> new train data
-
 
   Transformation with less rows !
 
-
-
 2 usage :
     Afte preprocessing, over sample, under-sample.
-
-
 
 
 """
@@ -412,6 +404,94 @@ def get_params(param_pars={}, **kw):
 
     else:
         raise Exception(f"Not support choice {choice} yet")
+
+
+def test():
+    from sklearn.datasets import make_classification
+    from sklearn.model_selection import train_test_split
+
+    X, y = make_classification(n_features=10, n_redundant=0, n_informative=2,
+                               random_state=1, n_clusters_per_class=1)
+    X = pd.DataFrame( X, columns = [ 'col_' +str(i) for i in range(30)] )
+    y = pd.DataFrame( y, columns = ['coly'] )
+    Xtrain, Xtest, ytrain, ytest = train_test_split(X, y)
+
+    #####
+    colnum = [ 'col_0', 'col_3', 'col_4']
+    colcat = [ 'col_1', 'col_7', 'col_8', 'col_9']
+    cols_input_type_1 = {
+        'colnum' : colnum,
+        'colcat' : colcat
+    }
+
+    colg_input = {
+      'cols_wide_input':   ['colnum', 'colcat' ],
+      'cols_deep_input':   ['colnum', 'colcat' ],
+    }
+
+    cols_model_type2= {}
+    for colg, colist in colg_input.items() :
+        cols_model_type2[colg] = []
+        for colg_i in colist :
+          cols_model_type2[colg].extend( cols_input_type_1[colg_i] )
+    ###############################################################################
+
+    model_pars = {'model_class': 'CTGAB',
+                  'model_pars': {},
+                }
+
+    data_pars = {'n_sample': 100,
+                  'cols_input_type': cols_input_type_1,
+                  'cols_model_group': ['colnum', 'colcat',  ],
+                  'cols_model_type2' : cols_model_type2
+
+        ### Filter data rows   #######################3############################
+        , 'filter_pars': {'ymax': 2, 'ymin': -1}
+                  }
+
+    data_pars['train'] ={'Xtrain': Xtrain,
+                           'ytrain': ytrain,
+                           'Xtest': Xtest,
+                           'ytest': ytest}
+    data_pars['eval'] =  {'X': Xtest,
+                          'y': ytest}
+    data_pars['predict'] = {'X': Xtest}
+
+    compute_pars = { 'compute_pars' : { 'epochs': 2,
+                    } }
+
+    test_helper(model_pars, data_pars, compute_pars)
+
+
+def test_helper(model_pars, data_pars, compute_pars):
+    global model, session
+
+    root  = "ztmp/"
+    model = Model(model_pars=model_pars, data_pars=data_pars, compute_pars=compute_pars)
+
+    log('\n\nTraining the model..')
+    fit(data_pars=data_pars, compute_pars=compute_pars, out_pars=None)
+    log('Training completed!\n\n')
+
+    log('Predict data..')
+    Xnew = transform(Xpred=None, data_pars=data_pars, compute_pars=compute_pars)
+    log(f'Top 5 y_pred: {Xnew}')
+    log('Data successfully predicted!\n\n')
+
+    log('Evaluating the model..')
+    log(eval(data_pars=data_pars, compute_pars=compute_pars))
+    log('Evaluating completed!\n\n')
+
+    log('Saving model..')
+    save(path= root + '/model_dir/')
+    log('Model successfully saved!\n\n')
+
+    log('Load model..')
+    model, session = load_model(path= root + "/model_dir/")
+    log('Model successfully loaded!\n\n')
+
+
+
 
 
 if __name__ == "__main__":
