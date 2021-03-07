@@ -29,7 +29,8 @@ def log(*s):
 
 
 ####################################################################################################
-global model, session
+global model, session, cols_input_formodel
+
 
 
 def init(*kw, **kwargs):
@@ -83,11 +84,12 @@ class Model(object):
             self.model = None
         else:
             model_class = model_pars['model_class']  # globals() removed
-
-            n_wide = calc( data_pars)
-            n_deep = calc( data_pars)
-
-            self.model  = Modelcustom(**model_pars['model_pars'])
+            
+            model_pars = {
+                'n_wide_cross' : len(data_pars['cols_model_type2']['cols_wide_input']),
+                'n_wide' : len(data_pars['cols_model_type2']['cols_deep_input']),
+            }
+            self.model  = Modelcustom(**model_pars)
             if VERBOSE: log(model_class, self.model)
             self.model.summary()
 
@@ -310,8 +312,11 @@ def test(config=''):
 
     #############################################################
     ##### Generate column actual names from
-    colnum = [ 'col_0', 'col_1']
-    colcat = [ 'col_2', 'col_3']
+    # colnum = [ 'col_0', 'col_1']
+    # colcat = [ 'col_2', 'col_3']
+
+    colnum = [ 'col_0', 'col_11', 'col_8']
+    colcat = [ 'col_13', 'col_17', 'col_13', 'col_9']
 
     cols_input_type_1 = {
         'colnum' : colnum,
@@ -324,14 +329,11 @@ def test(config=''):
       'cols_deep_input':   ['colnum', 'colcat' ],
     }
 
-
     cols_model_type2= {}
     for colg, colist in colg_input.items() :
         cols_model_type2[colg] = []
         for colg_i in colist :
           cols_model_type2[colg].extend( cols_input_type_1[colg_i] )
-
-    print(cols_model_type2)
 
 
     ##################################################################################
@@ -341,10 +343,9 @@ def test(config=''):
     #              }
 
     model_pars = {'model_class': 'WideAndDeep',
-                  'model_pars': {'n_wide_cross': len(cols_model_type2['cols_wide_input']),
-                                 'n_wide':       len(cols_model_type2['cols_deep_input'])},
-                 }
-
+                  'model_pars': {},
+                }
+    
     n_sample = 100
     data_pars = {'n_sample': n_sample,
                   'cols_input_type': cols_input_type_1,
@@ -362,6 +363,7 @@ def test(config=''):
         ### Filter data rows   #######################3############################
         , 'filter_pars': {'ymax': 2, 'ymin': -1}
                   }
+
     data_pars['train'] ={'Xtrain': X_train,
                            'ytrain': y_train,
                            'Xtest': X_test,
@@ -375,10 +377,6 @@ def test(config=''):
 
     ######## Run ###########################################
     test_helper(model_pars, data_pars, compute_pars)
-
-
-
-
 
 def get_dataset2(data_pars=None, task_type="train", **kw):
     """
@@ -510,6 +508,15 @@ def test2(config=''):
     n_features      = X_train.shape[1]  # number of features
     n_wide_features = 20
     n_deep_features = n_features - n_wide_features
+
+
+    n_wide = calc(data_pars)
+    n_deep = calc( data_pars)
+
+    self.model = Modelcustom(**model_pars['model_pars'])
+    if VERBOSE: log(model_class, self.model)
+    self.model.summary()
+
 
     model_pars = {'model_class': 'WideAndDeep',
                   'model_pars': {'n_wide_cross': n_wide_features,
