@@ -47,6 +47,8 @@ except:
     from sdv.evaluation import evaluate  
 
 
+
+### IMBLEARN
 from imblearn.over_sampling import SMOTE
 from imblearn.combine import SMOTEENN, SMOTETomek
 from imblearn.under_sampling import NearMiss
@@ -70,77 +72,6 @@ def init(*kw, **kwargs):
     global model, session
     model = Model(*kw, **kwargs)
     session = None
-
-
-
-
-def pd_augmentation_sdv(df, col=None, pars={})  :
-    '''
-    Using SDV Variation Autoencoders, the function augments more data into the dataset
-    params:
-            df          : (pandas dataframe) original dataframe
-            col : column name for data enancement
-            pars        : (dict - optional) contains:
-                n_samples     : (int - optional) number of samples you would like to add, defaul is 10%
-                primary_key   : (String - optional) the primary key of dataframe
-                aggregate  : (boolean - optional) if False, prints SVD metrics, else it averages them
-                path_model_save: saving location if save_model is set to True
-                path_model_load: saved model location to skip training
-                path_data_new  : new data where saved
-    returns:
-            df_new      : (pandas dataframe) df with more augmented data
-            col         : (list of strings) same columns
-    '''
-    n_samples       = pars.get('n_samples', max(1, int(len(df) * 0.10) ) )   ## Add 10% or 1 sample by default value
-    primary_key     = pars.get('colid', None)  ### Custom can be created on the fly
-    metrics_type    = pars.get('aggregate', False)
-    path_model_save = pars.get('path_model_save', 'data/output/ztmp/')
-    model_name      = pars.get('model_name', "TVAE")
-
-    # model fitting
-    if 'path_model_load' in pars:
-            model = load(pars['path_model_load'])
-    else:
-            log('##### Training Started #####')
-
-            model = {'TVAE' : TVAE, 'CTGAN' : CTGAN, 'PAR' : PAR}[model_name]
-            if model_name == 'PAR':
-                model = model(entity_columns = pars['entity_columns'],
-                              context_columns = pars['context_columns'],
-                              sequence_index = pars['sequence_index'])
-            else:
-                model = model(primary_key=primary_key)
-            model.fit(df)
-            log('##### Training Finshed #####')
-            try:
-                 save(model, path_model_save )
-                 log('model saved at: ', path_model_save  )
-            except:
-                 log('saving model failed: ', path_model_save)
-
-    log('##### Generating Samples #############')
-    new_data = model.sample(n_samples)
-    log_pd( new_data, n=7)
-
-
-    log('######### Evaluation Results #########')
-    if metrics_type == True:
-      evals = evaluate(new_data, df, aggregate= True )
-      log(evals)
-    else:
-      evals = evaluate(new_data, df, aggregate= False )
-      log_pd(evals, n=7)
-
-    # appending new data
-    df_new = df.append(new_data)
-    log(str(len(df_new) - len(df)) + ' new data added')
-
-    if 'path_newdata' in pars :
-        new_data.to_parquet( pars['path_newdata'] + '/features.parquet' )
-        log('###### df augmentation save on disk', pars['path_newdata'] )
-
-    log('###### augmentation complete ######')
-    return df_new, col
 
 
 
@@ -202,18 +133,6 @@ class Model(object):
         if model_pars is None:
             self.model = None
         else:
-            """
-            #model_name = model_pars['model_name']    
-            #model = {'TVAE' : TVAE, 'CTGAN' : CTGAN, 'PAR' : PAR}[model_name]
-                    
-            ### pAR
-            entity_columns = pars['entity_columns'],
-                              context_columns = pars['context_columns'],
-                              sequence_index = pars['sequence_index']
-            Other model           
-                              primary_key=primary_key
-            
-            """
             model_class = globals()[model_pars['model_class']]
             self.model  = model_class(**model_pars['model_pars'])
             if VERBOSE: log(model_class, self.model)
@@ -270,14 +189,19 @@ def transform(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
         def post_process_fun(y):
             return y
 
-    #if Xpred is None:
-    #    data_pars['train'] = False
-    #    Xpred = get_dataset(data_pars, task_type="predict")
-
-    # log(Xpred)
+    #######
+    Xnew= None
     if model.model_pars['model_class'] in ['CTGAN', 'TVAE', 'PAR'] :
        Xnew = model.model.sample(compute_pars.get('n_sample_generation', 100) )
 
+    else :  ### Sampler
+        if Xpred is None:
+           data_pars['train'] = False
+           Xpred, ypred = get_dataset(data_pars, task_type="eval")
+           log(Xpred, ypred)
+           Xnew = model.model.fit_resample( Xpred, ypred, **compute_pars.get('compute_pars', {}) )
+
+    log("generated data", Xnew)
     return Xnew
 
 
@@ -419,7 +343,6 @@ def test():
 
     X, y = make_classification(n_features=10, n_redundant=0, n_informative=2,
                                random_state=1, n_clusters_per_class=1)
-
     X = pd.DataFrame( X, columns = [ 'col_' +str(i) for i in range(X.shape[1])] )
     y = pd.DataFrame( y, columns = ['coly'] )
 
@@ -428,7 +351,7 @@ def test():
 
     #####
     colid  = 'colid'
-    colnum = [ 'col_0', 'col_3', 'col_4']
+    colnum = [ 'col_0', 'col_3', 'col_4', 'coly']
     colcat = [ 'col_1', 'col_7', 'col_8', 'col_9']
     cols_input_type_1 = {
         'colnum' : colnum,
@@ -446,24 +369,10 @@ def test():
         for colg_i in colist :
           cols_model_type2[colg].extend( cols_input_type_1[colg_i] )
     ###############################################################################
-
-    model_pars = {'model_class': 'CTGAN',
-                  'model_pars': {
-
-                 'primary_key': colid,
-                 'epochs': 1',
-                 'batch_size' :100,
-                 'generator_dim' : (256, 256, 256),
-                 'discriminator_dim' : (256, 256, 256)
-
-                },
-                }
-
     data_pars = {'n_sample': 100,
                   'cols_input_type': cols_input_type_1,
                   'cols_model_group': ['colnum', 'colcat',  ],
                   'cols_model_type2' : cols_model_type2
-
 
         ,'cols_model' : colnum + colcat
         ,'coly' : 'y'
@@ -481,6 +390,27 @@ def test():
     compute_pars = { 'compute_pars' : {
                     } }
 
+    #####################################################################
+    log("test 2")
+    model_pars = {'model_class': 'SMOTE',
+                  'model_pars': {
+                     # 'ratio' :'auto',
+                },
+                }
+    test_helper(model_pars, data_pars, compute_pars)
+
+
+    log("test 1")
+    model_pars = {'model_class': 'CTGAN',
+                  'model_pars': {
+                     ## CTGAN
+                     'primary_key': colid,
+                     'epochs': 1,
+                     'batch_size' :100,
+                     'generator_dim' : (256, 256, 256),
+                     'discriminator_dim' : (256, 256, 256)
+                },
+                }
     test_helper(model_pars, data_pars, compute_pars)
 
 
@@ -528,6 +458,77 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+def pd_augmentation_sdv(df, col=None, pars={})  :
+    '''
+    Using SDV Variation Autoencoders, the function augments more data into the dataset
+    params:
+            df          : (pandas dataframe) original dataframe
+            col : column name for data enancement
+            pars        : (dict - optional) contains:
+                n_samples     : (int - optional) number of samples you would like to add, defaul is 10%
+                primary_key   : (String - optional) the primary key of dataframe
+                aggregate  : (boolean - optional) if False, prints SVD metrics, else it averages them
+                path_model_save: saving location if save_model is set to True
+                path_model_load: saved model location to skip training
+                path_data_new  : new data where saved
+    returns:
+            df_new      : (pandas dataframe) df with more augmented data
+            col         : (list of strings) same columns
+    '''
+    n_samples       = pars.get('n_samples', max(1, int(len(df) * 0.10) ) )   ## Add 10% or 1 sample by default value
+    primary_key     = pars.get('colid', None)  ### Custom can be created on the fly
+    metrics_type    = pars.get('aggregate', False)
+    path_model_save = pars.get('path_model_save', 'data/output/ztmp/')
+    model_name      = pars.get('model_name', "TVAE")
+
+    # model fitting
+    if 'path_model_load' in pars:
+            model = load(pars['path_model_load'])
+    else:
+            log('##### Training Started #####')
+
+            model = {'TVAE' : TVAE, 'CTGAN' : CTGAN, 'PAR' : PAR}[model_name]
+            if model_name == 'PAR':
+                model = model(entity_columns = pars['entity_columns'],
+                              context_columns = pars['context_columns'],
+                              sequence_index = pars['sequence_index'])
+            else:
+                model = model(primary_key=primary_key)
+            model.fit(df)
+            log('##### Training Finshed #####')
+            try:
+                 save(model, path_model_save )
+                 log('model saved at: ', path_model_save  )
+            except:
+                 log('saving model failed: ', path_model_save)
+
+    log('##### Generating Samples #############')
+    new_data = model.sample(n_samples)
+    log_pd( new_data, n=7)
+
+
+    log('######### Evaluation Results #########')
+    if metrics_type == True:
+      evals = evaluate(new_data, df, aggregate= True )
+      log(evals)
+    else:
+      evals = evaluate(new_data, df, aggregate= False )
+      log_pd(evals, n=7)
+
+    # appending new data
+    df_new = df.append(new_data)
+    log(str(len(df_new) - len(df)) + ' new data added')
+
+    if 'path_newdata' in pars :
+        new_data.to_parquet( pars['path_newdata'] + '/features.parquet' )
+        log('###### df augmentation save on disk', pars['path_newdata'] )
+
+    log('###### augmentation complete ######')
+    return df_new, col
 
 
 
