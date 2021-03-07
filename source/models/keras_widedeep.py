@@ -10,12 +10,8 @@ pip install Keras==2.4.3
 
 
 """
-import os
-import pandas as pd, numpy as np, scipy as sci
-import sklearn
+import os, pandas as pd, numpy as np, sklearn, keras
 from sklearn.model_selection import train_test_split
-
-import keras
 layers = keras.layers
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.base import BaseEstimator, ClassifierMixin,  RegressorMixin, TransformerMixin
@@ -24,16 +20,14 @@ from sklearn.base import BaseEstimator, ClassifierMixin,  RegressorMixin, Transf
 ####################################################################################################
 VERBOSE = True
 
-# MODEL_URI = get_model_uri(__file__)
-
 def log(*s):
     print(*s, flush=True)
 
+def log2(*s):
+    print(*s, flush=True)
 
 ####################################################################################################
 global model, session
-
-
 
 def init(*kw, **kwargs):
     global model, session
@@ -43,7 +37,7 @@ def init(*kw, **kwargs):
 
 cols_input_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input' ]
 
-def Modelcustom(n_wide_cross, n_wide, n_feat=8, m_EMBEDDING=10, loss='mse', metric = 'mean_squared_error'):
+def Modelcustom(n_wide_cross, n_wide,n_deep, n_feat=8, m_EMBEDDING=10, loss='mse', metric = 'mean_squared_error'):
 
         #### Wide model with the functional API
         col_wide_cross          = layers.Input(shape=(n_wide_cross,))
@@ -56,10 +50,9 @@ def Modelcustom(n_wide_cross, n_wide, n_feat=8, m_EMBEDDING=10, loss='mse', metr
         wide_model.compile(loss = 'mse', optimizer='adam', metrics=[ metric ])
         print(wide_model.summary())
 
-
         #### Deep model with the Functional API
-        deep_inputs             = layers.Input(shape=(n_wide,))
-        embedding               = layers.Embedding(n_feat, m_EMBEDDING, input_length= n_wide)(deep_inputs)
+        deep_inputs             = layers.Input(shape=(n_deep,))
+        embedding               = layers.Embedding(n_feat, m_EMBEDDING, input_length= n_deep)(deep_inputs)
         embedding               = layers.Flatten()(embedding)
 
         merged_layer            = layers.Dense(15, activation='relu')(embedding)
@@ -113,13 +106,11 @@ def get_dataset(data_pars=None, task_type="train", **kw):
             Xtuple_train = get_dataset_tuple(Xtrain, cols_type, cols_input_formodel )
             return Xtuple_train
 
-
         if task_type == "eval":
             d = data_pars[task_type]
             Xtrain, ytrain  = d["X"], d["y"]
-            Xtuple_train    =  get_dataset_tuple(Xtrain, cols_type, cols_input_formodel )
+            Xtuple_train    = get_dataset_tuple(Xtrain, cols_type, cols_input_formodel )
             return Xtuple_train, ytrain
-
 
         if task_type == "train":
             d = data_pars[task_type]
@@ -128,6 +119,9 @@ def get_dataset(data_pars=None, task_type="train", **kw):
             ### dict  colgroup ---> list of df
             Xtuple_train = get_dataset_tuple(Xtrain, cols_type, cols_input_formodel )
             Xtuple_test  = get_dataset_tuple(Xtest, cols_type, cols_input_formodel )
+
+
+            log2("Xtuple_train", Xtuple_train)
 
             return Xtuple_train, ytrain, Xtuple_test, ytest
 
@@ -146,11 +140,17 @@ class Model(object):
         if model_pars is None:
             self.model = None
         else:
+            log2("data_pars", data_pars)
+
             model_class = model_pars['model_class']  # globals() removed
 
             ### Dynamic sizing
             model_pars['model_pars']['n_wide_cross'] = len(data_pars['cols_model_type2']['cols_cross_input'])
             model_pars['model_pars']['n_wide']       = len(data_pars['cols_model_type2']['cols_deep_input'])
+            model_pars['model_pars']['n_deep']       = len(data_pars['cols_model_type2']['cols_deep_input'])
+
+            model_pars['model_pars']['n_feat']       = model_pars['model_pars']['n_deep'] // 2
+
             mdict = model_pars['model_pars']
 
             self.model  = Modelcustom(**mdict)
@@ -167,15 +167,13 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train")
 
     cpars = compute_pars.get("compute_pars", {})
-    assert 'epochs' in cpars, 'epoch'
+    assert 'epochs' in cpars, 'epoch missing'
 
     out_pars ={} if out_pars is None else out_pars
     early_stopping = EarlyStopping(monitor='loss', patience=3)
     model_ckpt     = ModelCheckpoint(filepath = out_pars.get('path_ckpt', '/home/hari/model_.pth'),
                                      save_best_only=True, monitor='loss')
-    callbacks      = [early_stopping, model_ckpt]
-    cpars['callbacks'] =  callbacks
-
+    cpars['callbacks'] =  [early_stopping, model_ckpt]
 
     hist = model.model.fit( Xtrain_tuple, ytrain,  **cpars)
     model.history = hist
@@ -188,11 +186,8 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
     global model, session
     # data_pars['train'] = True
     Xval, yval = get_dataset(data_pars, task_type="eval")
-
-    # n_wide_features = data_pars.get('n_wide_features', None)
-    # n_deep_features = data_pars.get('n_deep_features', None)
-
     ypred = predict(Xval, data_pars, compute_pars, out_pars)
+
 
     # log(data_pars)
     mpars = compute_pars.get("metrics_pars", {'metric_name': 'mae'})
@@ -211,9 +206,6 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
 
 def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     global model, session
-    """
-
-    """
     if Xpred is None:
         # data_pars['train'] = False
         Xpred = get_dataset(data_pars, task_type="predict")
@@ -310,14 +302,9 @@ def test(config=''):
     X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
 
     #### Call back
-    early_stopping = EarlyStopping(monitor='loss', patience=3)
-    model_ckpt     = ModelCheckpoint(filepath='/home/hari/model_.pth', save_best_only=True, monitor='loss')
-    callbacks      = [early_stopping, model_ckpt]
-
-    # n_features      = X_train.shape[1]  # number of features
-    # n_wide_features = 20
-    # n_deep_features = n_features - n_wide_features
-
+    #early_stopping = EarlyStopping(monitor='loss', patience=3)
+    #model_ckpt     = ModelCheckpoint(filepath='/home/hari/model_.pth', save_best_only=True, monitor='loss')
+    #callbacks      = [early_stopping, model_ckpt]
 
     #############################################################
     ##### Generate column actual names from
@@ -370,12 +357,10 @@ def test(config=''):
     data_pars['predict'] = {'X': X_valid}
 
     compute_pars = { 'compute_pars' : { 'epochs': 2,
-                    'callbacks': callbacks} }
+                   } }
 
     ######## Run ###########################################
     test_helper(model_pars, data_pars, compute_pars)
-
-
 
 
 def get_params_sklearn(deep=False):
@@ -401,13 +386,11 @@ def get_params(param_pars={}, **kw):
 
 def test_helper(model_pars, data_pars, compute_pars):
     global model, session
-
     root  = "ztmp/"
     model = Model(model_pars=model_pars, data_pars=data_pars, compute_pars=compute_pars)
 
     log('\n\nTraining the model..')
     fit(data_pars=data_pars, compute_pars=compute_pars, out_pars=None)
-
 
     log('Predict data..')
     ypred, ypred_proba = predict(Xpred=None, data_pars=data_pars, compute_pars=compute_pars)
@@ -439,138 +422,3 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def test2(config=''):
-
-    global model, session
-
-    X = np.random.rand(100,30)
-    y = np.random.binomial(n=1, p=0.5, size=[100])
-
-    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, random_state=2021, stratify=y)
-    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
-
-    early_stopping = EarlyStopping(monitor='loss', patience=3)
-    model_ckpt     = ModelCheckpoint(filepath='', save_best_only=True, monitor='loss')
-    callbacks      = [early_stopping, model_ckpt]
-
-    n_features      = X_train.shape[1]  # number of features
-    n_wide_features = 20
-    n_deep_features = n_features - n_wide_features
-
-
-    n_wide = calc(data_pars)
-    n_deep = calc( data_pars)
-
-    self.model = Modelcustom(**model_pars['model_pars'])
-    if VERBOSE: log(model_class, self.model)
-    self.model.summary()
-
-
-    model_pars = {'model_class': 'WideAndDeep',
-                  'model_pars': {'n_wide_cross': n_wide_features,
-                                 'n_wide':       n_deep_features},
-                 }
-    data_pars = {'train': {'Xtrain': X_train,
-                           'ytrain': y_train,
-                           'Xtest': X_test,
-                           'ytest': y_test},
-                 'eval': {'X': X_valid,
-                          'y': y_valid},
-                 'predict': {'X': X_valid},
-                 'n_features': n_features,
-                 'n_wide_features': n_wide_features,
-                 'n_deep_features': n_deep_features,
-                }
-    compute_pars = { 'compute_pars' : { 'epochs': 2,
-                    'callbacks': callbacks} }
-
-    test_helper(model_pars, data_pars, compute_pars)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def get_dataset2(data_pars=None, task_type="train", **kw):
-    """
-      "ram"  :
-      "file" :
-
-    n_wide_features = data_pars.get('n_wide_features', None)
-    n_deep_features = data_pars.get('n_deep_features', None)
-
-    Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
-    Xtest_A, Xtest_B, Xtest_C    = Xtest[:, :n_wide_features], Xtest[:, -n_deep_features:], Xtest[:, -n_deep_features:]
-
-
-    """
-    # log(data_pars)
-    data_type = data_pars.get('type', 'ram')
-    if data_type == "ram":
-        n_wide_features = data_pars.get('n_wide_features', None)
-        n_deep_features = data_pars.get('n_deep_features', None)
-
-        if task_type == "predict":
-            d = data_pars[task_type]
-
-            Xtrain = d["X"]
-            Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
-            Xtuple_train = (Xtrain_A, Xtrain_B, Xtrain_C)
-            return Xtuple_train
-            # return d["X"]
-
-        if task_type == "eval":
-            d = data_pars[task_type]
-
-            Xtrain, ytrain  = d["X"], d["y"]
-            Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
-            Xtuple_train = (Xtrain_A, Xtrain_B, Xtrain_C)
-
-            return Xtuple_train, ytrain
-            #return d["X"], d["y"]
-
-
-        if task_type == "train":
-            d = data_pars[task_type]
-
-            Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
-
-            Xtrain_A, Xtrain_B, Xtrain_C = Xtrain[:, :n_wide_features], Xtrain[:, -n_deep_features:], Xtrain[:, -n_deep_features:]
-            Xtest_A, Xtest_B, Xtest_C    = Xtest[:, :n_wide_features], Xtest[:, -n_deep_features:], Xtest[:, -n_deep_features:]
-
-            Xtuple_train = (Xtrain_A, Xtrain_B, Xtrain_C)
-            Xtuple_test  = (Xtest_A, Xtest_B, Xtrain_C)
-
-            return Xtuple_train, ytrain, Xtuple_test, ytest
-            # return d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
-
-
-    elif data_type == "file":
-        raise Exception(f' {data_type} data_type Not implemented ')
-
-    raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
