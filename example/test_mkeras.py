@@ -106,7 +106,15 @@ def config1() :
           {"uri": "source/prepro.py::pd_coly",                 "pars": {}, "cols_family": "coly",       "cols_out": "coly",           "type": "coly"         },
 
           {"uri": "source/prepro.py::pd_colnum_bin",           "pars": {}, "cols_family": "colnum",     "cols_out": "colnum_bin",     "type": ""             },
+          {"uri": "source/prepro.py::pd_colnum_binto_onehot",  "pars": {}, "cols_family": "colnum_bin", "cols_out": "colnum_onehot",  "type": ""             },
+
+
           {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
+          {"uri": "source/prepro.py::pd_colcat_to_onehot",     "pars": {}, "cols_family": "colcat_bin", "cols_out": "colcat_onehot",  "type": ""             },
+
+
+          #### neeed to 0-1 Normalize the input
+          # {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
 
         ],
         }},
@@ -122,12 +130,12 @@ def config1() :
           "cols_input_type" : cols_input_type_1,
 
           ### family of columns used for model input  #########################################################
-          "cols_model_group": [ "colnum",  "colcat_bin",
+          "cols_model_group": [ "colnum_onehot",  "colcat_onehot",
                               ]
 
          ,'cols_model_type' : {
-              'cols_cross_input':  ['colnum',  ],
-              'cols_deep_input':   ['colnum',  ],
+              'cols_cross_input':  [ "colcat_onehot", ],
+              'cols_deep_input':   ['colnum_onehot',  ],
           }
 
           ### Filter data rows   ##################################################################

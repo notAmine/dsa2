@@ -149,7 +149,7 @@ class Model(object):
             model_pars['model_pars']['n_wide']       = len(data_pars['cols_model_type2']['cols_deep_input'])
             model_pars['model_pars']['n_deep']       = len(data_pars['cols_model_type2']['cols_deep_input'])
 
-            model_pars['model_pars']['n_feat']       = model_pars['model_pars']['n_deep'] // 2
+            model_pars['model_pars']['n_feat']       = model_pars['model_pars']['n_deep']
 
             mdict = model_pars['model_pars']
 
