@@ -1,6 +1,11 @@
 # pylint: disable=C0321,C0103,C0301,E1305,E1121,C0302,C0330,C0111,W0613,W0611,R1705
 # -*- coding: utf-8 -*-
 """
+cd source/models/
+
+python model_sampler.py test
+
+
 Genreate  train_data  ---> New train data by sampling
 
 Transformation for ALL Columns :
@@ -265,13 +270,13 @@ def transform(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
         def post_process_fun(y):
             return y
 
-    if Xpred is None:
-        data_pars['train'] = False
-        Xpred = get_dataset(data_pars, task_type="predict")
+    #if Xpred is None:
+    #    data_pars['train'] = False
+    #    Xpred = get_dataset(data_pars, task_type="predict")
 
-    log(Xpred)
+    # log(Xpred)
     if model.model_pars['model_class'] in ['CTGAN', 'TVAE', 'PAR'] :
-       Xnew = model.model.sample(Xpred)
+       Xnew = model.model.sample(compute_pars.get('n_sample_generation', 100) )
 
     return Xnew
 
@@ -443,7 +448,15 @@ def test():
     ###############################################################################
 
     model_pars = {'model_class': 'CTGAN',
-                  'model_pars': {'primary_key': colid},
+                  'model_pars': {
+
+                 'primary_key': colid,
+                 'epochs': 1',
+                 'batch_size' :100,
+                 'generator_dim' : (256, 256, 256),
+                 'discriminator_dim' : (256, 256, 256)
+
+                },
                 }
 
     data_pars = {'n_sample': 100,
@@ -465,7 +478,7 @@ def test():
                           'y': ytest}
     data_pars['predict'] = {'X': Xtest}
 
-    compute_pars = { 'compute_pars' : {  
+    compute_pars = { 'compute_pars' : {
                     } }
 
     test_helper(model_pars, data_pars, compute_pars)
@@ -473,31 +486,25 @@ def test():
 
 def test_helper(model_pars, data_pars, compute_pars):
     global model, session
-
     root  = "ztmp/"
     model = Model(model_pars=model_pars, data_pars=data_pars, compute_pars=compute_pars)
 
     log('\n\nTraining the model..')
     fit(data_pars=data_pars, compute_pars=compute_pars, out_pars=None)
-    log('Training completed!\n\n')
 
     log('Predict data..')
     Xnew = transform(Xpred=None, data_pars=data_pars, compute_pars=compute_pars)
-    log(f': {Xnew}')
-    log('Data successfully predicted!\n\n')
+    log(f'Xnew', Xnew)
 
     log('Evaluating the model..')
     log(eval(data_pars=data_pars, compute_pars=compute_pars))
-    log('Evaluating completed!\n\n')
 
     log('Saving model..')
     save(path= root + '/model_dir/')
-    log('Model successfully saved!\n\n')
 
     log('Load model..')
     model, session = load_model(path= root + "/model_dir/")
-    log('Model successfully loaded!\n\n')
-
+    log(model)
 
 
 
