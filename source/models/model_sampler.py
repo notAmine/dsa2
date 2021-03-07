@@ -222,8 +222,9 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
     if VERBOSE: log(Xtrain.shape, model.model)
 
+    list_unsupervised = [  'TVAE', 'CTGAN', 'PAR'  ]
 
-    if ytrain is not None :  ###with label
+    if ytrain is not None and model.model_pars['model_class'] not in list_unsupervised :  ###with label
        model.model.fit(Xtrain, ytrain, **compute_pars.get("compute_pars", {}))
 
     else :
@@ -268,7 +269,8 @@ def transform(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
         data_pars['train'] = False
         Xpred = get_dataset(data_pars, task_type="predict")
 
-    if model.model_pars['model_name'] in ['CTGAN', 'TVAE'] :
+    log(Xpred)
+    if model.model_pars['model_class'] in ['CTGAN', 'TVAE', 'PAR'] :
        Xnew = model.model.sample(Xpred)
 
     return Xnew
@@ -412,11 +414,15 @@ def test():
 
     X, y = make_classification(n_features=10, n_redundant=0, n_informative=2,
                                random_state=1, n_clusters_per_class=1)
-    X = pd.DataFrame( X, columns = [ 'col_' +str(i) for i in range(30)] )
+
+    X = pd.DataFrame( X, columns = [ 'col_' +str(i) for i in range(X.shape[1])] )
     y = pd.DataFrame( y, columns = ['coly'] )
+
+    X['colid'] = np.arange(0, len(X))
     Xtrain, Xtest, ytrain, ytest = train_test_split(X, y)
 
     #####
+    colid  = 'colid'
     colnum = [ 'col_0', 'col_3', 'col_4']
     colcat = [ 'col_1', 'col_7', 'col_8', 'col_9']
     cols_input_type_1 = {
@@ -436,8 +442,8 @@ def test():
           cols_model_type2[colg].extend( cols_input_type_1[colg_i] )
     ###############################################################################
 
-    model_pars = {'model_class': 'CTGAB',
-                  'model_pars': {},
+    model_pars = {'model_class': 'CTGAN',
+                  'model_pars': {'primary_key': colid},
                 }
 
     data_pars = {'n_sample': 100,
@@ -445,19 +451,21 @@ def test():
                   'cols_model_group': ['colnum', 'colcat',  ],
                   'cols_model_type2' : cols_model_type2
 
+
+        ,'cols_model' : colnum + colcat
+        ,'coly' : 'y'
+
         ### Filter data rows   #######################3############################
         , 'filter_pars': {'ymax': 2, 'ymin': -1}
                   }
 
-    data_pars['train'] ={'Xtrain': Xtrain,
-                           'ytrain': ytrain,
-                           'Xtest': Xtest,
-                           'ytest': ytest}
+    data_pars['train'] ={'Xtrain': Xtrain,  'ytrain': ytrain,
+                          'Xtest': Xtest,   'ytest': ytest}
     data_pars['eval'] =  {'X': Xtest,
                           'y': ytest}
     data_pars['predict'] = {'X': Xtest}
 
-    compute_pars = { 'compute_pars' : { 'epochs': 2,
+    compute_pars = { 'compute_pars' : {  
                     } }
 
     test_helper(model_pars, data_pars, compute_pars)
@@ -475,7 +483,7 @@ def test_helper(model_pars, data_pars, compute_pars):
 
     log('Predict data..')
     Xnew = transform(Xpred=None, data_pars=data_pars, compute_pars=compute_pars)
-    log(f'Top 5 y_pred: {Xnew}')
+    log(f': {Xnew}')
     log('Data successfully predicted!\n\n')
 
     log('Evaluating the model..')
