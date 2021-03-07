@@ -7,15 +7,12 @@ python source/run_train.py  run_train --config_name elasticnet  --path_data_trai
 activate py36 && python source/run_train.py  run_train   --n_sample 100  --config_name lightgbm  --path_model_config source/config_model.py  --path_output /data/output/a01_test/     --path_data_train /data/input/train/
 
 """
-import warnings
+import warnings,sys, os, json, importlib, copy
 warnings.filterwarnings('ignore')
-import sys, os, json, importlib
 
 ####################################################################################################
 #### Add path for python import
 sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
-
-#### Root folder analysis
 root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
 print(root)
 
@@ -94,14 +91,14 @@ def map_model(model_name):
 
     ##### Custom folder
     if ".py" in model_name :
-       path = os.path.parent(model_name)
+       ### Asbolute path of the file
+       path = os.path.dirname(os.path.abspath(model_name))
        sys.path.append(path)
-       mod = os.path.basename(model_name)
+       mod    = os.path.basename(model_name).replace(".py", "")
        modelx = importlib.import_module(mod)
        return modelx
 
-
-    ##### Local folder
+    ##### Repo folder
     model_file = model_name.split(":")[0]
     if  'optuna' in model_name : model_file = 'optuna_lightgbm'
 
@@ -166,6 +163,10 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     log('Model coly', coly)
     log('Model column type: ',data_pars['cols_model_type2'])
 
+    ### Only Parameters
+    data_pars_ref = copy.deepcopy(data_pars)
+
+    #### TODO : Lazy Dict to have large dataset
     data_pars['data_type'] = 'ram'
     data_pars['train'] = {'Xtrain' : dfX[colsX].iloc[:itrain, :],
                           'ytrain' : dfX[coly].iloc[:itrain],
@@ -176,13 +177,12 @@ def train(model_dict, dfX, cols_family, post_process_fun):
                           'yval'   : dfX[coly].iloc[ival:],
                           }
 
-
     log("#### Init, Train ############################################################")
     # from config_model import map_model    
     modelx = map_model(model_name)    
     log(modelx)
     modelx.reset()
-    modelx.init(model_pars, compute_pars=compute_pars)
+    modelx.init(model_pars, data_pars= data_pars_ref, compute_pars=compute_pars)
 
     if 'optuna' in model_name:
         modelx.fit(data_pars, compute_pars)
@@ -291,16 +291,16 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
 
 
     log("#### Extract column names  #####################################################")
-    ### Actual column names for Model Input :  label y and Input X (colnum , colcat)
+    ### Actual column names for Model Input :  label y and Input X (colnum , colcat), remove duplicate names
     model_dict['data_pars']['coly']       = cols['coly']
-    model_dict['data_pars']['cols_model'] = sum([  cols[colgroup] for colgroup in model_dict['data_pars']['cols_model_group'] ]   , [])
+    model_dict['data_pars']['cols_model'] = list(set(sum([  cols[colgroup] for colgroup in model_dict['data_pars']['cols_model_group'] ]   , []) ))
 
 
-    #### Col Group by column type : Sparse, continuous, .... (ie Neural Network feed Input
+    #### Col Group by column type : Sparse, continuous, .... (ie Neural Network feed Input, remove duplicate names
     ## 'coldense' = [ 'colnum' ]     'colsparse' = ['colcat' ]
     model_dict['data_pars']['cols_model_type2'] = {}
     for colg, colg_list in model_dict['data_pars'].get('cols_model_type', {}).items() :
-        model_dict['data_pars']['cols_model_type2'][colg] = sum([  cols[colgroup] for colgroup in colg_list ]   , [])
+        model_dict['data_pars']['cols_model_type2'][colg] = list(set(sum([  cols[colgroup] for colgroup in colg_list ]   , [])))
 
 
     log("#### Train model: #############################################################")
