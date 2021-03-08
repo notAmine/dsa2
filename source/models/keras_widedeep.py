@@ -10,12 +10,16 @@ pip install Keras==2.4.3
 
 
 """
-import os, pandas as pd, numpy as np, sklearn, keras, copy
+import os, pandas as pd, numpy as np, sklearn
 from sklearn.model_selection import train_test_split
+from sklearn.base import BaseEstimator, ClassifierMixin,  RegressorMixin, TransformerMixin
+try :
+  import keras
+except :
+  from tensorflow import keras
+    
 layers = keras.layers
 from keras.callbacks import EarlyStopping, ModelCheckpoint
-from sklearn.base import BaseEstimator, ClassifierMixin,  RegressorMixin, TransformerMixin
-
 
 ####################################################################################################
 VERBOSE = True
