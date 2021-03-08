@@ -63,8 +63,8 @@ def save_features(df, name, path):
 
 
 def model_dict_load(model_dict, config_path, config_name, verbose=True):
-    """
-       load the model dict from the python config file.
+    """ Load the model dict from the python config file.
+       ### Issue wiht passing function durin pickle on disk
     :param model_dict:
     :param config_path:
     :param config_name:
@@ -72,10 +72,21 @@ def model_dict_load(model_dict, config_path, config_name, verbose=True):
     :return:
     """
     if model_dict is None :
-       log("#### Model Params Dynamic loading  ###############################################")
-       model_dict_fun = load_function_uri(uri_name=config_path + "::" + config_name)
-       model_dict     = model_dict_fun()   ### params
-    if verbose : log( model_dict )
+      log("#### Model Params Dynamic loading  ###############################################")
+      model_dict_fun = load_function_uri(uri_name=config_path + "::" + config_name)
+      model_dict    = model_dict_fun()   ### params 
+
+    else :
+        ### Passing dict 
+        ### Due to Error when saving on disk the model, function definition is LOST, need dynamic loca
+        path_config = model_dict[ 'global_pars']['config_path']
+
+        p1 = path_config + "::" + model_dict['model_pars']['post_process_fun'].__name__
+        model_dict['model_pars']['post_process_fun'] = load_function_uri( p1)   
+
+        p1 = path_config + "::" + model_dict['model_pars']['pre_process_pars']['y_norm_fun'] .__name__ 
+        model_dict['model_pars']['pre_process_pars']['y_norm_fun'] = load_function_uri( p1 ) 
+
     return model_dict
 
 
