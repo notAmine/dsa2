@@ -10,14 +10,14 @@ pip install Keras==2.4.3
 
 
 """
-import os, pandas as pd, numpy as np, sklearn
+import os, pandas as pd, numpy as np, sklearn, copy
 from sklearn.model_selection import train_test_split
 
 import tensorflow
 try :
   import keras
   from keras.callbacks import EarlyStopping, ModelCheckpoint
-  layers = keras.layers  
+  from keras import layers
 except :
   from tensorflow import keras
   from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -281,35 +281,6 @@ def load_info(path=""):
     return dd
 
 
-def preprocess(prepro_pars):
-    if prepro_pars['type'] == 'test':
-        from sklearn.datasets import make_classification
-        from sklearn.model_selection import train_test_split
-
-        X, y = make_classification(n_features=10, n_redundant=0, n_informative=2,
-                                   random_state=1, n_clusters_per_class=1)
-
-        # log(X,y)
-        Xtrain, Xtest, ytrain, ytest = train_test_split(X, y)
-        return Xtrain, ytrain, Xtest, ytest
-
-    if prepro_pars['type'] == 'train':
-        from sklearn.model_selection import train_test_split
-        df  = pd.read_csv(prepro_pars['path'])
-        dfX = df[prepro_pars['colX']]
-        dfy = df[prepro_pars['coly']]
-        Xtrain, Xtest, ytrain, ytest = train_test_split(dfX.values, dfy.values,
-                                                        stratify=dfy.values,test_size=0.1)
-        return Xtrain, ytrain, Xtest, ytest
-
-    else:
-        df = pd.read_csv(prepro_pars['path'])
-        dfX = df[prepro_pars['colX']]
-
-        Xtest, ytest = dfX, None
-        return None, None, Xtest, ytest
-
-
 ####################################################################################################
 ############ Do not change #########################################################################
 def test(config=''):
@@ -321,17 +292,12 @@ def test(config=''):
     :param config:
     :return:
     """
-    global model, session
 
     X = pd.DataFrame( np.random.rand(100,30), columns= [ 'col_' +str(i) for i in range(30)] )
     y = pd.DataFrame( np.random.binomial(n=1, p=0.5, size=[100]), columns = ['coly'] )
     X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, random_state=2021, stratify=y)
     X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
 
-    #### Call back
-    #early_stopping = EarlyStopping(monitor='loss', patience=3)
-    #model_ckpt     = ModelCheckpoint(filepath='/home/hari/model_.pth', save_best_only=True, monitor='loss')
-    #callbacks      = [early_stopping, model_ckpt]
 
     ##############################################################
     ##### Generate column actual names from
