@@ -13,13 +13,18 @@ pip install Keras==2.4.3
 import os, pandas as pd, numpy as np, sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.base import BaseEstimator, ClassifierMixin,  RegressorMixin, TransformerMixin
+
+
+import tensorflow as tf
 try :
   import keras
+  from keras.callbacks import EarlyStopping, ModelCheckpoint
+  layers = keras.layers  
 except :
-  from tensorflow import keras
-    
-layers = keras.layers
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+  from tf import keras
+  from tf.keras.callbacks import EarlyStopping, ModelCheckpoint
+  layers = tf.keras.layers 
+  
 
 ####################################################################################################
 VERBOSE = True
