@@ -10,7 +10,7 @@ pip install Keras==2.4.3
 
 
 """
-import os, pandas as pd, numpy as np, sklearn, keras
+import os, pandas as pd, numpy as np, sklearn, keras, copy
 from sklearn.model_selection import train_test_split
 layers = keras.layers
 from keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -48,7 +48,7 @@ def Modelcustom(n_wide_cross, n_wide,n_deep, n_feat=8, m_EMBEDDING=10, loss='mse
         wide_model              = keras.Model(inputs=[col_wide_cross, col_wide], outputs=predictions)
 
         wide_model.compile(loss = 'mse', optimizer='adam', metrics=[ metric ])
-        print(wide_model.summary())
+        log2(wide_model.summary())
 
         #### Deep model with the Functional API
         deep_inputs             = layers.Input(shape=(n_deep,))
@@ -60,7 +60,7 @@ def Modelcustom(n_wide_cross, n_wide,n_deep, n_feat=8, m_EMBEDDING=10, loss='mse
         embed_out               = layers.Dense(1)(merged_layer)
         deep_model              = keras.Model(inputs=deep_inputs, outputs=embed_out)
         deep_model.compile(loss='mse',   optimizer='adam',  metrics=[ metric ])
-        print(deep_model.summary())
+        log2(deep_model.summary())
 
 
         #### Combine wide and deep into one model
@@ -68,7 +68,7 @@ def Modelcustom(n_wide_cross, n_wide,n_deep, n_feat=8, m_EMBEDDING=10, loss='mse
         merged_out = layers.Dense(1)(merged_out)
         model      = keras.Model( wide_model.input + [deep_model.input], merged_out)
         model.compile(loss=loss,   optimizer='adam',  metrics=[ metric ])
-        print(model.summary())
+        log2(model.summary())
 
         return model
 
@@ -132,7 +132,6 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
-
 class Model(object):
     def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
         self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
@@ -142,9 +141,9 @@ class Model(object):
         else:
             log2("data_pars", data_pars)
 
-            model_class = model_pars['model_class']  # globals() removed
+            model_class = model_pars['model_class']  #
 
-            ### Dynamic sizing
+            ### Dynamic shape of input
             model_pars['model_pars']['n_wide_cross'] = len(data_pars['cols_model_type2']['cols_cross_input'])
             model_pars['model_pars']['n_wide']       = len(data_pars['cols_model_type2']['cols_deep_input'])
             model_pars['model_pars']['n_deep']       = len(data_pars['cols_model_type2']['cols_deep_input'])
@@ -165,16 +164,13 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     session = None  # Session type for compute
 
     Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train")
-
-    cpars = compute_pars.get("compute_pars", {})
-    assert 'epochs' in cpars, 'epoch missing'
-
-    out_pars ={} if out_pars is None else out_pars
+    cpars          = copy.deepcopy( compute_pars.get("compute_pars", {}))   ## issue with pickle
     early_stopping = EarlyStopping(monitor='loss', patience=3)
-    model_ckpt     = ModelCheckpoint(filepath = out_pars.get('path_ckpt', '/home/hari/model_.pth'),
+    model_ckpt     = ModelCheckpoint(filepath = compute_pars.get('path_ckpt', 'ztmp_checkpoint/model_.pth'),
                                      save_best_only=True, monitor='loss')
     cpars['callbacks'] =  [early_stopping, model_ckpt]
 
+    assert 'epochs' in cpars, 'epoch missing'
     hist = model.model.fit( Xtrain_tuple, ytrain,  **cpars)
     model.history = hist
 
@@ -204,13 +200,18 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
     return ddict
 
 
-def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
+def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     global model, session
     if Xpred is None:
         # data_pars['train'] = False
-        Xpred = get_dataset(data_pars, task_type="predict")
+        Xpred_tuple = get_dataset(data_pars, task_type="predict")
 
-    ypred = model.model.predict(Xpred )
+    else :
+        cols_type   = data_pars['cols_model_type2']  ##
+        Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_input_formodel )
+
+    log2(Xpred_tuple)
+    ypred = model.model.predict(Xpred_tuple )
 
     ypred_proba = None  ### No proba
     if compute_pars.get("probability", False):
@@ -223,20 +224,34 @@ def reset():
     model, session = None, None
 
 
-def save(path=None):
+def save(path=None, info=None):
+    import dill as pickle, copy
     global model, session
     os.makedirs(path, exist_ok=True)
 
-    filename = "model.h5"
-    filepath = path + filename
-    model.model.save(filepath)
+    model.model.save(f"{path}/model_keras.h5")
+
+    modelx = Model()  # Empty model  Issue with pickle
+    modelx.model_pars   = model.model_pars
+    modelx.data_pars    = model.data_pars
+    modelx.compute_pars = model.compute_pars
+    # log('model', modelx.model)
+    pickle.dump(modelx, open(f"{path}/model.pkl", mode='wb'))  #
+
+    pickle.dump(info, open(f"{path}/info.pkl", mode='wb'))  #
 
 
 def load_model(path=""):
     global model, session
+    import dill as pickle
 
-    filepath = path + 'model.h5'
-    model = keras.models.load_model(filepath)
+    model_keras = keras.models.load_model(path + '/model_keras.h5' )
+    model0      = pickle.load(open(f"{path}/model.pkl", mode='rb'))
+
+    model = Model()  # Empty model
+    model.model = model_keras
+    model.model_pars = model0.model_pars
+    model.compute_pars = model0.compute_pars
     session = None
     return model, session
 
@@ -281,7 +296,6 @@ def preprocess(prepro_pars):
         return None, None, Xtest, ytest
 
 
-
 ####################################################################################################
 ############ Do not change #########################################################################
 def test(config=''):
@@ -289,7 +303,6 @@ def test(config=''):
         Group of columns for the input model
            cols_input_group = [ ]
           for cols in cols_input_group,
-
 
     :param config:
     :return:
@@ -306,7 +319,7 @@ def test(config=''):
     #model_ckpt     = ModelCheckpoint(filepath='/home/hari/model_.pth', save_best_only=True, monitor='loss')
     #callbacks      = [early_stopping, model_ckpt]
 
-    #############################################################
+    ##############################################################
     ##### Generate column actual names from
     colnum = [ 'col_0', 'col_11', 'col_8']
     colcat = [ 'col_13', 'col_17', 'col_13', 'col_9']
@@ -396,7 +409,6 @@ def test_helper(model_pars, data_pars, compute_pars):
     ypred, ypred_proba = predict(Xpred=None, data_pars=data_pars, compute_pars=compute_pars)
     log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
 
-
     log('Evaluating the model..')
     log(eval(data_pars=data_pars, compute_pars=compute_pars))
     #
@@ -415,7 +427,6 @@ def test_helper(model_pars, data_pars, compute_pars):
 if __name__ == "__main__":
     import fire
     fire.Fire(test)
-
 
 
 
