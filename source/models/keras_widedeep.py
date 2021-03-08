@@ -80,12 +80,19 @@ def get_dataset_tuple(Xtrain, cols_type, cols_input_formodel ):
     :param cols_input_formodel:
     :return:
     """
+    if len(cols_input_formodel) < 1 :
+        return Xtrain
+
     Xtuple_train = []
     for cols_groupname in cols_input_formodel :
+        assert cols_groupname in cols_type, "Error missing colgroup in config data_pars[cols_model_type] "
         cols_i = cols_type[cols_groupname]
         Xtuple_train.append( Xtrain[cols_i] )
 
-    return Xtuple_train
+    if len(cols_input_formodel) == 1 :
+        return Xtuple_train[0]  ### No tuple
+    else :
+        return Xtuple_train
 
 
 def get_dataset(data_pars=None, task_type="train", **kw):
@@ -166,7 +173,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train")
     cpars          = copy.deepcopy( compute_pars.get("compute_pars", {}))   ## issue with pickle
     early_stopping = EarlyStopping(monitor='loss', patience=3)
-    model_ckpt     = ModelCheckpoint(filepath = compute_pars.get('path_ckpt', 'ztmp_checkpoint/model_.pth'),
+    model_ckpt     = ModelCheckpoint(filepath = compute_pars.get('path_checkpoint', 'ztmp_checkpoint/model_.pth'),
                                      save_best_only=True, monitor='loss')
     cpars['callbacks'] =  [early_stopping, model_ckpt]
 

@@ -120,7 +120,9 @@ def config1() :
         }},
 
       "compute_pars": { "metric_list":  ["accuracy_score","average_precision_score"],
-                        'compute_pars': {'epochs': 1 }
+                        'compute_pars': {'epochs': 1 },
+
+                        'path_checkpoint' : "ztmp_checkpoint/"
                       },
 
       "data_pars": { "n_sample" : n_sample,
