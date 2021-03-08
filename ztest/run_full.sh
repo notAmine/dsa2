@@ -30,4 +30,4 @@ python example/classifier/classifier_income.py  predict  --nsample 1000   ;
 python  example/test_hyperopt.py  hyperparam  --ntrials 1
 
 ### Keras model test
-python example/mkeras.py  train    --config config1
+python example/test_mkeras.py  train    --config config1
