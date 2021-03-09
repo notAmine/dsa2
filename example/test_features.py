@@ -542,3 +542,89 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+############################################################################################################
+############################################################################################################
+##### Sampler
+"""
+
+
+
+"""
+def config3(path_model_out="") :
+    """
+       Contains all needed informations
+    """
+    config_name  = os_get_function_name()
+    data_name    = "titanic"         ### in data/input/
+    model_class  = 'LGBMClassifier'  ### ACTUAL Class name for model_sklearn.py
+    n_sample     = 1000
+
+    def post_process_fun(y):  return  int(y)
+    def pre_process_fun(y):   return  int(y)
+
+    model_dict = {'model_pars': {
+    ### LightGBM API model   #######################################
+     'model_class': model_class
+    ,'model_pars' : {'objective': 'binary', 'n_estimators':5,  }
+
+    , 'post_process_fun' : post_process_fun
+    , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,
+
+
+    ### Pipeline for data processing ##############################
+    'pipe_list': [
+    ###  coly encoding
+    {'uri': 'source/prepro.py::pd_coly',                 'pars': {'ymin': -9999999999.0, 'ymax': 999999999.0, 'y_norm_fun': None}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         }
+    ,{'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {'path_pipeline': False}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             }
+
+
+    #### Data Over/Under sampling, New data
+    #,{'uri': 'source/prepro_sampler.py::pd_sample_imblearn'   ,
+    #            'pars': {"model_name": 'SMOTEENN',
+    #                    'pars_resample':    {'sampling_strategy' : 'auto', 'random_state':0},
+    #                    "coly": "Survived"} ,
+    #                    'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': 'add_coly'  }
+    # ,{'uri': 'source/prepro_sampler.py::pd_filter_rows'       , 'pars': {'ymin': -9999999999.0, 'ymax': 999999999.0} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+    #,{'uri': 'source/prepro_sampler.py::pd_augmentation_sdv'  , 'pars': {} , 'cols_family': 'colnum' , 'cols_out': 'colnum_out' , 'type': '' }
+
+    ],
+           }
+    },
+
+  'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
+                  },
+
+  'data_pars': { 'n_sample' : n_sample,
+
+      #### columns as raw data input
+      'cols_input_type' : cols_input_type_2,
+
+      ### columns for model input    ############################################################
+      'cols_model_group': [ # 'colnum',
+                            'colcat_bin',
+                          ],
+
+      #### Separate Category Sparse from Continuous (DLearning input)
+      'cols_model_type': {
+         'continuous' : [ 'colnum',   ],
+         'discreate'  : [ 'colcat_bin',   ]
+      }
+
+
+      ### Filter data rows   ###################################################################
+     ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 }
+
+         }
+      }
+
+    ##### Filling Global parameters    #########################################################
+    model_dict        = global_pars_update(model_dict, data_name, config_name )
+    return model_dict
+
+
