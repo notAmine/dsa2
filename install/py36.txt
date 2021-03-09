@@ -24,7 +24,7 @@ dill
 nltk
 category_encoders
 imblearn
-
+umap
 ##########################################
 tensorflow_text>=2.0.0rc0
 # simpleneighbors[annoy]
