@@ -1,12 +1,11 @@
 # pylint: disable=C0321,C0103,C0301,E1305,E1121,C0302,C0330,C0111,W0613,W0611,R1705
 # -*- coding: utf-8 -*-
 """
-cd source/models/
+Genreate  train_data  ---> New train data by sampling
 
+cd source/models/
 python model_sampler.py test
 
-
-Genreate  train_data  ---> New train data by sampling
 
 Transformation for ALL Columns :
    Increase samples, Reduce Samples.
@@ -26,17 +25,13 @@ Main isssue is the number of rows change  !!!!
 
 """
 import os, pandas as pd, numpy as np,  sklearn
-from sklearn.cluster import *
-
+from sklearn.cluster import KMeans, DBSCAN, Birch
 from sklearn.decomposition import TruncatedSVD, MiniBatchSparsePCA, FastICA
-
-
-
+from umap import UMAP
 
 try:
     #from sdv.demo import load_tabular_demo
-    from sdv.tabular import TVAE
-    from sdv.tabular import CTGAN
+    from sdv.tabular import TVAE, CTGAN
     from sdv.timeseries import PAR
     from sdv.evaluation import evaluate
     import ctgan
@@ -46,12 +41,9 @@ try:
 except:
     os.system("pip install sdv")
     os.system('pip install ctgan==0.3.1.dev0')
-    from sdv.tabular import TVAE
-    from sdv.tabular import CTGAN
+    from sdv.tabular import TVAE, CTGAN
     from sdv.timeseries import PAR
     from sdv.evaluation import evaluate  
-
-
 
 ### IMBLEARN
 from imblearn.over_sampling import SMOTE
@@ -60,26 +52,33 @@ from imblearn.under_sampling import NearMiss
 
 
 ####################################################################################################
-VERBOSE = True
+verbosity = 3
 
 def log(*s):
     print(*s, flush=True)
 
 
 def log2(*s):
-    print(*s, flush=True)
+    if verbosity >= 2 :
+       print(*s, flush=True)
+
+
+def log3(*s):
+    if verbosity >= 3 :
+       print(*s, flush=True)
+
+
 
 ####################################################################################################
 global model, session
 
-
 def init(*kw, **kwargs):
     global model, session
-    model = Model(*kw, **kwargs)
+    model   = Model(*kw, **kwargs)
     session = None
 
 
-#####################################################################################
+####################################################################################################
 class Model(object):
     def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
         self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
@@ -89,24 +88,24 @@ class Model(object):
         else:
             model_class = globals()[model_pars['model_class']]
             self.model  = model_class(**model_pars['model_pars'])
-            if VERBOSE: log(model_class, self.model)
+            log2(model_class, self.model)
 
 
 
-def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
+def fit(data_pars: dict=None, compute_pars: dict=None, out_pars: dict=None, **kw):
     """
     """
     global model, session
     session = None  # Session type for compute
     Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train")
 
+    cpars = copy.deepcopy(compute_pars.get("compute_pars", {}))
 
     list_unsupervised = [  'TVAE', 'CTGAN', 'PAR'  ]
     if ytrain is not None and model.model_pars['model_class'] not in list_unsupervised :  ###with label
-       model.model.fit(Xtrain_tuple, ytrain, **compute_pars.get("compute_pars", {}))
-
+       model.model.fit(Xtrain_tuple, ytrain, **cpars)
     else :
-       model.model.fit(Xtrain_tuple, **compute_pars.get("compute_pars", {}))
+       model.model.fit(Xtrain_tuple, **cpars)
 
 
 def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
@@ -117,19 +116,17 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
     from sdv.evaluation import evaluate
 
     data_pars['train'] = True
-    Xval, yval = get_dataset(data_pars, task_type="eval")
+    Xval, yval         = get_dataset(data_pars, task_type="eval")
 
-    Xnew = transform(Xval, data_pars, compute_pars, out_pars)
-
+    Xnew               = transform(Xval, data_pars, compute_pars, out_pars)
     # log(data_pars)
     mpars = compute_pars.get("metrics_pars", {'aggregate': True})
     evals = evaluate(Xnew, Xval, **mpars )
-
     return evals
 
 
 def transform(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
-    """ Geenrate Xtrain  ----.> Xtrain_new
+    """ Geenrate Xtrain  ----> Xtrain_new
     :param Xpred:
     :param data_pars:
     :param compute_pars:
@@ -143,30 +140,25 @@ def transform(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
         def post_process_fun(y):
             return y
 
-
     #######
     if Xpred is None:
-        # data_pars['train'] = False
         Xpred_tuple = get_dataset(data_pars, task_type="predict")
-
     else :
-        cols_type   = data_pars['cols_model_type2']  ##
+        cols_type         = data_pars['cols_model_type2']
         cols_ref_formodel = cols_type
-        Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
+        Xpred_tuple       = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
 
     Xnew= None
     if model.model_pars['model_class'] in ['CTGAN', 'TVAE', 'PAR'] :
        Xnew = model.model.sample(compute_pars.get('n_sample_generation', 100) )
 
-    elif ypred is not None :  ### Sampler
+    elif model.model_pars['model_class'] in ['SMOTE', ] :   ### Sampler
        Xnew = model.model.resample( Xpred, **compute_pars.get('compute_pars', {}) )
 
     else :
        Xnew = model.model.transform( Xpred, **compute_pars.get('compute_pars', {}) )
 
-
-
-    log("generated data", Xnew)
+    log3("generated data", Xnew)
     return Xnew
 
 
@@ -200,8 +192,8 @@ def load_model(path=""):
     model0 = pickle.load(open(f"{path}/model.pkl", mode='rb'))
 
     model = Model()  # Empty model
-    model.model = model0.model
-    model.model_pars = model0.model_pars
+    model.model        = model0.model
+    model.model_pars   = model0.model_pars
     model.compute_pars = model0.compute_pars
     session = None
     return model, session
@@ -223,7 +215,7 @@ def load_info(path=""):
 ####################################################################################################
 ############ Do not change #########################################################################
 def get_dataset_tuple(Xtrain, cols_type_received, cols_ref):
-    """  Split into Tuples to feed  Xyuple = (df1, df2, df3)
+    """  Split into Tuples = (df1, df2, df3) to feed model, (ie Keras)
     :param Xtrain:
     :param cols_type_received:
     :param cols_ref:
@@ -243,18 +235,22 @@ def get_dataset_tuple(Xtrain, cols_type_received, cols_ref):
     else :
         return Xtuple_train
 
+
 def get_dataset(data_pars=None, task_type="train", **kw):
     """
-      return tuple of dataframes
+      return tuple of dataframes OR single dataframe
     """
-    # log(data_pars)
+    #### log(data_pars)
     data_type = data_pars.get('type', 'ram')
-    cols_ref  = cols_ref_formodel
+
+    ### Sparse columns, Dense Columns
+    cols_type_received     = data_pars.get('cols_model_type2', {} )
+    cols_ref  = list( cols_type_received.keys())
 
     if data_type == "ram":
         # cols_ref_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input' ]
         ### dict  colgroup ---> list of colname
-        cols_type_received     = data_pars.get('cols_model_type2', {} )  ##3 Sparse, Continuous
+        cols_type_received     = data_pars.get('cols_model_type2', {} )
 
         if task_type == "predict":
             d = data_pars[task_type]
@@ -286,18 +282,12 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
-
-def get_params_sklearn(deep=False):
-    return model.model.get_params(deep=deep)
-
-
 def get_params(param_pars={}, **kw):
     import json
     # from jsoncomment import JsonComment ; json = JsonComment()
-    pp = param_pars
-    choice = pp['choice']
-    config_mode = pp['config_mode']
-    data_path = pp['data_path']
+    choice      = param_pars['choice']
+    config_mode = param_pars['config_mode']
+    data_path   = param_pars['data_path']
 
     if choice == "json":
         cf = json.load(open(data_path, mode='r'))
@@ -320,7 +310,7 @@ def test():
 
     X['colid'] = np.arange(0, len(X))
     X_train, X_test, y_train, y_test    = train_test_split(X, y)
-    X_train, X_valid, y_train, y_valid  = train_test_split(X_train, y_train, random_state=2021, stratify=y_train_full)
+    X_train, X_valid, y_train, y_valid  = train_test_split(X_train, y_train, random_state=2021, stratify=y_train)
 
     #####
     colid  = 'colid'
@@ -379,6 +369,37 @@ def test():
 
 
 
+
+
+    log("test Umap")
+
+
+
+
+
+
+    log("test Umap 2")
+
+
+
+
+
+
+
+    log("test Umap 3")
+
+
+
+
+
+    log("test 5")
+
+
+
+
+
+
+
     log("test 2")
     model_pars = {'model_class': 'CTGAN',
                   'model_pars': {
@@ -398,7 +419,7 @@ def test_helper(model_pars, data_pars, compute_pars):
     root  = "ztmp/"
     model = Model(model_pars=model_pars, data_pars=data_pars, compute_pars=compute_pars)
 
-    log('\n\nTraining the model..')
+    log('\n\nTraining the model')
     fit(data_pars=data_pars, compute_pars=compute_pars, out_pars=None)
 
     log('Predict data..')
