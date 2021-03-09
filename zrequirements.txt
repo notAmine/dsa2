@@ -9,6 +9,7 @@ fire
 tqdm
 gplearn
 numba==0.50.1
+umap
 #cycler==0.10.0
 #joblib==0.16.0
 #kiwisolver==1.2.0

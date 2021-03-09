@@ -168,28 +168,29 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
     from prepro import prepro_load, prepro_save
     prepro, pars_saved, cols_saved = prepro_load(prefix, pars)
 
+
     #### Do something #################################################################
     from source.prepro_tseries import pd_ts_date, pd_ts_rolling
     if prepro is None :   ###  Training time
-        dfy, coly  = pars['dfy'], pars['coly']
-        coldate = pars['coldate']
-        df = df.set_index(coldate)
+        dfy, coly = pars['dfy'], pars['coly']
+        coldate   = pars['coldate']
+        df        = df.set_index(coldate)
 
         #### time features
-        dfi, coli = pd_ts_date(df, cols=[coldate], pars={'col_add':['day', 'month', 'year', 'weekday']})
-        df_new     = dfi
+        dfi, coli = pd_ts_date(df, cols=[coldate], pars={'col_add': ['day', 'month', 'year', 'weekday']})
+        df_new    = dfi
 
         #### Rolling features
         dfi, coli = pd_ts_rolling(df,  cols= ['date', 'item', 'store', 'sales'],
                                   pars= {'col_groupby' : ['store','item'],
                                          'col_stat':     'sales', 'lag_list': [7, 30]})
-        df_new = pd.concat([df_new , dfi], axis=1)
-
+        df_new    = pd.concat([df_new , dfi], axis=1)
 
     else :  ### predict time
         pars = pars_saved  ##merge
 
-    ### Transform features ###################################
+
+    ### Clean up the df ###############################################################
     df_new.index   = df.index  ### Impt for JOIN
     df_new.columns = [col + f"_{prefix}"  for col in df_new.columns ]
     cols_new       = list(df_new.columns)
@@ -198,6 +199,7 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
     ###### Training time save all #####################################################
     df_new, col_pars = prepro_save(prefix, pars, df_new, cols_new, prepro)
     return df_new, col_pars
+
 
 
 
