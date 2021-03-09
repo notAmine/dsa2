@@ -25,13 +25,15 @@ except :
 
 
 ####################################################################################################
-VERBOSE = True
+verbosity =2
 
 def log(*s):
     print(*s, flush=True)
 
 def log2(*s):
-    print(*s, flush=True)
+    if verbosity >= 2 :
+      print(*s, flush=True)
+
 
 ####################################################################################################
 global model, session
@@ -42,7 +44,7 @@ def init(*kw, **kwargs):
     session = None
 
 
-cols_input_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input' ]
+cols_ref_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input']
 
 def Modelcustom(n_wide_cross, n_wide,n_deep, n_feat=8, m_EMBEDDING=10, loss='mse', metric = 'mean_squared_error'):
 
@@ -80,23 +82,23 @@ def Modelcustom(n_wide_cross, n_wide,n_deep, n_feat=8, m_EMBEDDING=10, loss='mse
         return model
 
 
-def get_dataset_tuple(Xtrain, cols_type, cols_input_formodel ):
-    """  Split into Tuples to feed Keras
+def get_dataset_tuple(Xtrain, cols_type_received, cols_ref):
+    """  Split into Tuples to feed  Xyuple = (df1, df2, df3)
     :param Xtrain:
-    :param cols_type:
-    :param cols_input_formodel:
+    :param cols_type_received:
+    :param cols_ref:
     :return:
     """
-    if len(cols_input_formodel) < 1 :
+    if len(cols_ref) < 1 :
         return Xtrain
 
     Xtuple_train = []
-    for cols_groupname in cols_input_formodel :
-        assert cols_groupname in cols_type, "Error missing colgroup in config data_pars[cols_model_type] "
-        cols_i = cols_type[cols_groupname]
+    for cols_groupname in cols_ref :
+        assert cols_groupname in cols_type_received, "Error missing colgroup in config data_pars[cols_model_type] "
+        cols_i = cols_type_received[cols_groupname]
         Xtuple_train.append( Xtrain[cols_i] )
 
-    if len(cols_input_formodel) == 1 :
+    if len(cols_ref) == 1 :
         return Xtuple_train[0]  ### No tuple
     else :
         return Xtuple_train
@@ -108,22 +110,23 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     """
     # log(data_pars)
     data_type = data_pars.get('type', 'ram')
+    cols_ref  = cols_ref_formodel
 
     if data_type == "ram":
-        cols_input_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input' ]
+        # cols_ref_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input' ]
         ### dict  colgroup ---> list of colname
-        cols_type     = data_pars['cols_model_type2']  ##3 Sparse, Continuous
+        cols_type_received     = data_pars.get('cols_model_type2', {} )  ##3 Sparse, Continuous
 
         if task_type == "predict":
             d = data_pars[task_type]
             Xtrain       = d["X"]
-            Xtuple_train = get_dataset_tuple(Xtrain, cols_type, cols_input_formodel )
+            Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
             return Xtuple_train
 
         if task_type == "eval":
             d = data_pars[task_type]
             Xtrain, ytrain  = d["X"], d["y"]
-            Xtuple_train    = get_dataset_tuple(Xtrain, cols_type, cols_input_formodel )
+            Xtuple_train    = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
             return Xtuple_train, ytrain
 
         if task_type == "train":
@@ -131,8 +134,8 @@ def get_dataset(data_pars=None, task_type="train", **kw):
             Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
 
             ### dict  colgroup ---> list of df
-            Xtuple_train = get_dataset_tuple(Xtrain, cols_type, cols_input_formodel )
-            Xtuple_test  = get_dataset_tuple(Xtest, cols_type, cols_input_formodel )
+            Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
+            Xtuple_test  = get_dataset_tuple(Xtest, cols_type_received, cols_ref)
 
 
             log2("Xtuple_train", Xtuple_train)
@@ -167,7 +170,7 @@ class Model(object):
             mdict = model_pars['model_pars']
 
             self.model  = Modelcustom(**mdict)
-            if VERBOSE: log(model_class, self.model)
+            log2(model_class, self.model)
             self.model.summary()
 
 
@@ -222,7 +225,7 @@ def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
 
     else :
         cols_type   = data_pars['cols_model_type2']  ##
-        Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_input_formodel )
+        Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
 
     log2(Xpred_tuple)
     ypred = model.model.predict(Xpred_tuple )
