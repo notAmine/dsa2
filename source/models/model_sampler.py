@@ -28,6 +28,11 @@ Main isssue is the number of rows change  !!!!
 import os, pandas as pd, numpy as np,  sklearn
 from sklearn.cluster import *
 
+from sklearn.decomposition import TruncatedSVD, MiniBatchSparsePCA, FastICA
+
+
+
+
 try:
     #from sdv.demo import load_tabular_demo
     from sdv.tabular import TVAE
@@ -61,7 +66,7 @@ def log(*s):
     print(*s, flush=True)
 
 
-def log3(*s):
+def log2(*s):
     print(*s, flush=True)
 
 ####################################################################################################
@@ -72,57 +77,6 @@ def init(*kw, **kwargs):
     global model, session
     model = Model(*kw, **kwargs)
     session = None
-
-
-
-def pd_sample_imblearn(df=None, col=None, pars=None):
-    """
-        Over-sample
-    """
-    params_check(pars, ['model_name', 'pars_resample', 'coly']) # , 'dfy'
-    prefix = '_sample_imblearn'
-
-    ######################################################################################
-    from imblearn.over_sampling import SMOTE
-    from imblearn.combine import SMOTEENN, SMOTETomek
-    from imblearn.under_sampling import NearMiss
-
-    # model_resample = { 'SMOTE' : SMOTE, 'SMOTEENN': SMOTEENN }[  pars.get("model_name", 'SMOTEENN') ]
-    model_resample = locals()[  pars.get("model_name", 'SMOTEENN')  ]
-    pars_resample  = pars.get('pars_resample',
-                             {'sampling_strategy' : 'auto', 'random_state':0}) # , 'n_jobs': 2
-
-    if 'path_pipeline' in pars :   #### Inference time
-        return df, {'col_new': col }
-
-    else :     ### Training time
-        colX    = col # [col_ for col_ in col if col_ not in coly]
-        coly    = pars['coly']
-        train_y = pars['dfy']  ## df[coly] #
-        train_X = df[colX].fillna(method='ffill')
-        gp      = model_resample( **pars_resample)
-        X_resample, y_resample = gp.fit_resample(train_X, train_y)
-
-        col_new   = [ t + f"_{prefix}" for t in col ]
-        df2       = pd.DataFrame(X_resample, columns = col_new) # , index=train_X.index
-        df2[coly] = y_resample
-
-    ###################################################################################
-    if 'path_features_store' in pars and 'path_pipeline_export' in pars:
-       save_features(df2, prefix.replace("col_", "df_"), pars['path_features_store'])
-       save(gp,             pars['path_pipeline_export'] + f"/{prefix}_model.pkl" )
-       save(col,            pars['path_pipeline_export'] + f"/{prefix}.pkl" )
-       save(pars_resample,  pars['path_pipeline_export'] + f"/{prefix}_pars.pkl" )
-
-
-    col_pars = {'prefix' : prefix , 'path' :   pars.get('path_pipeline_export', pars.get('path_pipeline', None)) }
-    col_pars['cols_new'] = {
-       prefix :  col_new  ###  for training input data
-    }
-    return df2, col_pars
-
-
-
 
 
 #####################################################################################
@@ -138,21 +92,21 @@ class Model(object):
             if VERBOSE: log(model_class, self.model)
 
 
+
 def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
     """
     global model, session
     session = None  # Session type for compute
-    Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
-    if VERBOSE: log(Xtrain.shape, model.model)
+    Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train")
+
 
     list_unsupervised = [  'TVAE', 'CTGAN', 'PAR'  ]
-
     if ytrain is not None and model.model_pars['model_class'] not in list_unsupervised :  ###with label
-       model.model.fit(Xtrain, ytrain, **compute_pars.get("compute_pars", {}))
+       model.model.fit(Xtrain_tuple, ytrain, **compute_pars.get("compute_pars", {}))
 
     else :
-       model.model.fit(Xtrain, **compute_pars.get("compute_pars", {}))
+       model.model.fit(Xtrain_tuple, **compute_pars.get("compute_pars", {}))
 
 
 def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
@@ -189,17 +143,28 @@ def transform(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
         def post_process_fun(y):
             return y
 
+
     #######
+    if Xpred is None:
+        # data_pars['train'] = False
+        Xpred_tuple = get_dataset(data_pars, task_type="predict")
+
+    else :
+        cols_type   = data_pars['cols_model_type2']  ##
+        cols_ref_formodel = cols_type
+        Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
+
     Xnew= None
     if model.model_pars['model_class'] in ['CTGAN', 'TVAE', 'PAR'] :
        Xnew = model.model.sample(compute_pars.get('n_sample_generation', 100) )
 
-    else :  ### Sampler
-        if Xpred is None:
-           data_pars['train'] = False
-           Xpred, ypred = get_dataset(data_pars, task_type="eval")
-           log(Xpred, ypred)
-           Xnew = model.model.fit_resample( Xpred, ypred, **compute_pars.get('compute_pars', {}) )
+    elif ypred is not None :  ### Sampler
+       Xnew = model.model.resample( Xpred, **compute_pars.get('compute_pars', {}) )
+
+    else :
+       Xnew = model.model.transform( Xpred, **compute_pars.get('compute_pars', {}) )
+
+
 
     log("generated data", Xnew)
     return Xnew
@@ -253,67 +218,73 @@ def load_info(path=""):
     return dd
 
 
-def preprocess(prepro_pars):
-    if prepro_pars['type'] == 'test':
-        from sklearn.datasets import make_classification
-        from sklearn.model_selection import train_test_split
-
-        X, y = make_classification(n_features=10, n_redundant=0, n_informative=2,
-                                   random_state=1, n_clusters_per_class=1)
-
-        # log(X,y)
-        Xtrain, Xtest, ytrain, ytest = train_test_split(X, y)
-        return Xtrain, ytrain, Xtest, ytest
-
-    if prepro_pars['type'] == 'train':
-        from sklearn.model_selection import train_test_split
-        df = pd.read_csv(prepro_pars['path'])
-        dfX = df[prepro_pars['colX']]
-        dfy = df[prepro_pars['coly']]
-        Xtrain, Xtest, ytrain, ytest = train_test_split(dfX.values, dfy.values,
-                                                        stratify=dfy.values,test_size=0.1)
-        return Xtrain, ytrain, Xtest, ytest
-
-    else:
-        df = pd.read_csv(prepro_pars['path'])
-        dfX = df[prepro_pars['colX']]
-
-        Xtest, ytest = dfX, None
-        return None, None, Xtest, ytest
 
 
 ####################################################################################################
 ############ Do not change #########################################################################
+def get_dataset_tuple(Xtrain, cols_type_received, cols_ref):
+    """  Split into Tuples to feed  Xyuple = (df1, df2, df3)
+    :param Xtrain:
+    :param cols_type_received:
+    :param cols_ref:
+    :return:
+    """
+    if len(cols_ref) < 1 :
+        return Xtrain
+
+    Xtuple_train = []
+    for cols_groupname in cols_ref :
+        assert cols_groupname in cols_type_received, "Error missing colgroup in config data_pars[cols_model_type] "
+        cols_i = cols_type_received[cols_groupname]
+        Xtuple_train.append( Xtrain[cols_i] )
+
+    if len(cols_ref) == 1 :
+        return Xtuple_train[0]  ### No tuple
+    else :
+        return Xtuple_train
+
 def get_dataset(data_pars=None, task_type="train", **kw):
     """
-      "ram"  : 
-      "file" :
+      return tuple of dataframes
     """
     # log(data_pars)
-    data_type  = data_pars.get('type', 'ram')
-    cols_type  = data_pars.get('cols_model_type2', {})   #### Split input by Sparse, Continous
-    cols_model = data_pars['cols_model']
-    coly       = data_pars['coly']
-
-    log3("Cols Type:", cols_type)
+    data_type = data_pars.get('type', 'ram')
+    cols_ref  = cols_ref_formodel
 
     if data_type == "ram":
+        # cols_ref_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input' ]
+        ### dict  colgroup ---> list of colname
+        cols_type_received     = data_pars.get('cols_model_type2', {} )  ##3 Sparse, Continuous
+
         if task_type == "predict":
             d = data_pars[task_type]
-            return d["X"]
+            Xtrain       = d["X"]
+            Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
+            return Xtuple_train
 
         if task_type == "eval":
             d = data_pars[task_type]
-            return d["X"], d["y"]
+            Xtrain, ytrain  = d["X"], d["y"]
+            Xtuple_train    = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
+            return Xtuple_train, ytrain
 
         if task_type == "train":
             d = data_pars[task_type]
-            return d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
+            Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
+
+            ### dict  colgroup ---> list of df
+            Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
+            Xtuple_test  = get_dataset_tuple(Xtest, cols_type_received, cols_ref)
+
+            log2("Xtuple_train", Xtuple_train)
+
+            return Xtuple_train, ytrain, Xtuple_test, ytest
 
     elif data_type == "file":
         raise Exception(f' {data_type} data_type Not implemented ')
 
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
+
 
 
 def get_params_sklearn(deep=False):
@@ -346,8 +317,10 @@ def test():
     X = pd.DataFrame( X, columns = [ 'col_' +str(i) for i in range(X.shape[1])] )
     y = pd.DataFrame( y, columns = ['coly'] )
 
+
     X['colid'] = np.arange(0, len(X))
-    Xtrain, Xtest, ytrain, ytest = train_test_split(X, y)
+    X_train, X_test, y_train, y_test    = train_test_split(X, y)
+    X_train, X_valid, y_train, y_valid  = train_test_split(X_train, y_train, random_state=2021, stratify=y_train_full)
 
     #####
     colid  = 'colid'
@@ -369,30 +342,34 @@ def test():
         for colg_i in colist :
           cols_model_type2[colg].extend( cols_input_type_1[colg_i] )
     ###############################################################################
-    data_pars = {'n_sample': 100,
+    n_sample = 100
+    data_pars = {'n_sample': n_sample,
                   'cols_input_type': cols_input_type_1,
-                  'cols_model_group': ['colnum', 'colcat',  ],
+
+                  'cols_model_group': ['colnum',
+                                       'colcat',
+                                       # 'colcross_pair'
+                                       ],
+
                   'cols_model_type2' : cols_model_type2
 
-        ,'cols_model' : colnum + colcat
-        ,'coly' : 'y'
 
         ### Filter data rows   #######################3############################
         , 'filter_pars': {'ymax': 2, 'ymin': -1}
                   }
 
-    data_pars['train'] ={'Xtrain': Xtrain,  'ytrain': ytrain,
-                          'Xtest': Xtest,   'ytest': ytest}
-    data_pars['eval'] =  {'X': Xtest,
-                          'y': ytest}
-    data_pars['predict'] = {'X': Xtest}
+    data_pars['train'] ={'Xtrain': X_train,  'ytrain': y_train,
+                         'Xtest': X_test,  'ytest': y_test}
+    data_pars['eval'] =  {'X': X_valid,
+                          'y': y_valid}
+    data_pars['predict'] = {'X': X_valid}
 
-    compute_pars = { 'compute_pars' : {
-                    } }
+    compute_pars = { 'compute_pars' : { 'epochs': 2,
+                   } }
 
     #####################################################################
-    log("test 2")
-    model_pars = {'model_class': 'SMOTE',
+    log("test 1")
+    model_pars = {'model_class': 'TruncatedSVD',
                   'model_pars': {
                      # 'ratio' :'auto',
                 },
@@ -400,7 +377,9 @@ def test():
     test_helper(model_pars, data_pars, compute_pars)
 
 
-    log("test 1")
+
+
+    log("test 2")
     model_pars = {'model_class': 'CTGAN',
                   'model_pars': {
                      ## CTGAN
@@ -455,6 +434,57 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+def pd_sample_imblearn(df=None, col=None, pars=None):
+    """
+        Over-sample
+    """
+    params_check(pars, ['model_name', 'pars_resample', 'coly']) # , 'dfy'
+    prefix = '_sample_imblearn'
+
+    ######################################################################################
+    from imblearn.over_sampling import SMOTE
+    from imblearn.combine import SMOTEENN, SMOTETomek
+    from imblearn.under_sampling import NearMiss
+
+    # model_resample = { 'SMOTE' : SMOTE, 'SMOTEENN': SMOTEENN }[  pars.get("model_name", 'SMOTEENN') ]
+    model_resample = locals()[  pars.get("model_name", 'SMOTEENN')  ]
+    pars_resample  = pars.get('pars_resample',
+                             {'sampling_strategy' : 'auto', 'random_state':0}) # , 'n_jobs': 2
+
+    if 'path_pipeline' in pars :   #### Inference time
+        return df, {'col_new': col }
+
+    else :     ### Training time
+        colX    = col # [col_ for col_ in col if col_ not in coly]
+        coly    = pars['coly']
+        train_y = pars['dfy']  ## df[coly] #
+        train_X = df[colX].fillna(method='ffill')
+        gp      = model_resample( **pars_resample)
+        X_resample, y_resample = gp.fit_resample(train_X, train_y)
+
+        col_new   = [ t + f"_{prefix}" for t in col ]
+        df2       = pd.DataFrame(X_resample, columns = col_new) # , index=train_X.index
+        df2[coly] = y_resample
+
+    ###################################################################################
+    if 'path_features_store' in pars and 'path_pipeline_export' in pars:
+       save_features(df2, prefix.replace("col_", "df_"), pars['path_features_store'])
+       save(gp,             pars['path_pipeline_export'] + f"/{prefix}_model.pkl" )
+       save(col,            pars['path_pipeline_export'] + f"/{prefix}.pkl" )
+       save(pars_resample,  pars['path_pipeline_export'] + f"/{prefix}_pars.pkl" )
+
+
+    col_pars = {'prefix' : prefix , 'path' :   pars.get('path_pipeline_export', pars.get('path_pipeline', None)) }
+    col_pars['cols_new'] = {
+       prefix :  col_new  ###  for training input data
+    }
+    return df2, col_pars
 
 
 
