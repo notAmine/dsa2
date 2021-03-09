@@ -51,6 +51,12 @@ from imblearn.combine import SMOTEENN, SMOTETomek
 from imblearn.under_sampling import NearMiss
 
 
+### MMAE
+try:
+  from mmae.multimodal_autoencoder import MultimodalAutoencoder
+
+except:
+    os.system("pip install mmae[keras]")
 ####################################################################################################
 verbosity = 3
 
@@ -66,6 +72,149 @@ def log2(*s):
 def log3(*s):
     if verbosity >= 3 :
        print(*s, flush=True)
+
+
+
+
+
+####################################################################################################
+def autoencoder_multimodal():
+    """
+    pip install mmae[keras]
+    :return:
+    """
+    # Remove 'tensorflow.' from the next line if you use just Keras
+    from tensorflow.keras.datasets import mnist
+    from mmae.multimodal_autoencoder import MultimodalAutoencoder
+
+
+    # Load example data
+    (x_train, y_train), (x_validation, y_validation) = mnist.load_data()
+    x_train = x_train.astype('float32') / 255.0
+    y_train = y_train.astype('float32') / 255.0
+    x_validation = x_validation.astype('float32') / 255.0
+    y_validation = y_validation.astype('float32') / 255.0
+
+
+    data = [x_train, y_train]
+    validation_data = [x_validation, y_validation]
+
+    # Set network parameters
+    input_shapes = [x_train.shape[1:], (1,)]
+    # Number of units of each layer of encoder network
+    hidden_dims = [128, 64, 8]
+    # Output activation functions for each modality
+    output_activations = ['sigmoid', 'relu']
+
+    optimizer = 'adam'
+    # Loss functions corresponding to a noise model for each modality
+    loss = ['bernoulli_divergence', 'poisson_divergence']
+    # Construct autoencoder network
+    autoencoder = MultimodalAutoencoder(input_shapes, hidden_dims,
+                                        output_activations)
+    autoencoder.compile(optimizer, loss)
+
+
+    # Train model where input and output are the same
+    autoencoder.fit(data, epochs=100, batch_size=256,
+                    validation_data=validation_data)
+
+    #To obtain a latent representation of the training data:
+    latent_data = autoencoder.encode(data)
+
+    #To decode the latent representation:
+    reconstructed_data = autoencoder.decode(latent_data)
+
+    #Encoding and decoding can also be merged into the following single statement:
+    reconstructed_data = autoencoder.predict(data)
+
+
+
+
+def autoEncoder(df):
+    """"
+    (4) Autoencoder
+    An autoencoder is a type of artificial neural network used to learn efficient data codings in an unsupervised manner.
+    The aim of an autoencoder is to learn a representation (encoding) for a set of data, typically for dimensionality reduction,
+    by training the network to ignore noise.
+    (i) Feed Forward
+    The simplest form of an autoencoder is a feedforward, non-recurrent
+    neural network similar to single layer perceptrons that participate in multilayer perceptrons
+    """
+    from sklearn.preprocessing import minmax_scale
+    import tensorflow as tf
+    import pandas as pd
+    import numpy as np
+
+
+
+    def encoder_dataset(df, drop=None, dimesions=20):
+        # encode categorical columns
+        cat_columns = df.select_dtypes(['category']).columns
+        df[cat_columns] = df[cat_columns].apply(lambda x: x.cat.codes)
+        print(cat_columns)
+
+        # encode objects columns
+        from sklearn.preprocessing import OrdinalEncoder
+
+        def encode_objects(X_train):
+            oe = OrdinalEncoder()
+            oe.fit(X_train)
+            X_train_enc = oe.transform(X_train)
+            return X_train_enc
+
+        selected_cols = df.select_dtypes(['object']).columns
+        df[selected_cols] = encode_objects(df[selected_cols])
+
+        # df = df[[c for c in df.columns if c not in df.select_dtypes(['object']).columns]]
+        if drop:
+            train_scaled = minmax_scale(df.drop(drop,axis=1).values, axis = 0)
+        else:
+           train_scaled = minmax_scale(df.values, axis = 0)
+        return train_scaled
+    # define the number of encoding dimensions
+    encoding_dim = pars.get('dimesions', 2)
+    # define the number of features
+
+
+
+    train_scaled = encoder_dataset(df, pars.get('drop',None), encoding_dim)
+
+    print("train scaled: ", train_scaled)
+    ncol = train_scaled.shape[1]
+
+
+    input_dim = tf.keras.Input(shape = (ncol, ))
+    # Encoder Layers
+    encoded1      = tf.keras.layers.Dense(3000, activation = 'relu')(input_dim)
+    encoded2      = tf.keras.layers.Dense(2750, activation = 'relu')(encoded1)
+    encoded3      = tf.keras.layers.Dense(2500, activation = 'relu')(encoded2)
+    encoded4      = tf.keras.layers.Dense(750, activation = 'relu')(encoded3)
+    encoded5      = tf.keras.layers.Dense(500, activation = 'relu')(encoded4)
+    encoded6      = tf.keras.layers.Dense(250, activation = 'relu')(encoded5)
+    encoded7      = tf.keras.layers.Dense(encoding_dim, activation = 'relu')(encoded6)
+
+
+
+    encoder       = tf.keras.Model(inputs = input_dim, outputs = encoded7)
+    encoded_input = tf.keras.Input(shape = (encoding_dim, ))
+
+
+
+
+    encoded_train = pd.DataFrame(encoder.predict(train_scaled),index=df.index)
+    encoded_train = encoded_train.add_prefix('encoded_')
+    if 'drop' in pars :
+        drop = pars['drop']
+        encoded_train = pd.concat((df[drop],encoded_train),axis=1)
+
+    return encoded_train
+    # df_out = mapper.encoder_dataset(df.copy(), ["Close_1"], 15); df_out.head()
+
+
+
+
+
 
 
 
