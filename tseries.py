@@ -70,7 +70,7 @@ cols_input_type_1 = {
     ,"coldate" :  ['date']
 
     ### Specific for time sereis
-    ,"coltseries" :  ['date', 'shop', 'item', 'sales']
+    ,"col_tseries" :  ['date', 'shop', 'item', 'sales']
 
     ,"colcross" : [ ]
 }
