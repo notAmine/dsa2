@@ -213,6 +213,11 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
     supported_extensions = [ ".txt", ".csv", ".zip", ".gzip", ".pkl", ".parquet" ]
     # fallback_name        = "features"
 
+
+    if (path_data_x.startswith("spark")):
+        df = fetch_spark_koalas(path_data_x, path_data_y, colid, n_sample)
+        return df
+
     if (path_data_x.startswith("http")):
         download_path        = os.path.join(os.path.curdir, "data/input/download")
         path_data_x = fetch_dataset(path_data_x, download_path)
@@ -267,6 +272,14 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
         log("dfy not loaded", path_data_y, e  )
 
     return df
+
+
+def fetch_spark_koalas(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
+   import databricks.koalas as ks
+   path_data = path_data_x.replace("spark:", "")
+   df= ks.read_parquet(path_data)
+   return df
+
 
 
 def fetch_dataset(url_dataset, path_target=None, file_target=None):
