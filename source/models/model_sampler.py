@@ -3,8 +3,8 @@
 """
 Genreate  train_data  ---> New train data by sampling
 
-cd source/models/
-python model_sampler.py test
+cd source/
+python source/model_sampler.py test
 
 
 Transformation for ALL Columns :
@@ -24,6 +24,11 @@ Main isssue is the number of rows change  !!!!
 
 
 """
+import os, sys
+sys.path.append( os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/")
+### import util_feature
+
+
 import os, pandas as pd, numpy as np,  sklearn
 from sklearn.cluster import KMeans, DBSCAN, Birch
 from sklearn.decomposition import TruncatedSVD, MiniBatchSparsePCA, FastICA
@@ -430,21 +435,6 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
-
-def get_params(param_pars={}, **kw):
-    import json
-    # from jsoncomment import JsonComment ; json = JsonComment()
-    choice      = param_pars['choice']
-    config_mode = param_pars['config_mode']
-    data_path   = param_pars['data_path']
-
-    if choice == "json":
-        cf = json.load(open(data_path, mode='r'))
-        cf = cf[config_mode]
-        return cf['model_pars'], cf['data_pars'], cf['compute_pars'], cf['out_pars']
-
-    else:
-        raise Exception(f"Not support choice {choice} yet")
 
 
 def test():

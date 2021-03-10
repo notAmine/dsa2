@@ -84,6 +84,11 @@ def Modelcustom(n_wide_cross, n_wide,n_deep, n_feat=8, m_EMBEDDING=10, loss='mse
 
 
 def Modelsparse():
+    """
+    https://github.com/GoogleCloudPlatform/data-science-on-gcp/blob/master/09_cloudml/flights_model_tf2.ipynb
+
+    :return:
+    """
     import tensorflow as tf
 
     real = {
