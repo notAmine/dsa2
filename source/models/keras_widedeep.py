@@ -1,7 +1,7 @@
 # pylint: disable=C0321,C0103,C0301,E1305,E1121,C0302,C0330,C0111,W0613,W0611,R1705
 # -*- coding: utf-8 -*-
 """
-python source/models/keras_widedeep.py  test
+ipython source/models/keras_widedeep.py  test  --pdb
 
 
 python keras_widedeep.py  test
@@ -90,6 +90,7 @@ def Modelsparse():
     :return:
     """
     import tensorflow as tf
+    NBUCKETS = 10
 
     real = {
         colname : tf.feature_column.numeric_column(colname)
@@ -148,9 +149,9 @@ def Modelsparse():
               for colname, col in sparse.items()
     }
 
-    if DEVELOP_MODE:
-        print(sparse.keys())
-        print(real.keys())
+
+    print(sparse.keys())
+    print(real.keys())
 
 
     # Build a wide-and-deep model.
@@ -168,6 +169,8 @@ def Modelsparse():
                       metrics=['accuracy'])
         return model
 
+
+    DNN_HIDDEN_UNITS = 10
     model = wide_and_deep_classifier(
         inputs,
         linear_feature_columns = sparse.values(),
@@ -299,6 +302,8 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
     global model, session
     # data_pars['train'] = True
     Xval, yval = get_dataset(data_pars, task_type="eval")
+
+    log(Xval.shape)
     ypred = predict(Xval, data_pars, compute_pars, out_pars)
 
 
@@ -401,7 +406,7 @@ def test(config=''):
     X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, random_state=2021, stratify=y)
     X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
 
-
+    log(X_train.shape, )
     ##############################################################
     ##### Generate column actual names from
     colnum = [ 'col_0', 'col_11', 'col_8']
@@ -448,9 +453,9 @@ def test(config=''):
 
     data_pars['train'] ={'Xtrain': X_train,  'ytrain': y_train,
                          'Xtest': X_test,  'ytest': y_test}
-    data_pars['eval'] =  {'X': X_valid,
-                          'y': y_valid}
-    data_pars['predict'] = {'X': X_valid}
+    data_pars['eval'] =  {'X': X_test,
+                          'y': y_test}
+    data_pars['predict'] = {'X': X_test}
 
     compute_pars = { 'compute_pars' : { 'epochs': 2,
                    } }
