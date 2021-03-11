@@ -201,3 +201,4 @@ mlflow_local.db
 /variables
 /model_dir
 /ztmp_checkpoint/model_.pth
+/ztmp_checkpoint
