@@ -1,7 +1,7 @@
 
 #### Check here if latest commit is working :
 
-[Testing code ](https://github.com/arita37/dsa2/blob/main/ztest/run_fast.sh)
+[Auto test status ](https://github.com/arita37/dsa2/actions/workflows/test_fast.yml?query=branch%3Amulti)
 
 Main
 ![Main, test_fast_linux](https://github.com/arita37/dsa2/workflows/test_fast_linux/badge.svg?branch=main)
@@ -28,7 +28,9 @@ Preprocessors Check
 ### Install 
      git clone 
      cd dsa2
-     pip install -r zrequirements.txt
+     conda create -n dsa2  python=3.6.10
+     source activate dsa2
+     pip install -r install/py36.txt
 
 
 ### Basic usage 
