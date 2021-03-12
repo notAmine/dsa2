@@ -12,16 +12,7 @@ pip install Keras==2.4.3
 """
 import os, pandas as pd, numpy as np, sklearn, copy
 from sklearn.model_selection import train_test_split
-
 import tensorflow
-try :
-  import keras
-  from keras.callbacks import EarlyStopping, ModelCheckpoint
-  from keras import layers
-except :
-  from tensorflow import keras
-  from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-  from tensorflow.keras import layers
 
 
 ####################################################################################################
@@ -44,10 +35,15 @@ def init(*kw, **kwargs):
     session = None
 
 
+#from repo.vaem.model import model as Modelcustom
+from repo.vaem import model_main as Modelcustom
+
+"""
+
+
 cols_ref_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input']
 
 def Modelcustom(n_wide_cross, n_wide,n_deep, n_feat=8, m_EMBEDDING=10, loss='mse', metric = 'mean_squared_error'):
-
         #### Wide model with the functional API
         col_wide_cross          = layers.Input(shape=(n_wide_cross,))
         col_wide                = layers.Input(shape=(n_wide,))
@@ -80,106 +76,51 @@ def Modelcustom(n_wide_cross, n_wide,n_deep, n_feat=8, m_EMBEDDING=10, loss='mse
         log2(model.summary())
 
         return model
+"""
 
 
+class Model(object):
+    def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
+        self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
+        self.history = None
+        if model_pars is None:
+            self.model = None
+        else:
+            log2("data_pars", data_pars)
 
-def Modelsparse():
+            model_class = model_pars['model_class']  #
+
+            mdict = model_pars['model_pars']
+
+            self.model  = Modelcustom(**mdict)
+            log2(model_class, self.model)
+
+
+def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
-    https://github.com/GoogleCloudPlatform/data-science-on-gcp/blob/master/09_cloudml/flights_model_tf2.ipynb
-
-    :return:
     """
-    import tensorflow as tf
-    NBUCKETS = 10
+    global model, session
+    session = None  # Session type for compute
 
-    real = {
-        colname : tf.feature_column.numeric_column(colname)
-              for colname in
-                ('dep_delay,taxiout,distance,avg_dep_delay,avg_arr_delay' +
-                 ',dep_lat,dep_lon,arr_lat,arr_lon').split(',')
-    }
-    inputs = {
-        colname : tf.keras.layers.Input(name=colname, shape=(), dtype='float32')
-              for colname in real.keys()
-    }
+    Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train")
+    cpars          = copy.deepcopy( compute_pars.get("compute_pars", {}))   ## issue with pickle
+    pass
 
 
 
-    sparse = {
-          'carrier': tf.feature_column.categorical_column_with_vocabulary_list('carrier',
-                      vocabulary_list='AS,VX,F9,UA,US,WN,HA,EV,MQ,DL,OO,B6,NK,AA'.split(',')),
-          'origin' : tf.feature_column.categorical_column_with_hash_bucket('origin', hash_bucket_size=1000),
-          'dest'   : tf.feature_column.categorical_column_with_hash_bucket('dest', hash_bucket_size=1000)
-    }
-    inputs.update({
-        colname : tf.keras.layers.Input(name=colname, shape=(), dtype='string')
-              for colname in sparse.keys()
-    })
+def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
+    global model, session
+    if Xpred is None:
+        Xpred_tuple = get_dataset(data_pars, task_type="predict")
+    else :
+        cols_type   = data_pars['cols_model_type2']  ##
+        Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
+
+    log2(Xpred_tuple)
+    pass
 
 
-
-    latbuckets = np.linspace(20.0, 50.0, NBUCKETS).tolist()  # USA
-    lonbuckets = np.linspace(-120.0, -70.0, NBUCKETS).tolist() # USA
-    disc = {}
-    disc.update({
-           'd_{}'.format(key) : tf.feature_column.bucketized_column(real[key], latbuckets)
-              for key in ['dep_lat', 'arr_lat']
-    })
-    disc.update({
-           'd_{}'.format(key) : tf.feature_column.bucketized_column(real[key], lonbuckets)
-              for key in ['dep_lon', 'arr_lon']
-    })
-
-    # cross columns that make sense in combination
-    sparse['dep_loc'] = tf.feature_column.crossed_column([disc['d_dep_lat'], disc['d_dep_lon']], NBUCKETS*NBUCKETS)
-    sparse['arr_loc'] = tf.feature_column.crossed_column([disc['d_arr_lat'], disc['d_arr_lon']], NBUCKETS*NBUCKETS)
-    sparse['dep_arr'] = tf.feature_column.crossed_column([sparse['dep_loc'], sparse['arr_loc']], NBUCKETS ** 4)
-    #sparse['ori_dest'] = tf.feature_column.crossed_column(['origin', 'dest'], hash_bucket_size=1000)
-
-    # embed all the sparse columns
-    embed = {
-           'embed_{}'.format(colname) : tf.feature_column.embedding_column(col, 10)
-              for colname, col in sparse.items()
-    }
-    real.update(embed)
-
-    # one-hot encode the sparse columns
-    sparse = {
-        colname : tf.feature_column.indicator_column(col)
-              for colname, col in sparse.items()
-    }
-
-
-    print(sparse.keys())
-    print(real.keys())
-
-
-    # Build a wide-and-deep model.
-    def wide_and_deep_classifier(inputs, linear_feature_columns, dnn_feature_columns, dnn_hidden_units):
-        deep = tf.keras.layers.DenseFeatures(dnn_feature_columns, name='deep_inputs')(inputs)
-        layers = [int(x) for x in dnn_hidden_units.split(',')]
-        for layerno, numnodes in enumerate(layers):
-            deep = tf.keras.layers.Dense(numnodes, activation='relu', name='dnn_{}'.format(layerno+1))(deep)
-        wide = tf.keras.layers.DenseFeatures(linear_feature_columns, name='wide_inputs')(inputs)
-        both = tf.keras.layers.concatenate([deep, wide], name='both')
-        output = tf.keras.layers.Dense(1, activation='sigmoid', name='pred')(both)
-        model = tf.keras.Model(inputs, output)
-        model.compile(optimizer='adam',
-                      loss='binary_crossentropy',
-                      metrics=['accuracy'])
-        return model
-
-
-    DNN_HIDDEN_UNITS = 10
-    model = wide_and_deep_classifier(
-        inputs,
-        linear_feature_columns = sparse.values(),
-        dnn_feature_columns = real.values(),
-        dnn_hidden_units = DNN_HIDDEN_UNITS)
-    tf.keras.utils.plot_model(model, 'flights_model.png', show_shapes=False, rankdir='LR')
-
-
-
+    return ypred, ypred_proba
 
 
 
@@ -252,95 +193,8 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
-class Model(object):
-    def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
-        self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
-        self.history = None
-        if model_pars is None:
-            self.model = None
-        else:
-            log2("data_pars", data_pars)
 
-            model_class = model_pars['model_class']  #
-
-            ### Dynamic shape of input
-            model_pars['model_pars']['n_wide_cross'] = len(data_pars['cols_model_type2']['cols_cross_input'])
-            model_pars['model_pars']['n_wide']       = len(data_pars['cols_model_type2']['cols_deep_input'])
-            model_pars['model_pars']['n_deep']       = len(data_pars['cols_model_type2']['cols_deep_input'])
-
-            model_pars['model_pars']['n_feat']       = model_pars['model_pars']['n_deep']
-
-            mdict = model_pars['model_pars']
-
-            self.model  = Modelcustom(**mdict)
-            log2(model_class, self.model)
-            self.model.summary()
-
-
-def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
-    """
-    """
-    global model, session
-    session = None  # Session type for compute
-
-    Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train")
-    cpars          = copy.deepcopy( compute_pars.get("compute_pars", {}))   ## issue with pickle
-    early_stopping = EarlyStopping(monitor='loss', patience=3)
-    model_ckpt     = ModelCheckpoint(filepath = compute_pars.get('path_checkpoint', 'ztmp_checkpoint/model_.pth'),
-                                     save_best_only=True, monitor='loss')
-    cpars['callbacks'] =  [early_stopping, model_ckpt]
-
-    assert 'epochs' in cpars, 'epoch missing'
-    hist = model.model.fit( Xtrain_tuple, ytrain,  **cpars)
-    model.history = hist
-
-
-def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
-    """
-       Return metrics of the model when fitted.
-    """
-    global model, session
-    # data_pars['train'] = True
-    Xval, yval = get_dataset(data_pars, task_type="eval")
-
-    log(Xval.shape)
-    ypred = predict(Xval, data_pars, compute_pars, out_pars)
-
-
-    # log(data_pars)
-    mpars = compute_pars.get("metrics_pars", {'metric_name': 'mae'})
-
-    scorer = {
-        "rmse": sklearn.metrics.mean_squared_error,
-        "mae": sklearn.metrics.mean_absolute_error
-    }[mpars['metric_name']]
-
-    mpars2    = mpars.get("metrics_pars", {})  ##Specific to score
-    score_val = scorer(yval, ypred[0], **mpars2)
-
-    ddict = [{"metric_val": score_val, 'metric_name': mpars['metric_name']}]
-    return ddict
-
-
-def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
-    global model, session
-    if Xpred is None:
-        # data_pars['train'] = False
-        Xpred_tuple = get_dataset(data_pars, task_type="predict")
-
-    else :
-        cols_type   = data_pars['cols_model_type2']  ##
-        Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
-
-    log2(Xpred_tuple)
-    ypred = model.model.predict(Xpred_tuple )
-
-    ypred_proba = None  ### No proba
-    if compute_pars.get("probability", False):
-         ypred_proba = model.model.predict_proba(Xpred)
-    return ypred, ypred_proba
-
-
+########################################################################
 def reset():
     global model, session
     model, session = None, None
@@ -462,27 +316,6 @@ def test(config=''):
 
     ######## Run ###########################################
     test_helper(model_pars, data_pars, compute_pars)
-
-
-def get_params_sklearn(deep=False):
-    return model.model.get_params(deep=deep)
-
-
-def get_params(param_pars={}, **kw):
-    import json
-    # from jsoncomment import JsonComment ; json = JsonComment()
-    pp = param_pars
-    choice = pp['choice']
-    config_mode = pp['config_mode']
-    data_path = pp['data_path']
-
-    if choice == "json":
-        cf = json.load(open(data_path, mode='r'))
-        cf = cf[config_mode]
-        return cf['model_pars'], cf['data_pars'], cf['compute_pars'], cf['out_pars']
-
-    else:
-        raise Exception(f"Not support choice {choice} yet")
 
 
 def test_helper(model_pars, data_pars, compute_pars):
