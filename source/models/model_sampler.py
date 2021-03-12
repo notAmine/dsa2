@@ -311,9 +311,10 @@ def transform(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     if Xpred is None:
         Xpred_tuple = get_dataset(data_pars, task_type="predict")
     else :
-        # cols_type         = data_pars['cols_model_type2']
-        # cols_ref_formodel = cols_type
-        Xpred_tuple       = Xpred # get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
+        cols_type         = data_pars['cols_model_type2']
+        cols_ref_formodel = cols_type
+        split = kw.get("split", False)
+        Xpred_tuple       = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel, split)
 
     Xnew= None
     if model.model_pars['model_class'] in SDV_MODLES :
@@ -381,26 +382,31 @@ def load_info(path=""):
 
 ####################################################################################################
 ############ Do not change #########################################################################
-def get_dataset_tuple(Xtrain, cols_type_received, cols_ref):
+def get_dataset_tuple(Xtrain, cols_type_received, cols_ref, split=False):
     """  Split into Tuples = (df1, df2, df3) to feed model, (ie Keras)
     :param Xtrain:
     :param cols_type_received:
     :param cols_ref:
+    :param split: 
+        True :  split data to list of dataframe 
+        False:  return same input of data
     :return:
     """
-    if len(cols_ref) < 1 :
-        return Xtrain
-    
-    Xtuple_train = []
-    for cols_groupname in cols_ref :
-        assert cols_groupname in cols_type_received, "Error missing colgroup in config data_pars[cols_model_type] "
-        cols_i = cols_type_received[cols_groupname]
-        Xtuple_train.append( Xtrain[cols_i] )
+    if split:
+        if len(cols_ref) < 1 :
+            return Xtrain
+        
+        Xtuple_train = []
+        for cols_groupname in cols_ref :
+            assert cols_groupname in cols_type_received, "Error missing colgroup in config data_pars[cols_model_type] "
+            cols_i = cols_type_received[cols_groupname]
+            Xtuple_train.append( Xtrain[cols_i] )
 
-    if len(cols_ref) == 1 :
-        return Xtuple_train[0]  ### No tuple
-    else :
-        return Xtuple_train
+        if len(cols_ref) == 1 :
+            return Xtuple_train[0]  ### No tuple
+        else :
+            return Xtuple_train
+    return Xtrain
 
 
 def get_dataset(data_pars=None, task_type="train", **kw):
@@ -413,6 +419,7 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     ### Sparse columns, Dense Columns
     cols_type_received     = data_pars.get('cols_model_type2', {} )
     cols_ref  = list( cols_type_received.keys())
+    split = kw.get('split', False)
 
     if data_type == "ram":
         # cols_ref_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input' ]
@@ -422,28 +429,26 @@ def get_dataset(data_pars=None, task_type="train", **kw):
         if task_type == "predict":
             d = data_pars[task_type]
             Xtrain       = d["X"]
-            # Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
-            return Xtrain # Xtuple_train
+            Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref, split)
+            return Xtuple_train
 
         if task_type == "eval":
             d = data_pars[task_type]
             Xtrain, ytrain  = d["X"], d["y"]
-            # Xtuple_train    = get_datas1et_tuple(Xtrain, cols_type_received, cols_ref)
-            # return Xtuple_train, ytrain
-            return Xtrain, ytrain
+            Xtuple_train    = get_dataset_tuple(Xtrain, cols_type_received, cols_ref, split)
+            return Xtuple_train, ytrain
 
         if task_type == "train":
             d = data_pars[task_type]
             Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
 
             ### dict  colgroup ---> list of df
-            # Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
-            # Xtuple_test  = get_dataset_tuple(Xtest, cols_type_received, cols_ref)
+            Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref, split)
+            Xtuple_test  = get_dataset_tuple(Xtest, cols_type_received, cols_ref, split)
 
-            # log2("Xtuple_train", Xtuple_train)
+            log2("Xtuple_train", Xtuple_train)
 
-            # return Xtuple_train, ytrain, Xtuple_test, ytest
-            return Xtrain, ytrain, Xtest, ytest
+            return Xtuple_train, ytrain, Xtuple_test, ytest
 
     elif data_type == "file":
         raise Exception(f' {data_type} data_type Not implemented ')
