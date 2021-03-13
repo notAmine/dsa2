@@ -119,7 +119,8 @@ def config1() :
                }
         },
 
-      "compute_pars": { "metric_list": ["accuracy_score" ]
+      "compute_pars": { "metric_list": ['root_mean_squared_error', 'mean_absolute_error',
+                                       'explained_variance_score', 'r2_score', 'median_absolute_error']
                         # ,"mlflow_pars" : {}   ### Not empty --> use mlflow
                       },
 
@@ -138,8 +139,8 @@ def config1() :
 
       #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
      ,'cols_model_type': {
-         'My123_continuous'   : [ 'colnum',   ],
-         'my_sparse'       : [ 'colcat',  ],
+         'My123_continuous' : [ 'tseries_feat',   ],
+         'my_sparse'        : [ 'colcat',  ],
       }   
 
           ### Filter data rows   ##################################################################
@@ -168,6 +169,8 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
     prepro, pars_saved, cols_saved = prepro_load(prefix, pars)
 
 
+
+    ################################################################################### 
     #### Do something #################################################################
     from source.prepro_tseries import pd_ts_date, pd_ts_rolling
     if prepro is None :   ###  Training time
@@ -187,6 +190,10 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
 
     else :  ### predict time
         pars = pars_saved  ##merge
+    ###################################################################################
+
+
+
 
 
     ### Clean up the df ###############################################################
