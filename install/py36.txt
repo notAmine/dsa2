@@ -51,7 +51,7 @@ tensorflow_text>=2.0.0rc0
 #### Time Series
 # pystan==2.19.1.1 
 fbprophet==0.7.1  
-
+matrixprofile-ts  ### Use for tfresh
 
 
 #########################################
