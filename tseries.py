@@ -84,23 +84,28 @@ def config1() :
     """
     data_name    = "tseries_demand"         ### in data/input/
     model_class  = "LGBMRegressor"  ### ACTUAL Class name for model_sklearn.py
-    n_sample     = 1000
+    n_sample     = 100000
 
     def post_process_fun(y):   ### After prediction is done
-        return  float(y)
+        # ynew = np.exp(y) - 1.0 
+        ynew = float(y)
+        return  ynew
 
     def pre_process_fun(y):    ### Before the prediction is done
-        return  float(y)
+        # ynew = np.log(y+1)
+        ynew = float(y)
+        return  ynew
 
 
     model_dict = {"model_pars": {
         ### LightGBM API model   #######################################
          "model_class": model_class
         ,"model_pars" : {"objective": "huber",    ### Regression Type Loss
-                           "n_estimators": 10,
+                           "n_estimators": 100,
                            "learning_rate":0.001,
                            "boosting_type":"gbdt",     ### Model hyperparameters
                            "early_stopping_rounds": 5
+
                         }
 
         , "post_process_fun" : post_process_fun   ### After prediction  #######
@@ -121,7 +126,6 @@ def config1() :
 
       "compute_pars": { "metric_list": ['root_mean_squared_error', 'mean_absolute_error',
                                        'explained_variance_score', 'r2_score', 'median_absolute_error']
-                        # ,"mlflow_pars" : {}   ### Not empty --> use mlflow
                       },
 
       "data_pars": { "n_sample" : n_sample,
@@ -185,7 +189,8 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
         #### Rolling features
         dfi, coli = pd_ts_rolling(df,  cols= ['date', 'item', 'store', 'sales'],
                                   pars= {'col_groupby' : ['store','item'],
-                                         'col_stat':     'sales', 'lag_list': [7, 30]})
+                                         'col_stat'    : 'sales',
+                                         'lag_list'    : [7, 30]})
         df_new    = pd.concat([df_new , dfi], axis=1)
 
     else :  ### predict time
@@ -194,14 +199,12 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
 
 
 
-
-
+    ###################################################################################
     ### Clean up the df ###############################################################
     df_new.index   = df.index  ### Impt for JOIN
     df_new.columns = [col + f"_{prefix}"  for col in df_new.columns ]
     cols_new       = list(df_new.columns)
 
-    ###################################################################################
     ###### Training time save all #####################################################
     df_new, col_pars = prepro_save(prefix, pars, df_new, cols_new, prepro)
     return df_new, col_pars
