@@ -49,6 +49,7 @@ def init(*kw, **kwargs):
 
 
 ####################################################################################################
+##### Custom code  #################################################################################
 def sampling(args):
     z_mean, z_log_var = args
     batch = K.shape(z_mean)[0]
@@ -169,6 +170,16 @@ def get_model(model_pars):
     return vae
 
 
+
+
+
+
+
+
+
+
+
+
 ##################################################################################################
 ##################################################################################################
 class Model(object):
@@ -221,7 +232,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     #ytest = ytest.reshape(ytest.shape[0],-1)
     ytrain = np.ones((Xtrain_tuple.shape[0], 1))
     assert 'epochs' in cpars, 'epoch missing'
-    hist = model.model.fit((Xtrain_tuple, ytrain),
+    hist = model.model.fit([Xtrain_tuple, ytrain],
                            # validation_data=(Xtest_tuple, ytest),
                             **cpars)
     model.history = hist
@@ -527,5 +538,28 @@ if __name__ == "__main__":
     test()
 
 
+"""
 
+I had the same issue here using tf.data.Datasets and, for me, the problem was related with the inputs and outputs.
 
+I solved by naming each input layer and latter by creating a TF Dataset with the inputs as a dict and the output as a single value. Something like the following:
+
+# Example code
+
+x1 = tf.keras.layer.Input(..., name='input_1')
+x2 = tf.keras.layer.Input(..., name='input_2')
+......
+concat_layer = tf.keras.layers.Concatenate([x1, x2])
+y = tf.keras.layer.Dense(1)(concat_layer)
+
+model = Model([x1, x2], y)
+
+dataset = tf.data.Dataset(....) # suppose each sample in dataset is a triple (2-features and 1 label)
+
+def input_solver(sample):
+    return {'input_1': sample[0], 'input_2': sample[1]}, sample[2]
+
+dataset.map(input_solver) # this will map the first and the second feature in this triple-sample to the inputs.
+model.fit(dataset, epochs=5)
+
+""""
