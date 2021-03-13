@@ -288,7 +288,7 @@ class Model(object):
 
             mdict = model_pars['model_pars']
 
-            self.model  = Modelcustom(**mdict)
+            self.model  = VA_Model(**mdict)
             log2(model_class, self.model)
             self.model.summary()
 
