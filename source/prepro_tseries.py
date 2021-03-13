@@ -56,7 +56,7 @@ try:
     import pandasvault, tsfel, datetime as dt
 
 except:
-    os.system(" pip install  tsfresh pandasvault tsfel --no-deps")
+    os.system(" pip install matrixprofile-ts tsfresh pandasvault tsfel   --no-deps")
     os.system(" pip install deltapy --no-deps")
 
     from tsfresh import extract_relevant_features, extract_features
