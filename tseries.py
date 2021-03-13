@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 ### Usage:
-  python tseries_demand.py  train      --config  config1
-  python tseries_demand.py  predict    --config  config1
+  python tseries.py  train      --config  config1
+  python tseries.py  predict    --config  config1
 
 """
 import warnings, copy, os, sys, pandas as pd
@@ -67,7 +67,7 @@ cols_input_type_1 = {
     ,"colcat" :   ["store", "item" ]
     ,"colnum" :   []
     ,"coltext" :  []
-    ,"coldate" :  ['date']
+    ,"coldate" :  []
 
     ### Specific for time sereis
     ,"col_tseries" :  ['date', 'store', 'item', 'sales']
@@ -113,7 +113,7 @@ def config1() :
         {"uri":  THIS_FILEPATH + "::pd_dsa2_custom",
             "pars": {'coldate': 'date'},
             "cols_family": "col_tseries",
-            "cols_out": "tseries_feat",  "type": "" },
+            "cols_out":    "tseries_feat",  "type": "" },
 
         ],
                }
