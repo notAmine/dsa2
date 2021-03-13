@@ -12,8 +12,19 @@ pip install Keras==2.4.3
 """
 import os, pandas as pd, numpy as np, sklearn, copy
 from sklearn.model_selection import train_test_split
+
+
+
+
+from keras.layers import Lambda, Input, Dense, Reshape
+from keras.models import Model
+from keras.datasets import mnist
+from keras.losses import mse, binary_crossentropy
+from keras.utils import plot_model
+from keras import backend as K
 import tensorflow as tf
 import numpy as np
+
 
 
 from keras.layers import Lambda, Input, Dense, Reshape
@@ -23,8 +34,10 @@ from keras.losses import mse, binary_crossentropy
 from keras.utils import plot_model
 from keras import backend as K
 
+import numpy as np
 
 
+import tensorflow
 try :
   import keras
   from keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -60,7 +73,7 @@ def init(*kw, **kwargs):
 def sampling(args):
     z_mean, z_log_var = args
     batch = K.shape(z_mean)[0]
-    dim   = K.int_shape(z_mean)[1]
+    dim = K.int_shape(z_mean)[1]
     # by default, random_normal has mean=0 and std=1.0
     epsilon = K.random_normal(shape=(batch, dim))
     thre = K.random_uniform(shape=(batch, 1))
@@ -70,14 +83,14 @@ def sampling(args):
 
 
 def get_dataset(data_pars):
-    state_num        = data_pars['state_num']
-    time_len         = data_pars['time_len']
+    state_num = data_pars['state_num']
+    time_len = data_pars['time_len']
     signal_dimension = data_pars['signal_dimension']
-    CNR              = data_pars['CNR']
-    window_len       = data_pars['window_len']
-    half_window_len  = data_pars['half_window_len']
-    a                = np.ones(shape=(state_num, state_num))
-    alpha            = np.ones(10)*10
+    CNR = data_pars['CNR']
+    window_len = data_pars['window_len']
+    half_window_len = data_pars['half_window_len']
+    a = np.ones(shape=(state_num, state_num))
+    alpha = np.ones(10)*10
     alpha[5:] = 1
     base_prob = np.random.dirichlet(alpha) * 0.1
     for t in range(state_num):
@@ -127,7 +140,6 @@ def get_dataset(data_pars):
             sum_corr[state[t], :] += x_train[t-window_len, :]
             occupancy[state[t]] += 1
 
-    ### Correlation Matrix  flatten
     return x_train
 
 

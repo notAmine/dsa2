@@ -11,7 +11,6 @@ import warnings
 warnings.filterwarnings('ignore')
 import sys, gc, os, sys, json, copy, pandas as pd
 
-
 ####################################################################################################
 #### Add path for python import
 sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
@@ -19,7 +18,7 @@ sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
 
 #### Root folder analysis
 root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
-print(root)
+# print(root)
 
 #### Debuging state (Ture/False)
 DEBUG_=True
@@ -189,8 +188,7 @@ def preprocess(path_train_X="", path_train_y="", path_pipeline_export="", cols_g
            pars['colid']           = colid
            pars['colcross_single'] = cols_group.get('colcross', [])
 
-       #elif col_type == 'add_coly':
-       #    log( 'add_coly genetic', cols_group['coly'] )
+
        pars['coly'] = cols_group['coly']
        pars['dfy']  = dfi_all[ 'coly' ]  ### add dfy by default
 
@@ -205,7 +203,6 @@ def preprocess(path_train_X="", path_train_y="", path_pipeline_export="", cols_g
        ## Check Index are matching for Later JOIN: Issues with Sampler, re-index !!!!!!
        if 'sampler' not in pipe_i['uri'] :
           dfi.index = df_.index
-          # assert dfi.index == df_.index, "df.index are not matching"
 
 
        ### Concatenate colnum, colnum_bin into cols_family_all , dfi_all  ###########################
@@ -218,7 +215,6 @@ def preprocess(path_train_X="", path_train_y="", path_pipeline_export="", cols_g
 
     ######  Merge AlL int dfXy  ##################################################################
     dfXy = df[ [coly] + colnum + colcat ]
-    #dfXy = df[ [coly]  ]
 
     for t in dfi_all.keys():
         if t not in [ 'coly', 'colnum', 'colcat' ] :
@@ -226,17 +222,15 @@ def preprocess(path_train_X="", path_train_y="", path_pipeline_export="", cols_g
     save_features(dfXy, 'dfX', path_features_store)
 
 
-    colXy = list(dfXy.columns)
-    colXy.remove(coly)    ##### Only X columns
+    colX = list(dfXy.columns)
+    colX.remove(coly)    ##### Only X columns
     if len(colid)>0:
         cols_family_all['colid']=colid
-    cols_family_all['colX'] = colXy
+    cols_family_all['colX'] = colX
 
 
     ####  Cols group for model input  ###########################################################
-
-
-    save(colXy,            f'{path_pipeline_export}/colsX.pkl' )
+    save(colX,             f'{path_pipeline_export}/colsX.pkl' )
     save(cols_family_all,  f'{path_pipeline_export}/cols_family.pkl' )
 
     ###### Return values  #######################################################################
