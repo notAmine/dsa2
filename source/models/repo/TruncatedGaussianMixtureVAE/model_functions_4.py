@@ -217,7 +217,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     cpars          = copy.deepcopy( compute_pars.get("compute_pars", {}))   ## issue with pickle
 
     early_stopping = EarlyStopping(monitor='loss', patience=3)
-    model_ckpt     = ModelCheckpoint(filepath = compute_pars.get('path_checkpoint', 'ztmp_checkpoint/model_.pth'),
+    model_ckpt     = ModelCheckpoint(filepath = compute_pars.get('path_checkpoint', 'ztmp_checkpoint/'),
                                      save_best_only=True, monitor='loss')
     cpars['callbacks'] =  [early_stopping, model_ckpt]
 
@@ -226,7 +226,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     #ytest = ytest.reshape(ytest.shape[0],-1)
     ytrain = np.ones((Xtrain_tuple.shape[0], 1))
     assert 'epochs' in cpars, 'epoch missing'
-    hist = model.model.fit((Xtrain_tuple, ytrain),
+    hist = model.model.fit([Xtrain_tuple, ytrain],
                            # validation_data=(Xtest_tuple, ytest),
                             **cpars)
     model.history = hist
