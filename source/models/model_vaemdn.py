@@ -223,17 +223,19 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     cpars          = copy.deepcopy( compute_pars.get("compute_pars", {}))   ## issue with pickle
 
     early_stopping = EarlyStopping(monitor='loss', patience=3)
-    model_ckpt     = ModelCheckpoint(filepath = compute_pars.get('path_checkpoint', 'ztmp_checkpoint/model_.pth'),
+    path_check     = compute_pars.get('path_checkpoint', 'ztmp_checkpoint/model/')
+    # os.makedirs(path_check , exist_ok= True)
+    model_ckpt     = ModelCheckpoint(filepath =  path_check,
                                      save_best_only=True, monitor='loss')
     cpars['callbacks'] =  [early_stopping, model_ckpt]
 
     ### Fake label
-    #ytrain = ytrain.reshape(ytrain.shape[0],-1)
-    #ytest = ytest.reshape(ytest.shape[0],-1)
+    #ytrain = ytrain.reshape(ytrain.shape[0], 1)
+    #ytest = ytest.reshape(ytest.shape[0], 1)
     ytrain = np.ones((Xtrain_tuple.shape[0], 1))
     assert 'epochs' in cpars, 'epoch missing'
     hist = model.model.fit([Xtrain_tuple, ytrain],
-                           # validation_data=(Xtest_tuple, ytest),
+                           # validation_data=[Xtest_tuple, ytest],
                             **cpars)
     model.history = hist
 
@@ -249,7 +251,8 @@ def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
         Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
 
     log2(Xpred_tuple)
-    ypred = model.model.predict(Xpred_tuple )
+    Xdummy = np.ones((Xpred_tuple.shape[0], 1))
+    ypred = model.model.predict([Xpred_tuple, Xdummy ] )
 
     ypred_proba = None  ### No proba
     if compute_pars.get("probability", False):
@@ -538,28 +541,29 @@ if __name__ == "__main__":
     test()
 
 
-"""
+def a():
+    """
 
-I had the same issue here using tf.data.Datasets and, for me, the problem was related with the inputs and outputs.
+    I had the same issue here using tf.data.Datasets and, for me, the problem was related with the inputs and outputs.
 
-I solved by naming each input layer and latter by creating a TF Dataset with the inputs as a dict and the output as a single value. Something like the following:
+    I solved by naming each input layer and latter by creating a TF Dataset with the inputs as a dict and the output as a single value. Something like the following:
 
-# Example code
+    # Example code
 
-x1 = tf.keras.layer.Input(..., name='input_1')
-x2 = tf.keras.layer.Input(..., name='input_2')
-......
-concat_layer = tf.keras.layers.Concatenate([x1, x2])
-y = tf.keras.layer.Dense(1)(concat_layer)
+    x1 = tf.keras.layer.Input(..., name='input_1')
+    x2 = tf.keras.layer.Input(..., name='input_2')
+    ......
+    concat_layer = tf.keras.layers.Concatenate([x1, x2])
+    y = tf.keras.layer.Dense(1)(concat_layer)
 
-model = Model([x1, x2], y)
+    model = Model([x1, x2], y)
 
-dataset = tf.data.Dataset(....) # suppose each sample in dataset is a triple (2-features and 1 label)
+    dataset = tf.data.Dataset(....) # suppose each sample in dataset is a triple (2-features and 1 label)
 
-def input_solver(sample):
-    return {'input_1': sample[0], 'input_2': sample[1]}, sample[2]
+    def input_solver(sample):
+        return {'input_1': sample[0], 'input_2': sample[1]}, sample[2]
 
-dataset.map(input_solver) # this will map the first and the second feature in this triple-sample to the inputs.
-model.fit(dataset, epochs=5)
+    dataset.map(input_solver) # this will map the first and the second feature in this triple-sample to the inputs.
+    model.fit(dataset, epochs=5)
 
-""""
+    """
