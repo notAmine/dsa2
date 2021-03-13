@@ -56,7 +56,7 @@ try:
     import pandasvault, tsfel
 
 except:
-    os.system(" pip install deltapy pandasvault --no-deps")
+    os.system(" pip install deltapy pandasvault ")
     from deltapy import transform, interact, mapper, extract
     import pandasvault
 
