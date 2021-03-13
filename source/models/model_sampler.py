@@ -191,8 +191,6 @@ def autoEncoder(df):
     encoding_dim = pars.get('dimesions', 2)
     # define the number of features
 
-
-
     train_scaled = encoder_dataset(df, pars.get('drop',None), encoding_dim)
 
     print("train scaled: ", train_scaled)
