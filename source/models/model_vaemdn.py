@@ -189,13 +189,10 @@ class Model(object):
         if model_pars is None:
             self.model = None
             return
-
         # log2("data_pars", data_pars)
         model_class = model_pars['model_class']  #
 
-        ### Dynamic shape of input
-        #model_pars['model_pars']['n_feat']       = model_pars['model_pars']['n_deep']
-        ### get model params  ###############################################
+        ### get model params  #######################################################
         mdict_default = {
              'class_num':           5
             ,'intermediate_dim':    64
@@ -208,10 +205,11 @@ class Model(object):
         }
         mdict = model_pars.get('model_pars', mdict_default)
 
-        ### Dimension : data_pars  ---> model_pars dimension  ###############
+        ### Dynamic Dimension : data_pars  ---> model_pars dimension  ###############
         mdict['original_dim'] = np.uint32( data_pars['signal_dimension']*(data_pars['signal_dimension']-1)/2)
 
-        #### Load
+
+        #### Model setup ################################
         self.model_pars['model_pars'] = mdict
         self.model  = get_model(model_pars['model_pars'])
         log2(self.model_pars, self.model)
@@ -468,9 +466,9 @@ def get_mydata_correl(data_pars):
             sum_corr[state[t], :] += x_train[t-window_len, :]
             occupancy[state[t]] += 1
 
-
-    y_train = np.ones((x_train.shape[0], 1))
-    return x_train, y_train
+    ### Dummy
+    y_dummy = np.ones((x_train.shape[0], 1))   ### Not used, no label
+    return x_train, y_dummy
 
 
 def test():
@@ -491,26 +489,25 @@ def test():
 
     d["train"] ={
       "Xtrain":  X[:10,:],
-      "ytrain":  y[:10,:],
+      "ytrain":  y[:10,:],        ## Not used
       "Xtest":   X[10:1000,:],
-      "ytest":   y[10:1000,:],
+      "ytest":   y[10:1000,:],    ## Nor Used
     }
 
     data_pars= d
-
-
-    model_pars                       = {}
-    model_pars['original_dim']       = np.uint32( adata_pars['signal_dimension']*(adata_pars['signal_dimension']-1)/2)
-    model_pars['class_num']          = 5
-    model_pars['intermediate_dim']   = 64
-    model_pars['intermediate_dim_2'] = 16
-    model_pars['latent_dim']         = 3
-    model_pars['Lambda1']            = 1
-    model_pars['batch_size']         = 256
-    model_pars['Lambda2']            = 200
-    model_pars['Alpha']              = 0.075
-    model_pars['model_pars'] = model_pars
-    model_pars['model_class'] = "Kears"
+    m                       = {}
+    m['original_dim']       = np.uint32( adata_pars['signal_dimension']*(adata_pars['signal_dimension']-1)/2)
+    m['class_num']          = 5
+    m['intermediate_dim']   = 64
+    m['intermediate_dim_2'] = 16
+    m['latent_dim']         = 3
+    m['Lambda1']            = 1
+    m['batch_size']         = 256
+    m['Lambda2']            = 200
+    m['Alpha']              = 0.075
+    model_pars = {'model_pars'  : m,
+                  'model_class' : "class_VAEMDN"
+                 }
 
     compute_pars = {}
     compute_pars['compute_pars'] = {'epochs': 1, }   ## direct feed
