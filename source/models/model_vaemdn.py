@@ -166,7 +166,7 @@ def get_model(model_pars):
 
     vae.add_loss(vae_loss)
     vae.compile(optimizer='adam')
-    # vae.summary()
+    print(vae.summary() )
     return vae
 
 
@@ -190,14 +190,14 @@ class Model(object):
             self.model = None
             return
 
-        log2("data_pars", data_pars)
+        # log2("data_pars", data_pars)
         model_class = model_pars['model_class']  #
 
         ### Dynamic shape of input
         #model_pars['model_pars']['n_feat']       = model_pars['model_pars']['n_deep']
+        ### get model params  ###############################################
         mdict_default = {
-             'original_dim':        np.uint32( data_pars['signal_dimension']*(data_pars['signal_dimension']-1)/2)
-            ,'class_num':           5
+             'class_num':           5
             ,'intermediate_dim':    64
             ,'intermediate_dim_2':  16
             ,'latent_dim':          3
@@ -208,8 +208,13 @@ class Model(object):
         }
         mdict = model_pars.get('model_pars', mdict_default)
 
-        self.model  = get_model(mdict)
-        log2(model_class, self.model)
+        ### Dimension : data_pars  ---> model_pars dimension  ###############
+        mdict['original_dim'] = np.uint32( data_pars['signal_dimension']*(data_pars['signal_dimension']-1)/2)
+
+        #### Load
+        self.model_pars['model_pars'] = mdict
+        self.model  = get_model(model_pars['model_pars'])
+        log2(self.model_pars, self.model)
         self.model.summary()
 
 
@@ -222,20 +227,22 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train",)
     cpars          = copy.deepcopy( compute_pars.get("compute_pars", {}))   ## issue with pickle
 
+
     early_stopping = EarlyStopping(monitor='loss', patience=3)
-    path_check     = compute_pars.get('path_checkpoint', 'ztmp_checkpoint/model/')
-    # os.makedirs(path_check , exist_ok= True)
+    path_check     = compute_pars.get('path_checkpoint', 'ztmp/model_dir/check.ckpt')
+    os.makedirs(os.path.dirname(path_check) , exist_ok= True)
     model_ckpt     = ModelCheckpoint(filepath =  path_check,
                                      save_best_only=True, monitor='loss')
     cpars['callbacks'] =  [early_stopping, model_ckpt]
+    # cpars['callbacks'] = {}
 
     ### Fake label
-    #ytrain = ytrain.reshape(ytrain.shape[0], 1)
-    #ytest = ytest.reshape(ytest.shape[0], 1)
-    ytrain = np.ones((Xtrain_tuple.shape[0], 1))
+    Xtest_dummy  = np.ones((Xtest_tuple.shape[0], 1))
+    Xtrain_dummy = np.ones((Xtrain_tuple.shape[0], 1))
+
     assert 'epochs' in cpars, 'epoch missing'
-    hist = model.model.fit([Xtrain_tuple, ytrain],
-                           # validation_data=[Xtest_tuple, ytest],
+    hist = model.model.fit([Xtrain_tuple, Xtrain_dummy],
+                           validation_data=[ [Xtest_tuple, Xtest_dummy], None],
                             **cpars)
     model.history = hist
 
@@ -319,7 +326,7 @@ def get_dataset(data_pars=None, task_type="train", **kw):
             ### dict  colgroup ---> list of df
             Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
             Xtuple_test  = get_dataset_tuple(Xtest, cols_type_received, cols_ref)
-            log2("Xtuple_train", Xtuple_train)
+            #flog2("Xtuple_train", Xtuple_train)
 
             return Xtuple_train, ytrain, Xtuple_test, ytest
 
@@ -357,6 +364,7 @@ def save(path=None, info=None):
     os.makedirs(path, exist_ok=True)
 
     model.model.save(f"{path}/model_keras.h5")
+    model.model.save_weights(f"{path}/model_keras_weights.h5")
 
     modelx = Model()  # Empty model  Issue with pickle
     modelx.model_pars   = model.model_pars
@@ -372,13 +380,19 @@ def load_model(path=""):
     global model, session
     import dill as pickle
 
-    model_keras = keras.models.load_model(path + '/model_keras.h5' )
     model0      = pickle.load(open(f"{path}/model.pkl", mode='rb'))
 
     model = Model()  # Empty model
-    model.model = model_keras
-    model.model_pars = model0.model_pars
+    model.model        = get_model( model0.model_pars)
+    model.model_pars   = model0.model_pars
     model.compute_pars = model0.compute_pars
+
+    model.model.load_weights( f'{path}/model_keras_weights.h5')
+
+    log(model.model.summary())
+    #### Issue when loading model due to custom weights, losses, Keras erro
+    #model_keras = get_model()
+    #model_keras = keras.models.load_model(path + '/model_keras.h5' )
     session = None
     return model, session
 
@@ -463,7 +477,7 @@ def test():
     ### Custom dataset
     adata_pars = {'dataset_name':  'correlation'}
     adata_pars['state_num']           = 10
-    adata_pars['time_len']            = 50000
+    adata_pars['time_len']            = 500
     adata_pars['signal_dimension']    = 15
     adata_pars['CNR']                 = 1
     adata_pars['window_len']          = 11
@@ -476,10 +490,10 @@ def test():
     d['signal_dimension'] = 15
 
     d["train"] ={
-      "Xtrain":  X[:100,:],
-      "ytrain":  y[:100,:],
-      "Xtest":   X[100:1000,:],
-      "ytest":   y[100:1000,:],
+      "Xtrain":  X[:10,:],
+      "ytrain":  y[:10,:],
+      "Xtest":   X[10:1000,:],
+      "ytest":   y[10:1000,:],
     }
 
     data_pars= d
@@ -517,20 +531,27 @@ def test_helper(model_pars, data_pars, compute_pars, Xpred):
     log('\n\nTraining the model..')
     fit(data_pars=data_pars, compute_pars=compute_pars, out_pars=None)
 
+
     log('Predict data..')
     ypred, ypred_proba = predict(Xpred=Xpred, data_pars=data_pars, compute_pars=compute_pars)
-    log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
+    log(f'Top 5 y_pred: {np.squeeze(ypred)[:3]}')
 
     #
     log('Saving model..')
+    log( model.model.summary() )
     save(path= root + '/model_dir/')
+
 
     log('Load model..')
     model, session = load_model(path= root + "/model_dir/")
     log('Model successfully loaded!\n\n')
 
     log('Model architecture:')
-    log(model.summary())
+    log(model.model.summary())
+
+    log('Predict data..')
+    ypred, ypred_proba = predict(Xpred=Xpred, data_pars=data_pars, compute_pars=compute_pars)
+
 
 
 
@@ -539,6 +560,10 @@ def test_helper(model_pars, data_pars, compute_pars, Xpred):
 
 if __name__ == "__main__":
     test()
+    # import fire
+    # fire.Fire()
+
+
 
 
 def a():
