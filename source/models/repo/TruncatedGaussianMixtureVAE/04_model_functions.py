@@ -231,6 +231,22 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
                            validation_data=(Xtest_tuple, ytest),
                             **cpars)
     model.history = hist
+        ### get model params  ###############################################
+        mdict_default = {
+             'class_num':           5
+            ,'intermediate_dim':    64
+            ,'intermediate_dim_2':  16
+            ,'latent_dim':          3
+            ,'Lambda1':             1
+            ,'batch_size':          256
+            ,'Lambda2':             200
+            ,'Alpha':               0.075
+        }
+        mdict = model_pars.get('model_pars', mdict_default)
+
+        ### Dimension : data_pars  ---> model_pars dimension  ###############
+        mdict['original_dim'] = np.uint32( data_pars['signal_dimension']*(data_pars['signal_dimension']-1)/2)
+
 
 
 def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
