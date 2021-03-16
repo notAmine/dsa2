@@ -213,7 +213,6 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
     import glob, ntpath
 
     supported_extensions = [ ".txt", ".csv", ".zip", ".gzip", ".pkl", ".parquet" ]
-    # fallback_name        = "features"
 
 
     if (path_data_x.startswith("spark")):
@@ -312,7 +311,6 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
 
     if file_target is None:
         file_target = fallback_name # mktemp(dir="")
-
 
 
     if "github.com" in url_dataset:

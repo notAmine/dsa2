@@ -208,33 +208,6 @@ def load_info(path=""):
     return dd
 
 
-def preprocess(prepro_pars):
-    if prepro_pars['type'] == 'test':
-        from sklearn.datasets import make_classification
-        from sklearn.model_selection import train_test_split
-
-        X, y = make_classification(n_features=10, n_redundant=0, n_informative=2,
-                                   random_state=1, n_clusters_per_class=1)
-
-        # log(X,y)
-        Xtrain, Xtest, ytrain, ytest = train_test_split(X, y)
-        return Xtrain, ytrain, Xtest, ytest
-
-    if prepro_pars['type'] == 'train':
-        from sklearn.model_selection import train_test_split
-        df = pd.read_csv(prepro_pars['path'])
-        dfX = df[prepro_pars['colX']]
-        dfy = df[prepro_pars['coly']]
-        Xtrain, Xtest, ytrain, ytest = train_test_split(dfX.values, dfy.values)
-        return Xtrain, ytrain, Xtest, ytest
-
-    else:
-        df = pd.read_csv(prepro_pars['path'])
-        dfX = df[prepro_pars['colX']]
-
-        Xtest, ytest = dfX, None
-        return None, None, Xtest, ytest
-
 
 ####################################################################################################
 ############ Do not change #########################################################################
@@ -264,26 +237,10 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
-def get_params(param_pars={}, **kw):
-    import json
-    # from jsoncomment import JsonComment ; json = JsonComment()
-    pp = param_pars
-    choice = pp['choice']
-    config_mode = pp['config_mode']
-    data_path = pp['data_path']
-
-    if choice == "json":
-        cf = json.load(open(data_path, mode='r'))
-        cf = cf[config_mode]
-        return cf['model_pars'], cf['data_pars'], cf['compute_pars'], cf['out_pars']
-
-    else:
-        raise Exception(f"Not support choice {choice} yet")
 
 
-
-
-
+####################################################################################################
+####################################################################################################
 def test2(nrow=10000):
     """
        python source/models/torch_tabular.py test
