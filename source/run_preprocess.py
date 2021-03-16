@@ -133,7 +133,8 @@ def preprocess(path_train_X="", path_train_y="", path_pipeline_export="", cols_g
     pipe_list_X  = [ task for task in pipe_list  if task.get('type', '')  not in ['coly', 'filter']  ]
     pipe_list_y  = [ task for task in pipe_list  if task.get('type', '')   in ['coly']  ]
     pipe_filter  = [ task for task in pipe_list  if task.get('type', '')   in ['filter']  ]
-    ##### Load data #################################################################################
+
+    log("##### Load data ##########################################################################")
     df = load_dataset(path_train_X, path_train_y, colid, n_sample= n_sample)
 
 
