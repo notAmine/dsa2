@@ -252,6 +252,97 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
+
+
+
+def get_sparse_data(df, colcategpry, colnumeic):
+    """
+       Create sparse data struccture from dataframe data  to Feed Keras
+
+    https://github.com/GoogleCloudPlatform/data-science-on-gcp/blob/master/09_cloudml/flights_model_tf2.ipynb
+
+    :return:
+    """
+    import tensorflow as tf
+    NBUCKETS = 10
+
+    real = { colname : tf.feature_column.numeric_column(colname)
+              for colname in colnumeric
+    }
+
+    inputs = {        colname : tf.keras.layers.Input(name=colname, shape=(), dtype='float32')
+              for colname in real.keys()
+    }
+
+
+
+    sparse = {
+          'carrier': tf.feature_column.categorical_column_with_vocabulary_list('carrier',
+                      vocabulary_list='AS,VX,F9,UA,US,WN,HA,EV,MQ,DL,OO,B6,NK,AA'.split(',')),
+          'origin' : tf.feature_column.categorical_column_with_hash_bucket('origin', hash_bucket_size=1000),
+          'dest'   : tf.feature_column.categorical_column_with_hash_bucket('dest', hash_bucket_size=1000)
+    }
+
+    inputs.update({
+        colname : tf.keras.layers.Input(name=colname, shape=(), dtype='string')
+              for colname in sparse.keys()
+    })
+
+
+
+    latbuckets = np.linspace(20.0, 50.0, NBUCKETS).tolist()  # USA
+    lonbuckets = np.linspace(-120.0, -70.0, NBUCKETS).tolist() # USA
+    disc = {}
+    disc.update({
+           'd_{}'.format(key) : tf.feature_column.bucketized_column(real[key], latbuckets)
+              for key in ['dep_lat', 'arr_lat']
+    })
+    disc.update({
+           'd_{}'.format(key) : tf.feature_column.bucketized_column(real[key], lonbuckets)
+              for key in ['dep_lon', 'arr_lon']
+    })
+
+    # cross columns that make sense in combination
+    sparse['dep_loc'] = tf.feature_column.crossed_column([disc['d_dep_lat'], disc['d_dep_lon']], NBUCKETS*NBUCKETS)
+    sparse['arr_loc'] = tf.feature_column.crossed_column([disc['d_arr_lat'], disc['d_arr_lon']], NBUCKETS*NBUCKETS)
+    sparse['dep_arr'] = tf.feature_column.crossed_column([sparse['dep_loc'], sparse['arr_loc']], NBUCKETS ** 4)
+    #sparse['ori_dest'] = tf.feature_column.crossed_column(['origin', 'dest'], hash_bucket_size=1000)
+
+    # embed all the sparse columns
+    embed = {
+           'embed_{}'.format(colname) : tf.feature_column.embedding_column(col, 10)
+              for colname, col in sparse.items()
+    }
+    real.update(embed)
+
+
+
+    # one-hot encode the sparse columns
+    sparse = { colname : tf.feature_column.indicator_column(col)
+              for colname, col in sparse.items()
+    }
+
+    #DNN_HIDDEN_UNITS = 10
+    #model = wide_and_deep_classifier(
+    #    inputs,
+    #    linear_feature_columns = sparse.values(),
+    #    dnn_feature_columns = real.values(),
+    #    dnn_hidden_units = DNN_HIDDEN_UNITS)
+
+    return sparse, real
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Model(object):
     def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
         self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
@@ -294,32 +385,6 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     hist = model.model.fit( Xtrain_tuple, ytrain,  **cpars)
     model.history = hist
 
-
-def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
-    """
-       Return metrics of the model when fitted.
-    """
-    global model, session
-    # data_pars['train'] = True
-    Xval, yval = get_dataset(data_pars, task_type="eval")
-
-    log(Xval.shape)
-    ypred = predict(Xval, data_pars, compute_pars, out_pars)
-
-
-    # log(data_pars)
-    mpars = compute_pars.get("metrics_pars", {'metric_name': 'mae'})
-
-    scorer = {
-        "rmse": sklearn.metrics.mean_squared_error,
-        "mae": sklearn.metrics.mean_absolute_error
-    }[mpars['metric_name']]
-
-    mpars2    = mpars.get("metrics_pars", {})  ##Specific to score
-    score_val = scorer(yval, ypred[0], **mpars2)
-
-    ddict = [{"metric_val": score_val, 'metric_name': mpars['metric_name']}]
-    return ddict
 
 
 def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
