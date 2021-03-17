@@ -205,6 +205,55 @@ def get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref, **kw):
 
     :return:
     """
+    from tensorflow.feature_column import (categorical_column_with_hash_bucket,
+        numeric_column, embedding_column, bucketized_column, crossed_column, indicator_column)
+
+    if len(cols_ref) <= 1 :
+        return Xtrain
+
+    dict_sparse, dict_dense = {}, {}
+    for cols_groupname in cols_ref :
+        assert cols_groupname in cols_type_received, "Error missing colgroup in config data_pars[cols_model_type] "
+
+        if cols_groupname == "cols_sparse" :
+           col_list = cols_type_received[cols_groupname]
+           for coli in col_list :
+               m_bucket = min(500, int( Xtrain[coli].nunique()) )
+               dict_sparse[coli] = categorical_column_with_hash_bucket(coli, hash_bucket_size= m_bucket)
+
+        if cols_groupname == "cols_dense" :
+           col_list = cols_type_received[cols_groupname]
+           for coli in col_list :
+               dict_dense[coli] = numeric_column(coli)
+
+        if cols_groupname == "cols_cross" :
+           col_list = cols_type_received[cols_groupname]
+           for coli in col_list :
+               m_bucketi = min(500, int( Xtrain[coli[0]].nunique()) )
+               m_bucketj = min(500, int( Xtrain[coli[1]].nunique()) )
+               dict_sparse[coli[0]+"-"+coli[1]] = crossed_column(coli[0], coli[1], m_bucketi * m_bucketj)
+
+        if cols_groupname == "cols_discretize" :
+           col_list = cols_type_received[cols_groupname]
+           for coli in col_list :
+               bucket_list = np.linspace(min, max, 100).tolist()
+               dict_sparse[coli +"_bin"] = bucketized_column(numeric_column(coli), bucket_list)
+
+
+    #### one-hot encode the sparse columns
+    dict_sparse = { colname : indicator_column(col)  for colname, col in dict_sparse.items()}
+
+    ### Embed
+    dict_embed  = { 'em_{}'.format(colname) : embedding_column(col, 10) for colname, col in dict_sparse.items()}
+    dict_dense2 = {**dict_dense, **dict_embed}
+
+    X_tuple = (dict_sparse, dict_dense, dict_dense2 )
+    return X_tuple
+
+
+
+    
+
     import tensorflow as tf
     NBUCKETS = 10
 
@@ -228,7 +277,6 @@ def get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref, **kw):
         colname : tf.keras.layers.Input(name=colname, shape=(), dtype='string')
               for colname in sparse.keys()
     })
-
 
 
     latbuckets = np.linspace(20.0, 50.0, NBUCKETS).tolist()  # USA
@@ -262,8 +310,6 @@ def get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref, **kw):
               for colname, col in sparse.items()
     }
 
-
-    """"
     def wide_and_deep_classifier(inputs, linear_feature_columns, dnn_feature_columns, dnn_hidden_units):
         deep = tf.keras.layers.DenseFeatures(dnn_feature_columns, name='deep_inputs')(inputs)
         layers = [int(x) for x in dnn_hidden_units.split(',')]
@@ -285,7 +331,6 @@ def get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref, **kw):
         dnn_feature_columns = real.values(),
         dnn_hidden_units = DNN_HIDDEN_UNITS)
     tf.keras.utils.plot_model(model, 'flights_model.png', show_shapes=False, rankdir='LR')
-    """
     X_tuple = (sparse, real, real)
     return X_tuple
 
@@ -340,7 +385,6 @@ def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     global model, session
     if Xpred is None:
         Xpred_tuple = get_dataset(data_pars, task_type="predict")
-
     else :
         cols_type   = data_pars.get('cols_model_type2', {})  ##
         Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
