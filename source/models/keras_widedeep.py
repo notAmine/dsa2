@@ -252,7 +252,7 @@ def get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref, **kw):
 
 
 
-    
+
 
     import tensorflow as tf
     NBUCKETS = 10
