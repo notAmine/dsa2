@@ -217,7 +217,6 @@ def get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref, **kw):
     }
 
 
-
     sparse = {
           'carrier': tf.feature_column.categorical_column_with_vocabulary_list('carrier',
                       vocabulary_list='AS,VX,F9,UA,US,WN,HA,EV,MQ,DL,OO,B6,NK,AA'.split(',')),
@@ -340,11 +339,10 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
 def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     global model, session
     if Xpred is None:
-        # data_pars['train'] = False
         Xpred_tuple = get_dataset(data_pars, task_type="predict")
 
     else :
-        cols_type   = data_pars['cols_model_type2']  ##
+        cols_type   = data_pars.get('cols_model_type2', {})  ##
         Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
 
     log2(Xpred_tuple)
@@ -366,16 +364,17 @@ def save(path=None, info=None):
     global model, session
     os.makedirs(path, exist_ok=True)
 
+    ### Keras
     model.model.save(f"{path}/model_keras.h5")
 
+    ### Wrapper
     modelx = Model()  # Empty model  Issue with pickle
     modelx.model_pars   = model.model_pars
     modelx.data_pars    = model.data_pars
     modelx.compute_pars = model.compute_pars
-    # log('model', modelx.model)
-    pickle.dump(modelx, open(f"{path}/model.pkl", mode='wb'))  #
 
-    pickle.dump(info, open(f"{path}/info.pkl", mode='wb'))  #
+    pickle.dump(modelx, open(f"{path}/model.pkl", mode='wb'))  #
+    pickle.dump(info,   open(f"{path}/info.pkl", mode='wb'))  #
 
 
 def load_model(path=""):
@@ -509,6 +508,23 @@ def test_helper(model_pars, data_pars, compute_pars):
 if __name__ == "__main__":
     import fire
     fire.Fire(test)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
