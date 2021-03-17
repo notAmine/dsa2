@@ -36,7 +36,7 @@
 
 # ## Load modules
 """
-import numpy as np
+import numpy as np, sys,os
 import tensorflow as tf
 print(tf.__version__)
 from scipy.stats import bernoulli
@@ -51,7 +51,7 @@ import sklearn.preprocessing as preprocessing
 from sklearn.metrics import mean_squared_error
 from sklearn.feature_selection import mutual_info_regression, mutual_info_classif
 plt.switch_backend('agg')
-tfd = tf.contrib.distributions
+# tfd = tf.contrib.distributions
 import json
 import seaborn as sns; sns.set(style="ticks", color_codes=True)
 
@@ -59,9 +59,13 @@ import seaborn as sns; sns.set(style="ticks", color_codes=True)
 
 
 #############################################################################################################################
+sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/repo/VAEM/" )
+
 import repo.VAEM.utils.process as process
 import repo.VAEM.utils.params as params
 import repo.VAEM.utils.active_learning as active_learning
+
+
 
 
 
@@ -96,9 +100,9 @@ max_Data = 0.7
 min_Data = 0.3
 
 def encode2(data_decode,list_discrete,records_d,fast_plot):
-    args = params.Params('./hyperparameters/bank_plot.json')
+    args = params.Params('repo/VAEM/hyperparameters/bank_plot.json')
     Data_train_decomp, Data_train_noisy_decomp,mask_train_decomp,Data_test_decomp,mask_test_comp,mask_test_decomp,cat_dims,DIM_FLT,dic_var_type = data_decode
-    vae = active_learning.p_vae_active_learning(Data_train_comp, Data_train_noisy_decomp,mask_train_decomp,Data_test_decomp,mask_test_comp,mask_test_decomp,cat_dims,DIM_FLT,dic_var_type,args,list_discrete,records_d)
+    vae = active_learning.p_vae_active_learning(Data_train_decomp, Data_train_noisy_decomp,mask_train_decomp,Data_test_decomp,mask_test_comp,mask_test_decomp,cat_dims,DIM_FLT,dic_var_type,args,list_discrete,records_d)
     tf.reset_default_graph()
     ### Impute missing data. Fthe mask to be zeros
 
@@ -152,9 +156,16 @@ def encode2(data_decode,list_discrete,records_d,fast_plot):
 
 
 def decode2(data_decode,scaling_factor,list_discrete,records_d):
-    args = params.Params('./hyperparameters/bank_SAIA.json')
+    args = params.Params('repo/VAEM/hyperparameters/bank_SAIA.json')
     Data_train_comp, Data_train_noisy_decomp,mask_train_decomp,Data_test_decomp,mask_test_comp,mask_test_decomp,cat_dims,DIM_FLT,dic_var_type = data_decode
-    vae = active_learning.p_vae_active_learning(Data_train_comp, Data_train_noisy_decomp,mask_train_decomp,Data_test_decomp,mask_test_comp,mask_test_decomp,cat_dims,DIM_FLT,dic_var_type,args,list_discrete,records_d)
+    vae = active_learning.p_vae_active_learning(Data_train_comp, Data_train_noisy_decomp,
+        mask_train_decomp, Data_test_decomp,
+        mask_test_comp,mask_test_decomp,
+        cat_dims,
+        DIM_FLT,dic_var_type,
+        args,list_discrete,records_d)
+
+
 
     npzfile = np.load(args.output_dir+'/UCI_rmse_curve_SING.npz')
     IC_SING=npzfile['information_curve']*scaling_factor[-1]
@@ -200,7 +211,7 @@ def test2(fast_plot=0):
     data_decode,records_d = load_data(list_flt,list_cat,list_discrete,max_Data,min_Data,rs)
     """
     list_discrete = np.array([8,9])
-    args = params.Params('./hyperparameters/bank_plot.json')
+    args = params.Params('repo/VAEM/hyperparameters/bank_plot.json')
     data_decode,records_d = load_data()
     Data_train_comp, Data_train_noisy_decomp,mask_train_decomp,Data_test_decomp,mask_test_comp,mask_test_decomp,cat_dims,DIM_FLT,dic_var_type = data_decode
 
@@ -209,6 +220,87 @@ def test2(fast_plot=0):
 
     save_model2(model, args.output_dir)
 
+
+def load_data(): #(list_flt,list_cat,list_discrete,max_Data,min_Data,rs):
+    args = params.Params('repo/VAEM/hyperparameters/bank_plot.json')
+
+    if not os.path.exists(args.output_dir):
+            os.makedirs(args.output_dir)
+    rs = 42 # random seed
+    # the data will be mapped to interval [min_Data,max_Data]. Usually this will be [0,1] but you can also specify other values.
+    max_Data = 0.7
+    min_Data = 0.3
+    list_discrete = np.array([8,9])
+
+    # list of categorical variables
+    list_cat = np.array([0,1,2,3,4,5,6,7])
+    # list of numerical variables
+    list_flt = np.array([8,9,10,11,12,13,14,15,16,17,18,19,20])
+    #data_decode,records_d = load_data(list_flt,list_cat,list_discrete,max_Data,min_Data,rs)
+
+    seed = 100
+    bank_raw = pd.read_csv("repo/VAEM/data/bank/bankmarketing_train.csv")
+    print(bank_raw.info())
+    label_column="y"
+    matrix1 = bank_raw.copy()
+    print(matrix1.shape)
+    process.encode_catrtogrial_column(matrix1, ["job"])
+    process.encode_catrtogrial_column(matrix1, ["marital"])
+    process.encode_catrtogrial_column(matrix1, ["education"])
+    process.encode_catrtogrial_column(matrix1, ["default"])
+    process.encode_catrtogrial_column(matrix1, ["housing"])
+    process.encode_catrtogrial_column(matrix1, ["loan"])
+    process.encode_catrtogrial_column(matrix1, ["contact"])
+    process.encode_catrtogrial_column(matrix1, ["month"])
+    process.encode_catrtogrial_column(matrix1, ["day_of_week"])
+    process.encode_catrtogrial_column(matrix1, ["poutcome"])
+    process.encode_catrtogrial_column(matrix1, ["y"])
+
+    Data = ((matrix1.values).astype(float))[0:,:]
+    list_discrete_in_flt = (np.in1d(list_flt, list_discrete).nonzero()[0])
+    list_discrete_comp = list_discrete_in_flt + len(list_cat)
+
+    if len(list_flt)>0 and len(list_cat)>0:
+        list_var = np.concatenate((list_cat,list_flt))
+    elif len(list_flt)>0:
+        list_var = list_flt
+    else:
+        list_var = list_cat
+    Data_sub = Data[:,list_var]
+    dic_var_type = np.zeros(Data_sub.shape[1])
+    dic_var_type[0:len(list_cat)] = 1
+
+    # In this notebook we assume the raw data matrix is fully observed
+    Mask = np.ones(Data_sub.shape)
+    # Normalize/squash the data matrix
+    Data_std = (Data_sub - Data_sub.min(axis=0)) / (Data_sub.max(axis=0) - Data_sub.min(axis=0))
+    scaling_factor = (Data_sub.max(axis=0) - Data_sub.min(axis=0))/(max_Data - min_Data)
+    Data_sub = Data_std * (max_Data - min_Data) + min_Data
+
+    # decompress categorical data into one hot representation
+    Data_cat = Data[:,list_cat].copy()
+    Data_flt = Data[:,list_flt].copy()
+    Data_comp = np.concatenate((Data_cat,Data_flt),axis = 1)
+    Data_decomp, Mask_decomp, cat_dims, DIM_FLT = process.data_preprocess(Data_sub,Mask,dic_var_type)
+    Data_train_decomp, Data_test_decomp, mask_train_decomp, mask_test_decomp,mask_train_comp, mask_test_comp,Data_train_comp, Data_test_comp = train_test_split(
+            Data_decomp, Mask_decomp,Mask,Data_comp,test_size=0.1, random_state=rs)
+
+    list_discrete = list_discrete_in_flt + (cat_dims.sum()).astype(int)
+
+    Data_decomp = np.concatenate((Data_train_decomp, Data_test_decomp), axis=0)
+    Data_train_orig = Data_train_decomp.copy()
+    Data_test_orig = Data_test_decomp.copy()
+
+    # Note that here we have added some noise to continuous-discrete variables to help training. Alternatively, you can also disable this by changing the noise ratio to 0.
+    Data_noisy_decomp,records_d, intervals_d = process.noisy_transform(Data_decomp, list_discrete, noise_ratio = 0.99)
+    noise_record = Data_noisy_decomp - Data_decomp
+    Data_train_noisy_decomp = Data_noisy_decomp[0:Data_train_decomp.shape[0],:]
+    Data_test_noisy_decomp = Data_noisy_decomp[Data_train_decomp.shape[0]:,:]
+    
+    
+    data_decode = (Data_train_comp, Data_train_noisy_decomp,mask_train_decomp,Data_test_decomp,mask_test_comp,mask_test_decomp,cat_dims,DIM_FLT,dic_var_type)
+    
+    return data_decode,records_d
 
 
 
@@ -500,92 +592,11 @@ def test_helper(model_pars, data_pars, compute_pars, Xpred):
 
 
 
-def load_data(): #(list_flt,list_cat,list_discrete,max_Data,min_Data,rs):
-    args = params.Params('./hyperparameters/bank_plot.json')
-
-    if not os.path.exists(args.output_dir):
-            os.makedirs(args.output_dir)
-    rs = 42 # random seed
-    # the data will be mapped to interval [min_Data,max_Data]. Usually this will be [0,1] but you can also specify other values.
-    max_Data = 0.7
-    min_Data = 0.3
-    list_discrete = np.array([8,9])
-
-    # list of categorical variables
-    list_cat = np.array([0,1,2,3,4,5,6,7])
-    # list of numerical variables
-    list_flt = np.array([8,9,10,11,12,13,14,15,16,17,18,19,20])
-    data_decode,records_d = load_data(list_flt,list_cat,list_discrete,max_Data,min_Data,rs)
-
-    seed = 100
-    bank_raw = pd.read_csv("./data/bank/bankmarketing_train.csv")
-    print(bank_raw.info())
-    label_column="y"
-    matrix1 = bank_raw.copy()
-    print(matrix1.shape)
-    process.encode_catrtogrial_column(matrix1, ["job"])
-    process.encode_catrtogrial_column(matrix1, ["marital"])
-    process.encode_catrtogrial_column(matrix1, ["education"])
-    process.encode_catrtogrial_column(matrix1, ["default"])
-    process.encode_catrtogrial_column(matrix1, ["housing"])
-    process.encode_catrtogrial_column(matrix1, ["loan"])
-    process.encode_catrtogrial_column(matrix1, ["contact"])
-    process.encode_catrtogrial_column(matrix1, ["month"])
-    process.encode_catrtogrial_column(matrix1, ["day_of_week"])
-    process.encode_catrtogrial_column(matrix1, ["poutcome"])
-    process.encode_catrtogrial_column(matrix1, ["y"])
-
-    Data = ((matrix1.values).astype(float))[0:,:]
-    list_discrete_in_flt = (np.in1d(list_flt, list_discrete).nonzero()[0])
-    list_discrete_comp = list_discrete_in_flt + len(list_cat)
-
-    if len(list_flt)>0 and len(list_cat)>0:
-        list_var = np.concatenate((list_cat,list_flt))
-    elif len(list_flt)>0:
-        list_var = list_flt
-    else:
-        list_var = list_cat
-    Data_sub = Data[:,list_var]
-    dic_var_type = np.zeros(Data_sub.shape[1])
-    dic_var_type[0:len(list_cat)] = 1
-
-    # In this notebook we assume the raw data matrix is fully observed
-    Mask = np.ones(Data_sub.shape)
-    # Normalize/squash the data matrix
-    Data_std = (Data_sub - Data_sub.min(axis=0)) / (Data_sub.max(axis=0) - Data_sub.min(axis=0))
-    scaling_factor = (Data_sub.max(axis=0) - Data_sub.min(axis=0))/(max_Data - min_Data)
-    Data_sub = Data_std * (max_Data - min_Data) + min_Data
-
-    # decompress categorical data into one hot representation
-    Data_cat = Data[:,list_cat].copy()
-    Data_flt = Data[:,list_flt].copy()
-    Data_comp = np.concatenate((Data_cat,Data_flt),axis = 1)
-    Data_decomp, Mask_decomp, cat_dims, DIM_FLT = process.data_preprocess(Data_sub,Mask,dic_var_type)
-    Data_train_decomp, Data_test_decomp, mask_train_decomp, mask_test_decomp,mask_train_comp, mask_test_comp,Data_train_comp, Data_test_comp = train_test_split(
-            Data_decomp, Mask_decomp,Mask,Data_comp,test_size=0.1, random_state=rs)
-
-    list_discrete = list_discrete_in_flt + (cat_dims.sum()).astype(int)
-
-    Data_decomp = np.concatenate((Data_train_decomp, Data_test_decomp), axis=0)
-    Data_train_orig = Data_train_decomp.copy()
-    Data_test_orig = Data_test_decomp.copy()
-
-    # Note that here we have added some noise to continuous-discrete variables to help training. Alternatively, you can also disable this by changing the noise ratio to 0.
-    Data_noisy_decomp,records_d, intervals_d = process.noisy_transform(Data_decomp, list_discrete, noise_ratio = 0.99)
-    noise_record = Data_noisy_decomp - Data_decomp
-    Data_train_noisy_decomp = Data_noisy_decomp[0:Data_train_decomp.shape[0],:]
-    Data_test_noisy_decomp = Data_noisy_decomp[Data_train_decomp.shape[0]:,:]
-    
-    
-    data_decode = (Data_train_comp, Data_train_noisy_decomp,mask_train_decomp,Data_test_decomp,mask_test_comp,mask_test_decomp,cat_dims,DIM_FLT,dic_var_type)
-    
-    return data_decode,records_d
-
 
 
 
 if __name__ == "__main__":
-    test()
+    test2()
 
 
 

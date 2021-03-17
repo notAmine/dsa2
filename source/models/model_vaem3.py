@@ -1,8 +1,13 @@
+import sys
+
+sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
+
+
 from __main__ import *
-import models.decoders as decoders
-import models.encoders as encoders
-import models.model as model
-import utils.reward as reward
+import repo.VAEM.models.decoders as decoders
+import repo.VAEM.models.encoders as encoders
+import repo.VAEM.models.model as model
+import repo.VAEM.utils.reward as reward
 
 def p_vae_active_learning(Data_train_compressed, Data_train,mask_train,Data_test,mask_test_compressed,mask_test,cat_dims,dim_flt,dic_var_type,args,list_discrete,records_d, estimation_method=1):
     
@@ -247,10 +252,10 @@ def train_p_vae(stage, x_train, Data_train,mask_train, epochs, latent_dim,cat_di
     if stage == 3:
         ## after stage 2, do discriminative training of y. Please refer to Section 3.4 and Appendix C in our paper.
         for epoch in range(epochs):
-            training_loss_full = 0.
-            training_loss_cat = 0.
-            training_loss_flt = 0.
-            training_loss_z_local = 0.
+            train_loss_full = 0.
+            train_loss_cat = 0.
+            train_loss_flt = 0.
+            train_loss_z_local = 0.
             for it in range(n_it):
                 if iteration == -1:
                     batch_indices = list_train[it * kwargs['batch_size']:min(it * kwargs['batch_size'] + kwargs['batch_size'], n_train - 1)]
@@ -267,26 +272,26 @@ def train_p_vae(stage, x_train, Data_train,mask_train, epochs, latent_dim,cat_di
                 mask_drop = mask_drop.reshape([kwargs['batch_size'], obs_dim])
                 _ = vae.update(x, mask_drop * mask_train_batch, 'disc')
                 loss_full, loss_cat, loss_flt, loss_z_local, loss_kl, stds, _, _ = vae.full_batch_loss(x,mask_drop * mask_train_batch)
-                training_loss_full += loss_full
-                training_loss_cat += loss_cat
-                training_loss_flt += loss_flt
-                training_loss_z_local += loss_z_local
+                train_loss_full += loss_full
+                train_loss_cat += loss_cat
+                train_loss_flt += loss_flt
+                train_loss_z_local += loss_z_local
 
             # average loss over most recent epoch
-            training_loss_full /= n_it
-            training_loss_cat /= n_it
-            training_loss_flt /= n_it
-            training_loss_z_local /= n_it
+            train_loss_full /= n_it
+            train_loss_cat /= n_it
+            train_loss_flt /= n_it
+            train_loss_z_local /= n_it
             print(
                 'Epoch: {} \tnegative training ELBO per observed feature: {:.2f}, Cat_term: {:.2f}, Flt_term: {:.2f},z_term: {:.2f}'
-                    .format(epoch, training_loss_full, training_loss_cat, training_loss_flt, training_loss_z_local))
+                    .format(epoch, train_loss_full, train_loss_cat, train_loss_flt, train_loss_z_local))
 
     for epoch in range(epochs):
-        training_loss_full = 0. # full training loss
-        training_loss_cat = 0. # reconstruction loss for non_continuous likelihood term
-        training_loss_flt = 0. # reconstruction loss for continuous likelihood term
-        training_loss_z_local = 0. # reconstruction loss for second stage on z space (gaussian likelihood)
-        training_loss_kl = 0 # loss for KL term
+        train_loss_full = 0. # full training loss
+        train_loss_cat = 0. # reconstruction loss for non_continuous likelihood term
+        train_loss_flt = 0. # reconstruction loss for continuous likelihood term
+        train_loss_z_local = 0. # reconstruction loss for second stage on z space (gaussian likelihood)
+        train_loss_kl = 0 # loss for KL term
 
         for it in range(n_it):
             if iteration == -1:
@@ -305,26 +310,26 @@ def train_p_vae(stage, x_train, Data_train,mask_train, epochs, latent_dim,cat_di
             mask_drop = mask_drop.reshape([kwargs['batch_size'], obs_dim])
             _ = vae.update(x, mask_drop*mask_train_batch,disc_mode)
             loss_full, loss_cat, loss_flt,loss_z_local, loss_kl, stds, _,_ = vae.full_batch_loss(x,mask_drop*mask_train_batch)
-            training_loss_full += loss_full
-            training_loss_cat += loss_cat
-            training_loss_flt += loss_flt
-            training_loss_z_local += loss_z_local
-            training_loss_kl += loss_kl
+            train_loss_full += loss_full
+            train_loss_cat += loss_cat
+            train_loss_flt += loss_flt
+            train_loss_z_local += loss_z_local
+            train_loss_kl += loss_kl
 
           # average loss over most recent epoch
-        training_loss_full /= n_it
-        training_loss_cat /= n_it
-        training_loss_flt /= n_it
-        training_loss_z_local /= n_it
-        training_loss_kl /= n_it
-        hist_loss_full[epoch] = training_loss_full
-        hist_loss_cat[epoch] = training_loss_cat
-        hist_loss_flt[epoch] = training_loss_flt
-        hist_loss_z_local[epoch] = training_loss_z_local
-        hist_loss_kl[epoch] = training_loss_kl
+        train_loss_full /= n_it
+        train_loss_cat /= n_it
+        train_loss_flt /= n_it
+        train_loss_z_local /= n_it
+        train_loss_kl /= n_it
+        hist_loss_full[epoch] = train_loss_full
+        hist_loss_cat[epoch] = train_loss_cat
+        hist_loss_flt[epoch] = train_loss_flt
+        hist_loss_z_local[epoch] = train_loss_z_local
+        hist_loss_kl[epoch] = train_loss_kl
 
         print('Epoch: {} \tnegative training ELBO per observed feature: {:.2f}, Cat_term: {:.2f}, Flt_term: {:.2f},z_term: {:.2f}'
-            .format(epoch, training_loss_full,training_loss_cat,training_loss_flt, training_loss_z_local))
+            .format(epoch, train_loss_full,train_loss_cat,train_loss_flt, train_loss_z_local))
 
     if stage <= 2:
         vae.save_generator(os.path.join(args.output_dir, 'generator.tensorflow'))
