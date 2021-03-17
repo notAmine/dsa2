@@ -84,10 +84,7 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
     global model, session
     data_pars['train'] = True
     Xval, yval        = get_dataset(data_pars, task_type="eval")
-    # ypred      = model.model.predict(Xval)
     ypred, ypred_prob = predict(Xval, data_pars, compute_pars, out_pars)
-
-    # log(data_pars)
     mpars = compute_pars.get("metrics_pars", {'metric_name': 'auc'})
 
     scorer = {
