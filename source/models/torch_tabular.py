@@ -110,7 +110,6 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     # if data_pars is not None :
     Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train")
     cpars          = copy.deepcopy( compute_pars.get("compute_pars", {}))   ## issue with pickle
-    
     if VERBOSE: log(Xtrain, model.model)
     
     #Xtrain = torch.tensor(Xtrain.values, dtype=torch.float)
