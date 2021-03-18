@@ -42,9 +42,11 @@ try :
     from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig, ExperimentConfig
     print("**************************************** Imported DataConfig ****************************************")
 except :
-    os.system("pip install pytorch_tabular[all]")
+    print("**************************************** !! Couldn't import DataConfig !! ****************************************")
 
-MODEL_LIST = "CategoryEmbeddingModelConfig, TabNetModelConfig,NodeConfig".split(",")
+    # os.system("pip install pytorch_tabular[all]")
+
+MODEL_LIST = "CategoryEmbeddingModelConfig,TabNetModelConfig,NodeConfig".split(",")
 
 # torch.manual_seed(0)
 # np.random.seed(0)
@@ -87,12 +89,14 @@ class Model(object):
             )
 
             class_name   = model_pars.get('model_class',  "CategoryEmbeddingModelConfig" ).split("::")[-1]
+            print("before split =", model_pars.get('model_class',  "NO model_class key" ))
+            print("model class name =", class_name)
             assert class_name in MODEL_LIST, "nota vailable"
             model_class  = globals()[ class_name]
             model_config = model_class( **model_pars['model_pars']   )
             # model_config     = CategoryEmbeddingModelConfig( **model_pars['model_pars'],   )
 
-            trainer_config   = TrainerConfig( **compute_pars.get('compute_pars', {} ) )
+            trainer_config   = TrainerConfig( **compute_pars.get('compute_pars', {} )) # For testing quickly, max_epochs=1 )
             optimizer_config = OptimizerConfig(**compute_pars.get('optimizer_pars', {} ))
 
             self.config_pars = { 'data_config' : data_config,
@@ -129,11 +133,11 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     target_col = data_pars['cols_model_group_custom']['coly'][0]
 
     train = pd.concat((Xtrain_tuple[0], Xtrain_tuple[1]), axis=1)
-    train.drop([target_col], axis=1, inplace=True)
+    # train.drop([target_col], axis=1, inplace=True)
     train = pd.concat((train, ytrain), axis=1)
 
     val   = pd.concat((Xtest_tuple[0], Xtest_tuple[1]), axis=1)
-    val.drop([target_col], axis=1, inplace=True)
+    # val.drop([target_col], axis=1, inplace=True)
     val   = pd.concat((val, ytest), axis=1)
 
     ###############################################################
@@ -158,7 +162,7 @@ def predict(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dic
     target_col = data_pars['cols_model_group_custom']['coly'][0]
 
     Xpred_tuple_concat = pd.concat((Xpred_tuple[0], Xpred_tuple[1]), axis=1)
-    Xpred_tuple_concat.drop([target_col], axis=1, inplace=True)
+    # Xpred_tuple_concat.drop([target_col], axis=1, inplace=True)
     ypred = model.model.predict(Xpred_tuple_concat)
     
     #####################################################################
@@ -317,57 +321,13 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
 ####################################################################################################
 ############ Test  #################################################################################
-def test(nrows=1000):
-    log("start")
-    global model, session
+class Tests:
 
-    #X = np.random.rand(10000,20)
-    #y = np.random.binomial(n=1, p=0.5, size=[10000])
-    root = os.path.join(os.getcwd() ,"ztmp")
+    colnum = ["Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology",
+            "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways",
+            "Hillshade_9am" , "Hillshade_Noon",  "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"]
 
-
-    BASE_DIR = Path.home().joinpath( root, 'data/input/covtype/')
-    datafile = BASE_DIR.joinpath('covtype.data.gz')
-    datafile.parent.mkdir(parents=True, exist_ok=True)
-    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/covtype/covtype.data.gz"
-    if not datafile.exists():
-        wget.download(url, datafile.as_posix())
-
-    coly        = ["Covertype"]
-    colcat      = [ "Wilderness_Area1", "Wilderness_Area2", "Wilderness_Area3", "Wilderness_Area4", "Soil_Type1", "Soil_Type2", "Soil_Type3", "Soil_Type4", "Soil_Type5", "Soil_Type6", "Soil_Type7", "Soil_Type8", "Soil_Type9", "Soil_Type10", "Soil_Type11", "Soil_Type12", "Soil_Type13", "Soil_Type14", "Soil_Type15", "Soil_Type16", "Soil_Type17", "Soil_Type18", "Soil_Type19", "Soil_Type20", "Soil_Type21", "Soil_Type22", "Soil_Type23", "Soil_Type24", "Soil_Type25", "Soil_Type26", "Soil_Type27", "Soil_Type28", "Soil_Type29", "Soil_Type30", "Soil_Type31", "Soil_Type32", "Soil_Type33", "Soil_Type34", "Soil_Type35", "Soil_Type36", "Soil_Type37", "Soil_Type38", "Soil_Type39", "Soil_Type40"
-                  ]
-    colnum      = [ "Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology", "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways", "Hillshade_9am", "Hillshade_Noon", "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"
-    ]
-
-    feature_columns = colnum + colcat + coly
-    df = pd.read_csv(datafile, header=None, names=feature_columns, nrows=1000)
-
-
-    #### Matching Big dict  ##################################################
-    X = df
-    y = df[coly].astype('uint8')
-    log('y', np.sum(y[y==1]) )
-
-    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, stratify=y)
-    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
-    num_classes = len(set(y_train_full[coly].values.ravel()))
-    log(X_train)
-
-
-    cols_input_type_1 = []
-    n_sample = 100
-    def post_process_fun(y):
-        return int(y)
-
-    def pre_process_fun(y):
-        return int(y)
-
-
-    cols_continuous_features = ["Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology",
-        "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways",
-        "Hillshade_9am" , "Hillshade_Noon",  "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"]
-
-    cols_sparse_features = ["Wilderness_Area1",  "Wilderness_Area2", "Wilderness_Area3",  
+    colcat = ["Wilderness_Area1",  "Wilderness_Area2", "Wilderness_Area3",  
         "Wilderness_Area4",  "Soil_Type1",  "Soil_Type2",  "Soil_Type3",
         "Soil_Type4",  "Soil_Type5",  "Soil_Type6",  "Soil_Type7",  "Soil_Type8",  "Soil_Type9",
         "Soil_Type10",  "Soil_Type11",  "Soil_Type12",  "Soil_Type13",  "Soil_Type14",
@@ -377,77 +337,134 @@ def test(nrows=1000):
         "Soil_Type30",  "Soil_Type31",  "Soil_Type32",  "Soil_Type33",  "Soil_Type34",
         "Soil_Type35",  "Soil_Type36",  "Soil_Type37",  "Soil_Type38",  "Soil_Type39",
         "Soil_Type40",  ]
+    
+    coly        = ["Covertype"]
 
 
-    m = {'model_pars': {
-        ### LightGBM API model   #######################################
-         'model_class':  'torch_tabular.py::CategoryEmbeddingModelConfig'
-        ,'model_pars' : { 'task': "classification",
-                          'metrics' : ["f1","accuracy"],
-                          'metrics_params' : [{"num_classes":num_classes},{}]
-                        }  
+    CategoryEmbeddingModelConfig = 'torch_tabular.py::CategoryEmbeddingModelConfig'
+    TabNetModelConfig = 'torch_tabular.py::TabNetModelConfig'
+    NodeConfig = 'torch_tabular.py::NodeConfig'
+    
 
-        , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
-        , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
+    @staticmethod
+    def test(
+        model_config="torch_tabular.py::CategoryEmbeddingModelConfig", 
+        nrows=1000
+        ):
+        """
+            model_config : [CategoryEmbeddingModelConfig, TabNetModelConfig, NodeConfig]
+                            These are defined as static variables in the Tests class
+        """
+        log("start")
+        global model, session
 
-        ### Pipeline for data processing ##############################
-        'pipe_list': [  #### coly target prorcessing
-        {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+        root = os.path.join(os.getcwd() ,"ztmp")
 
-        {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
-        {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
 
-        #### catcol INTO integer,   colcat into OneHot
-        {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
-        {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
+        BASE_DIR = Path.home().joinpath( root, 'data/input/covtype/')
+        datafile = BASE_DIR.joinpath('covtype.data.gz')
+        datafile.parent.mkdir(parents=True, exist_ok=True)
+        url = "https://archive.ics.uci.edu/ml/machine-learning-databases/covtype/covtype.data.gz"
+        if not datafile.exists():
+            wget.download(url, datafile.as_posix())
 
-        ],
-               }
-        },
+        # coly        = ["Covertype"]
+        # colcat      = [ "Wilderness_Area1", "Wilderness_Area2", "Wilderness_Area3", "Wilderness_Area4", "Soil_Type1", "Soil_Type2", "Soil_Type3", "Soil_Type4", "Soil_Type5", "Soil_Type6", "Soil_Type7", "Soil_Type8", "Soil_Type9", "Soil_Type10", "Soil_Type11", "Soil_Type12", "Soil_Type13", "Soil_Type14", "Soil_Type15", "Soil_Type16", "Soil_Type17", "Soil_Type18", "Soil_Type19", "Soil_Type20", "Soil_Type21", "Soil_Type22", "Soil_Type23", "Soil_Type24", "Soil_Type25", "Soil_Type26", "Soil_Type27", "Soil_Type28", "Soil_Type29", "Soil_Type30", "Soil_Type31", "Soil_Type32", "Soil_Type33", "Soil_Type34", "Soil_Type35", "Soil_Type36", "Soil_Type37", "Soil_Type38", "Soil_Type39", "Soil_Type40"
+        #             ]
+        # colnum      = [ "Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology", "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways", "Hillshade_9am", "Hillshade_Noon", "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"
+        # ]
 
-      'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
-                      },
+        feature_columns = Tests.colnum + Tests.colcat + Tests.coly
+        df = pd.read_csv(datafile, header=None, names=feature_columns, nrows=1000)
 
-      'data_pars': { 'n_sample' : n_sample,
 
-          'download_pars' : None,
+        #### Matching Big dict  ##################################################
+        X = df
+        y = df[Tests.coly].astype('uint8')
+        log('y', np.sum(y[y==1]) )
 
-          'cols_input_type' : cols_input_type_1,
-          ### family of columns for MODEL  #########################################################
-          'cols_model_group': [ 'colnum_bin',
-                                'colcat_bin',
-                              ]
+        X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, stratify=y)
+        X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
+        num_classes = len(set(y_train_full[Tests.coly].values.ravel()))
+        log(X_train)
 
-          ,'cols_model_group_custom' :  { 'colnum' : colnum,
-                                         'colcat' : colcat,
-                                         'coly' : coly
-                              }
-          ###################################################  
-          ,'train': {'Xtrain': X_train,
-                     'ytrain': y_train,
-                           'Xtest': X_valid,
-                           'ytest': y_valid},
-                 'eval': {'X': X_valid,
-                          'y': y_valid},
-                 'predict': {'X': X_valid}
 
-          ### Filter data rows   ##################################################################
-         ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+        cols_input_type_1 = []
+        n_sample = 100
+        def post_process_fun(y):
+            return int(y)
 
-        
-         ### Added continuous & sparse features ###
-         'cols_model_type2': {
-             'colcontinuous':   cols_continuous_features ,
-            'colsparse' : cols_sparse_features, 
-          },
-         }
-    }
+        def pre_process_fun(y):
+            return int(y)
 
-    ##### Running loop
-    ll = [('torch_tabular.py::CategoryEmbeddingModelConfig' )]
 
-    for cfg in ll :
-        m['model_pars']['model_class'] = cfg[0]
+        m = {'model_pars': {
+            ### LightGBM API model   #######################################
+            'model_class':  'torch_tabular.py::CategoryEmbeddingModelConfig'
+            ,'model_pars' : { 'task': "classification",
+                            'metrics' : ["f1","accuracy"],
+                            'metrics_params' : [{"num_classes":num_classes},{}]
+                            }  
+
+            # , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
+            , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
+
+            ### Pipeline for data processing ##############################
+            'pipe_list': [  #### coly target prorcessing
+            {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+
+            {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+            {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
+
+            #### catcol INTO integer,   colcat into OneHot
+            {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+            {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
+
+            ],
+                }
+            },
+
+        'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
+                        },
+
+        'data_pars': { 'n_sample' : n_sample,
+
+            'download_pars' : None,
+
+            'cols_input_type' : cols_input_type_1,
+            ### family of columns for MODEL  #########################################################
+            'cols_model_group': [ 'colnum_bin',
+                                    'colcat_bin',
+                                ]
+
+            ,'cols_model_group_custom' :  { 'colnum' : Tests.colnum,
+                                            'colcat' : Tests.colcat,
+                                            'coly' : Tests.coly
+                                }
+            ###################################################  
+            ,'train': {'Xtrain': X_train,
+                        'ytrain': y_train,
+                            'Xtest': X_valid,
+                            'ytest': y_valid},
+                    'eval': {'X': X_valid,
+                            'y': y_valid},
+                    'predict': {'X': X_valid}
+
+            ### Filter data rows   ##################################################################
+            ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+
+            
+            ### Added continuous & sparse features ###
+            'cols_model_type2': {
+                'colcontinuous':   Tests.colnum ,
+                'colsparse' : Tests.colcat, 
+            },
+            }
+        }
+
+        ##### Running loop
+
+        m['model_pars']['model_class'] = model_config
 
 
 
@@ -462,17 +479,22 @@ def test(nrows=1000):
         ypred, ypred_proba = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
         log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
 
+        if model_config != Tests.NodeConfig:
+            log('Saving model..')
+            save(path= "ztmp/data/output/torch_tabular")
+            #  os.path.join(root, 'data\\output\\torch_tabular\\model'))
 
-        log('Saving model..')
-        save(path= "ztmp/data/output/torch_tabular")
-        #  os.path.join(root, 'data\\output\\torch_tabular\\model'))
-
-        log('Load model..')
-        model, session = load_model(path="ztmp/data/output/torch_tabular")
-        #os.path.join(root, 'data\\output\\torch_tabular\\model'))
-
+            log('Load model..')
+            model, session = load_model(path="ztmp/data/output/torch_tabular")
+            #os.path.join(root, 'data\\output\\torch_tabular\\model'))
+        else:
+            log('\n*** !!! Saving Bug in pytorch_tabular for NodeConfig !!! ***\n')
+            
         log('Model architecture:')
         log(model.model)
+
+        log('Model config:')
+        log(model.model.config._config_name)
         reset()
 
 
@@ -561,5 +583,19 @@ def test2(nrow=10000):
 if __name__ == "__main__":
     # import fire
     # fire.Fire()
-    test(500)
+    
+    
+    # Tests.test(
+    #     model_config=Tests.CategoryEmbeddingModelConfig,
+    #     nrows=500
+    # )
 
+    Tests.test(
+        model_config=Tests.TabNetModelConfig,
+        nrows=500
+    )
+
+    # Tests.test(
+    #     model_config=Tests.NodeConfig,
+    #     nrows=500
+    # )

@@ -1,9 +1,9 @@
-import sys
+import sys, os, numpy as np, random
+import tensorflow as tf
 
 sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
 
 
-from __main__ import *
 import repo.VAEM.models.decoders as decoders
 import repo.VAEM.models.encoders as encoders
 import repo.VAEM.models.model as model
