@@ -75,7 +75,7 @@ cols_input_type_1 = {
 
 
 ####################################################################################
-def config1() :
+def config_sampler() :
     """
        ONE SINGLE DICT Contains all needed informations for
        used for titanic classification task
