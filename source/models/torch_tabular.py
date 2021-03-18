@@ -94,7 +94,6 @@ class Model(object):
             assert class_name in MODEL_LIST, "nota vailable"
             model_class  = globals()[ class_name]
             model_config = model_class( **model_pars['model_pars']   )
-            # model_config     = CategoryEmbeddingModelConfig( **model_pars['model_pars'],   )
 
             trainer_config   = TrainerConfig( **compute_pars.get('compute_pars', {} )) # For testing quickly, max_epochs=1 )
             optimizer_config = OptimizerConfig(**compute_pars.get('optimizer_pars', {} ))
@@ -122,22 +121,10 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train")
     cpars          = copy.deepcopy( compute_pars.get("compute_pars", {}))   ## issue with pickle
 
-    # if VERBOSE: log(Xtrain, model.model)
-    # Xtrain = torch.tensor(Xtrain.values, dtype=torch.float)
-    # Xtest  = torch.tensor(Xtest.values, dtype=torch.float)
-    # ytrain = torch.tensor(ytrain.values, dtype=torch.float)
-    # ytest  = torch.tensor(ytest.values, dtype=torch.float)
-    # train = torch.cat((Xtrain,ytrain))
-    # val   = torch.cat((Xtest,ytest))
-
-    target_col = data_pars['cols_model_group_custom']['coly'][0]
-
     train = pd.concat((Xtrain_tuple[0], Xtrain_tuple[1]), axis=1)
-    # train.drop([target_col], axis=1, inplace=True)
     train = pd.concat((train, ytrain), axis=1)
 
     val   = pd.concat((Xtest_tuple[0], Xtest_tuple[1]), axis=1)
-    # val.drop([target_col], axis=1, inplace=True)
     val   = pd.concat((val, ytest), axis=1)
 
     ###############################################################
@@ -154,15 +141,7 @@ def predict(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dic
         cols_type   = data_pars.get('cols_model_type2', {})  ##
         Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)   
 
-    # cols_Xpred = list(Xpred.columns)
-    # max_size = compute_pars2.get('max_size', len(Xpred))
-    # Xpred    = Xpred.iloc[:max_size, :]
-    # Xpred_   = torch.tensor(Xpred.values, dtype=torch.float)
-
-    target_col = data_pars['cols_model_group_custom']['coly'][0]
-
     Xpred_tuple_concat = pd.concat((Xpred_tuple[0], Xpred_tuple[1]), axis=1)
-    # Xpred_tuple_concat.drop([target_col], axis=1, inplace=True)
     ypred = model.model.predict(Xpred_tuple_concat)
     
     #####################################################################
@@ -263,10 +242,13 @@ def get_dataset_tuple(Xtrain, cols_type_received, cols_ref):
         return Xtrain
 
     Xtuple_train = []
-
+    # cols_ref is the reference for types of cols groups (sparse/continuous)
+    # This will result in deviding the dataset into many groups of features
     for cols_groupname in cols_ref :
+        # Assert the group name is in the cols reference
         assert cols_groupname in cols_type_received, "Error missing colgroup in config data_pars[cols_model_type] "
         cols_i = cols_type_received[cols_groupname]
+        # Add the columns of this group to the list
         Xtuple_train.append( Xtrain[cols_i] )
 
     if len(cols_ref) == 1 :
@@ -321,12 +303,32 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
 ####################################################################################################
 ############ Test  #################################################################################
-class Tests:
 
+
+def test(
+    model_config="CategoryEmbeddingModelConfig", 
+    nrows=1000
+    ):
+    """
+        model_config : [CategoryEmbeddingModelConfig, TabNetModelConfig, NodeConfig] These are the supported ModelConfigs
+        nrows : take first nrows from dataset
+    """
+    
+    # Make sure the given model config is one of the supported by pytorch_tabular models
+    available_model_configs = {
+        "CategoryEmbeddingModelConfig" : 'torch_tabular.py::CategoryEmbeddingModelConfig', 
+        "TabNetModelConfig" : 'torch_tabular.py::TabNetModelConfig', 
+        "NodeConfig" : 'torch_tabular.py::NodeConfig'
+    }
+    assert model_config in available_model_configs, "Given ModelConfig not supported, enter one of ['CategoryEmbeddingModelConfig', 'TabNetModelConfig', 'NodeConfig']"
+    model_config = available_model_configs[model_config]
+    
+    # Dense features
     colnum = ["Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology",
-            "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways",
-            "Hillshade_9am" , "Hillshade_Noon",  "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"]
+        "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways",
+        "Hillshade_9am" , "Hillshade_Noon",  "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"]
 
+    # Sparse features
     colcat = ["Wilderness_Area1",  "Wilderness_Area2", "Wilderness_Area3",  
         "Wilderness_Area4",  "Soil_Type1",  "Soil_Type2",  "Soil_Type3",
         "Soil_Type4",  "Soil_Type5",  "Soil_Type6",  "Soil_Type7",  "Soil_Type8",  "Soil_Type9",
@@ -338,164 +340,147 @@ class Tests:
         "Soil_Type35",  "Soil_Type36",  "Soil_Type37",  "Soil_Type38",  "Soil_Type39",
         "Soil_Type40",  ]
     
+    # Target column
     coly        = ["Covertype"]
 
+    log("start")
+    global model, session
 
-    CategoryEmbeddingModelConfig = 'torch_tabular.py::CategoryEmbeddingModelConfig'
-    TabNetModelConfig = 'torch_tabular.py::TabNetModelConfig'
-    NodeConfig = 'torch_tabular.py::NodeConfig'
+    root = os.path.join(os.getcwd() ,"ztmp")
+
+
+    BASE_DIR = Path.home().joinpath( root, 'data/input/covtype/')
+    datafile = BASE_DIR.joinpath('covtype.data.gz')
+    datafile.parent.mkdir(parents=True, exist_ok=True)
+    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/covtype/covtype.data.gz"
     
+    # Download the dataset in case it's missing
+    if not datafile.exists():
+        wget.download(url, datafile.as_posix())
 
-    @staticmethod
-    def test(
-        model_config="torch_tabular.py::CategoryEmbeddingModelConfig", 
-        nrows=1000
-        ):
-        """
-            model_config : [CategoryEmbeddingModelConfig, TabNetModelConfig, NodeConfig]
-                            These are defined as static variables in the Tests class
-        """
-        log("start")
-        global model, session
-
-        root = os.path.join(os.getcwd() ,"ztmp")
+    # Read nrows of only the given columns 
+    feature_columns = colnum + colcat + coly
+    df = pd.read_csv(datafile, header=None, names=feature_columns, nrows=nrows)
 
 
-        BASE_DIR = Path.home().joinpath( root, 'data/input/covtype/')
-        datafile = BASE_DIR.joinpath('covtype.data.gz')
-        datafile.parent.mkdir(parents=True, exist_ok=True)
-        url = "https://archive.ics.uci.edu/ml/machine-learning-databases/covtype/covtype.data.gz"
-        if not datafile.exists():
-            wget.download(url, datafile.as_posix())
+    #### Matching Big dict  ##################################################
+    X = df
+    y = df[coly].astype('uint8')
+    log('y', np.sum(y[y==1]) )
 
-        # coly        = ["Covertype"]
-        # colcat      = [ "Wilderness_Area1", "Wilderness_Area2", "Wilderness_Area3", "Wilderness_Area4", "Soil_Type1", "Soil_Type2", "Soil_Type3", "Soil_Type4", "Soil_Type5", "Soil_Type6", "Soil_Type7", "Soil_Type8", "Soil_Type9", "Soil_Type10", "Soil_Type11", "Soil_Type12", "Soil_Type13", "Soil_Type14", "Soil_Type15", "Soil_Type16", "Soil_Type17", "Soil_Type18", "Soil_Type19", "Soil_Type20", "Soil_Type21", "Soil_Type22", "Soil_Type23", "Soil_Type24", "Soil_Type25", "Soil_Type26", "Soil_Type27", "Soil_Type28", "Soil_Type29", "Soil_Type30", "Soil_Type31", "Soil_Type32", "Soil_Type33", "Soil_Type34", "Soil_Type35", "Soil_Type36", "Soil_Type37", "Soil_Type38", "Soil_Type39", "Soil_Type40"
-        #             ]
-        # colnum      = [ "Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology", "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways", "Hillshade_9am", "Hillshade_Noon", "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"
-        # ]
-
-        feature_columns = Tests.colnum + Tests.colcat + Tests.coly
-        df = pd.read_csv(datafile, header=None, names=feature_columns, nrows=1000)
+    # Split the df into train/test subsets
+    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, stratify=y)
+    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
+    num_classes = len(set(y_train_full[coly].values.ravel()))
+    log(X_train)
 
 
-        #### Matching Big dict  ##################################################
-        X = df
-        y = df[Tests.coly].astype('uint8')
-        log('y', np.sum(y[y==1]) )
+    cols_input_type_1 = []
+    n_sample = 100
+    def post_process_fun(y):
+        return int(y)
 
-        X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, stratify=y)
-        X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
-        num_classes = len(set(y_train_full[Tests.coly].values.ravel()))
-        log(X_train)
+    def pre_process_fun(y):
+        return int(y)
 
 
-        cols_input_type_1 = []
-        n_sample = 100
-        def post_process_fun(y):
-            return int(y)
+    m = {'model_pars': {
+        ### LightGBM API model   #######################################
+        # Specify the ModelConfig for pytorch_tabular
+        'model_class':  model_config
+        
+        # Type of target prediction, evaluation metrics
+        ,'model_pars' : { 'task': "classification",
+                        'metrics' : ["f1","accuracy"],
+                        'metrics_params' : [{"num_classes":num_classes},{}]
+                        }  
 
-        def pre_process_fun(y):
-            return int(y)
+        , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
+        , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
 
+        ### Pipeline for data processing ##############################
+        'pipe_list': [  #### coly target prorcessing
+        {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
 
-        m = {'model_pars': {
-            ### LightGBM API model   #######################################
-            'model_class':  'torch_tabular.py::CategoryEmbeddingModelConfig'
-            ,'model_pars' : { 'task': "classification",
-                            'metrics' : ["f1","accuracy"],
-                            'metrics_params' : [{"num_classes":num_classes},{}]
-                            }  
+        {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+        {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
 
-            # , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
-            , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
+        #### catcol INTO integer,   colcat into OneHot
+        {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+        {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
 
-            ### Pipeline for data processing ##############################
-            'pipe_list': [  #### coly target prorcessing
-            {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
-
-            {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
-            {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
-
-            #### catcol INTO integer,   colcat into OneHot
-            {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
-            {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
-
-            ],
-                }
-            },
-
-        'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
-                        },
-
-        'data_pars': { 'n_sample' : n_sample,
-
-            'download_pars' : None,
-
-            'cols_input_type' : cols_input_type_1,
-            ### family of columns for MODEL  #########################################################
-            'cols_model_group': [ 'colnum_bin',
-                                    'colcat_bin',
-                                ]
-
-            ,'cols_model_group_custom' :  { 'colnum' : Tests.colnum,
-                                            'colcat' : Tests.colcat,
-                                            'coly' : Tests.coly
-                                }
-            ###################################################  
-            ,'train': {'Xtrain': X_train,
-                        'ytrain': y_train,
-                            'Xtest': X_valid,
-                            'ytest': y_valid},
-                    'eval': {'X': X_valid,
-                            'y': y_valid},
-                    'predict': {'X': X_valid}
-
-            ### Filter data rows   ##################################################################
-            ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
-
-            
-            ### Added continuous & sparse features ###
-            'cols_model_type2': {
-                'colcontinuous':   Tests.colnum ,
-                'colsparse' : Tests.colcat, 
-            },
+        ],
             }
+        },
+
+    'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
+                    },
+
+    'data_pars': { 'n_sample' : n_sample,
+
+        'download_pars' : None,
+
+        'cols_input_type' : cols_input_type_1,
+        ### family of columns for MODEL  #########################################################
+        'cols_model_group': [ 'colnum_bin',
+                                'colcat_bin',
+                            ]
+
+        ,'cols_model_group_custom' :  { 'colnum' : colnum,
+                                        'colcat' : colcat,
+                                        'coly' : coly
+                            }
+        ###################################################  
+        ,'train': {'Xtrain': X_train,
+                    'ytrain': y_train,
+                        'Xtest': X_valid,
+                        'ytest': y_valid},
+                'eval': {'X': X_valid,
+                        'y': y_valid},
+                'predict': {'X': X_valid}
+
+        ### Filter data rows   ##################################################################
+        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+
+        
+        ### Added continuous & sparse features groups ###
+        'cols_model_type2': {
+            'colcontinuous':   colnum ,
+            'colsparse' : colcat, 
+        },
         }
+    }
 
-        ##### Running loop
+    ##### Running loop
 
-        m['model_pars']['model_class'] = model_config
+    log('Setup model..')
+    model = Model(model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
 
+    log('\n\nTraining the model..')
+    fit(data_pars=m['data_pars'], compute_pars= m['compute_pars'], out_pars=None)
+    log('Training completed!\n\n')
 
+    log('Predict data..')
+    ypred, ypred_proba = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
+    log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
 
-        log('Setup model..')
-        model = Model(model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
+    if model_config != "torch_tabular.py::NodeConfig":
+        log('Saving model..')
+        save(path= "ztmp/data/output/torch_tabular")
+        #  os.path.join(root, 'data\\output\\torch_tabular\\model'))
 
-        log('\n\nTraining the model..')
-        fit(data_pars=m['data_pars'], compute_pars= m['compute_pars'], out_pars=None)
-        log('Training completed!\n\n')
+        log('Load model..')
+        model, session = load_model(path="ztmp/data/output/torch_tabular")
+        #os.path.join(root, 'data\\output\\torch_tabular\\model'))
+    else:
+        log('\n*** !!! Saving Bug in pytorch_tabular for NodeConfig !!! ***\n')
+        
+    log('Model architecture:')
+    log(model.model)
 
-        log('Predict data..')
-        ypred, ypred_proba = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
-        log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
-
-        if model_config != Tests.NodeConfig:
-            log('Saving model..')
-            save(path= "ztmp/data/output/torch_tabular")
-            #  os.path.join(root, 'data\\output\\torch_tabular\\model'))
-
-            log('Load model..')
-            model, session = load_model(path="ztmp/data/output/torch_tabular")
-            #os.path.join(root, 'data\\output\\torch_tabular\\model'))
-        else:
-            log('\n*** !!! Saving Bug in pytorch_tabular for NodeConfig !!! ***\n')
-            
-        log('Model architecture:')
-        log(model.model)
-
-        log('Model config:')
-        log(model.model.config._config_name)
-        reset()
+    log('Model config:')
+    log(model.model.config._config_name)
+    reset()
 
 
 def test3():
@@ -581,21 +566,8 @@ def test2(nrow=10000):
 
 
 if __name__ == "__main__":
-    # import fire
-    # fire.Fire()
+    import fire
+    fire.Fire()
     
-    
-    # Tests.test(
-    #     model_config=Tests.CategoryEmbeddingModelConfig,
-    #     nrows=500
-    # )
 
-    Tests.test(
-        model_config=Tests.TabNetModelConfig,
-        nrows=500
-    )
 
-    # Tests.test(
-    #     model_config=Tests.NodeConfig,
-    #     nrows=500
-    # )
