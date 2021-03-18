@@ -324,6 +324,112 @@ def test():
 
     log('gefs model test ok')
 
+
+
+def test2():
+    data_name    = "titanic"         ### in data/input/
+    model_class  = "model_gefs.py::Model"  ### ACTUAL Class name for model_sklearn.py
+    n_sample     = 1000
+
+    def post_process_fun(y):   ### After prediction is done
+        return  int(y)
+
+    def pre_process_fun(y):    ### Before the prediction is done
+        return  int(y)
+
+
+    model_dict = {"model_pars": {
+        ### LightGBM API model   #######################################
+         "model_class": model_class
+        ,"model_pars" : {'cat': 10, 'n_estimators': 5
+                        }
+
+        , "post_process_fun" : post_process_fun   ### After prediction  ##########################################
+        , "pre_process_pars" : {"y_norm_fun" :  pre_process_fun ,  ### Before training  ##########################
+
+
+        ### Pipeline for data processing ##############################
+        "pipe_list": [
+        #### coly target prorcessing
+        {"uri": "source/prepro.py::pd_coly",                 "pars": {}, "cols_family": "coly",       "cols_out": "coly",           "type": "coly"         },
+        {"uri": "source/prepro.py::pd_colnum_bin",           "pars": {}, "cols_family": "colnum",     "cols_out": "colnum_bin",     "type": ""             },
+
+        #### catcol INTO integer,   colcat into OneHot
+        {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
+        {"uri": "source/prepro.py::pd_colcat_to_onehot",     "pars": {}, "cols_family": "colcat_bin", "cols_out": "colcat_onehot",  "type": ""             },
+
+        ],
+               }
+        },
+
+      "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
+                        # ,"mlflow_pars" : {}   ### Not empty --> use mlflow
+                      },
+
+      "data_pars": { "n_sample" : n_sample,
+          "download_pars" : None,
+
+          ### Raw data:  column input ##############################################################
+          "cols_input_type" : cols_input_type_1,
+
+
+          ### Model Input :  Merge family of columns   #############################################
+          "cols_model_group": [ "colnum_bin",
+                                "colcat_bin",
+
+                              ]
+
+      #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
+     ,'cols_model_type': {
+         'continuous'   : [ 'colnum',   ],
+         'sparse'       : [ 'colcat_bin', 'colnum_bin',  ],
+         'my_split_23'  : [ 'colnum_bin',   ],
+      }   
+
+          ### Filter data rows   ##################################################################
+         ,"filter_pars": { "ymax" : 2 ,"ymin" : -1 }
+
+         }
+      }
+
+    ######## Run ###########################################
+    test_helper(model_dict)
+
+
+def test_helper(model_pars, data_pars, compute_pars):
+
+
+    model_pars, data_pars, compute_pars =  model_dict['model_pars'],
+
+    global model, session
+    root  = "ztmp/"
+    model = Model(model_pars=model_pars, data_pars=data_pars, compute_pars=compute_pars)
+
+    log('\n\nTraining the model..')
+    fit(data_pars=data_pars, compute_pars=compute_pars, out_pars=None)
+
+    log('Predict data..')
+    ypred, ypred_proba = predict(Xpred=None, data_pars=data_pars, compute_pars=compute_pars)
+    log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
+
+    log('Evaluating the model..')
+    log(eval(data_pars=data_pars, compute_pars=compute_pars))
+
+    log('Saving model..')
+    save(path= root + '/model_dir/')
+
+    log('Load model..')
+    model, session = load_model(path= root + "/model_dir/")
+    log('Model successfully loaded!\n\n')
+
+    log('Model architecture:')
+    log(model.summary())
+
+
+
+
+
+
                                      
 if __name__ == "__main__":
     import fire
