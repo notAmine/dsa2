@@ -33,12 +33,14 @@ Args:
         Typically used when providing Custom Models
 
 """
-import os, sys,  numpy as np,  pandas as pd
-
+import os, sys,  numpy as np,  pandas as pd, wget, copy
+from pathlib import Path
 try :
+    print("**************************************** Importing DataConfig ****************************************")
     from pytorch_tabular import TabularModel
-    from pytorch_tabular.models import CategoryEmbeddingModelConfig
+    from pytorch_tabular.models import CategoryEmbeddingModelConfig, TabNetModelConfig,NodeConfig,
     from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig, ExperimentConfig
+    print("**************************************** Imported DataConfig ****************************************")
 except :
     os.system("pip install pytorch_tabular[all]")
 
@@ -47,9 +49,7 @@ except :
 # torch.set_deterministic(True)
 # from torch.utils import data
 from sklearn.model_selection import train_test_split
-from pathlib import Path
-import wget
-
+import torch
 ####################################################################################################
 VERBOSE = False
 
@@ -84,14 +84,18 @@ class Model(object):
               categorical_cols = dm['colcat'],
             )
 
-            model_config     = CategoryEmbeddingModelConfig( **model_pars['model_pars'],   )
+            class_name   = model_pars.get('model_class',  "CategoryEmbeddingModelConfig" ).split("::")[-1]
+            model_class  = globals()[ class_name]
+            model_config = model_class( **model_pars['model_pars']   )
+            # model_config     = CategoryEmbeddingModelConfig( **model_pars['model_pars'],   )
+
             trainer_config   = TrainerConfig( **compute_pars.get('compute_pars', {} ) )
-            optimizer_config = OptimizerConfig()
+            optimizer_config = OptimizerConfig(**compute_pars.get('optimizer_pars', {} ))
 
             self.config_pars = { 'data_config' : data_config,
-                        'model_config'     : model_config,
-                        'optimizer_config' : optimizer_config,
-                        'trainer_config'   : trainer_config,
+                        'model_config'         : model_config,
+                        'optimizer_config'     : optimizer_config,
+                        'trainer_config'       : trainer_config,
             }
 
             self.model = TabularModel(**self.config_pars)
@@ -110,15 +114,24 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     # if data_pars is not None :
     Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train")
     cpars          = copy.deepcopy( compute_pars.get("compute_pars", {}))   ## issue with pickle
-    if VERBOSE: log(Xtrain, model.model)
-    
-    #Xtrain = torch.tensor(Xtrain.values, dtype=torch.float)
-    #Xtest  = torch.tensor(Xtest.values, dtype=torch.float)
-    #ytrain = torch.tensor(ytrain.values, dtype=torch.float)
-    #ytest  = torch.tensor(ytest.values, dtype=torch.float)
 
-    train = pd.concat((Xtrain,ytrain))
-    val   = pd.concat((Xtest,ytest))
+    # if VERBOSE: log(Xtrain, model.model)
+    # Xtrain = torch.tensor(Xtrain.values, dtype=torch.float)
+    # Xtest  = torch.tensor(Xtest.values, dtype=torch.float)
+    # ytrain = torch.tensor(ytrain.values, dtype=torch.float)
+    # ytest  = torch.tensor(ytest.values, dtype=torch.float)
+    # train = torch.cat((Xtrain,ytrain))
+    # val   = torch.cat((Xtest,ytest))
+
+    target_col = data_pars['cols_model_group_custom']['coly'][0]
+
+    train = pd.concat((Xtrain_tuple[0], Xtrain_tuple[1]), axis=1)
+    train.drop([target_col], axis=1, inplace=True)
+    train = pd.concat((train, ytrain), axis=1)
+
+    val   = pd.concat((Xtest_tuple[0], Xtest_tuple[1]), axis=1)
+    val.drop([target_col], axis=1, inplace=True)
+    val   = pd.concat((val, ytest), axis=1)
 
     ###############################################################
     model.model.fit(train=train, validation=val, **cpars)
@@ -138,9 +151,14 @@ def predict(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dic
     # max_size = compute_pars2.get('max_size', len(Xpred))
     # Xpred    = Xpred.iloc[:max_size, :]
     # Xpred_   = torch.tensor(Xpred.values, dtype=torch.float)
-    #####################################################################
-    ypred = model.model.predict(Xpred_tuple)
 
+    target_col = data_pars['cols_model_group_custom']['coly'][0]
+
+    Xpred_tuple_concat = pd.concat((Xpred_tuple[0], Xpred_tuple[1]), axis=1)
+    Xpred_tuple_concat.drop([target_col], axis=1, inplace=True)
+    ypred = model.model.predict(Xpred_tuple_concat)
+    
+    #####################################################################
     ypred_proba = None  ### No proba
     if compute_pars.get("probability", False):
          ypred_proba = model.model.predict_proba(Xpred)
@@ -152,7 +170,7 @@ def reset():
     global model, session
     model, session = None, None
 
-
+#D:\dsa2\source\models\ztmp\data\output\torch_tabular\model\torch_checkpoint
 def save(path=None, info=None):
     """ Custom saving
     """
@@ -166,8 +184,7 @@ def save(path=None, info=None):
     #### Wrapper
     model.model = None   ## prevent issues
     pickle.dump(model,  open(path + "/model/model.pkl", mode='wb')) # , protocol=pickle.HIGHEST_PROTOCOL )
-
-    pickle.dump(info, open(path + "/model/info.pkl", mode='wb'))  # ,protocol=pickle.HIGHEST_PROTOCOL )
+    pickle.dump(info, open(path   + "/model/info.pkl", mode='wb'))  # ,protocol=pickle.HIGHEST_PROTOCOL )
 
 
 def load_model(path=""):
@@ -180,8 +197,9 @@ def load_model(path=""):
     model.compute_pars = model0.compute_pars
     model.data_pars    = model0.data_pars
 
+    ### Custom part
     # model.model        = TabularModel.load_from_checkpoint( "ztmp/data/output/torch_tabular/torch_checkpoint")
-    model.model        = TabularModel.load_from_checkpoint(  path +"/checkpoint")
+    model.model        = TabularModel.load_from_checkpoint(  path +"/model/torch_checkpoint")
  
     session = None
     return model, session
@@ -225,7 +243,8 @@ def get_dataset2(data_pars=None, task_type="train", **kw):
 
 
 
-cols_ref_formodel = ['cols_single_group']
+# cols_ref_formodel = ['cols_single_group']
+cols_ref_formodel = ['colcontinuous', 'colsparse']
 def get_dataset_tuple(Xtrain, cols_type_received, cols_ref):
     """  Split into Tuples to feed  Xyuple = (df1, df2, df3) OR single dataframe
     :param Xtrain:
@@ -237,6 +256,7 @@ def get_dataset_tuple(Xtrain, cols_type_received, cols_ref):
         return Xtrain
 
     Xtuple_train = []
+
     for cols_groupname in cols_ref :
         assert cols_groupname in cols_type_received, "Error missing colgroup in config data_pars[cols_model_type] "
         cols_i = cols_type_received[cols_groupname]
@@ -259,6 +279,7 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     if data_type == "ram":
         # cols_ref_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input' ]
         ### dict  colgroup ---> list of colname
+
         cols_type_received     = data_pars.get('cols_model_type2', {} )  ##3 Sparse, Continuous
 
         if task_type == "predict":
@@ -337,10 +358,40 @@ def test(nrows=1000):
 
     def pre_process_fun(y):
         return int(y)
+    """
+        dense features : ["Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology",
+        "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways",
+        "Hillshade_9am"  "Hillshade_Noon",  "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"]
 
+        sparse features :  ["Wilderness_Area1",  "Wilderness_Area2", "Wilderness_Area3",  
+        "Wilderness_Area4",  "Soil_Type1",  "Soil_Type2",  "Soil_Type3",
+        "Soil_Type4",  "Soil_Type5",  "Soil_Type6",  "Soil_Type7",  "Soil_Type8",  "Soil_Type9",
+        "Soil_Type10",  "Soil_Type11",  "Soil_Type12",  "Soil_Type13",  "Soil_Type14",
+        "Soil_Type15",  "Soil_Type16",  "Soil_Type17",  "Soil_Type18",  "Soil_Type19",
+        "Soil_Type20",  "Soil_Type21",  "Soil_Type22",  "Soil_Type23",  "Soil_Type24",
+        "Soil_Type25",  "Soil_Type26",  "Soil_Type27",  "Soil_Type28",  "Soil_Type29",
+        "Soil_Type30",  "Soil_Type31",  "Soil_Type32",  "Soil_Type33",  "Soil_Type34",
+        "Soil_Type35",  "Soil_Type36",  "Soil_Type37",  "Soil_Type38",  "Soil_Type39",
+        "Soil_Type40",   "Covertype"]
+
+    """
+    cols_continuous_features = ["Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology",
+        "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways",
+        "Hillshade_9am" , "Hillshade_Noon",  "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"]
+
+    cols_sparse_features = ["Wilderness_Area1",  "Wilderness_Area2", "Wilderness_Area3",  
+        "Wilderness_Area4",  "Soil_Type1",  "Soil_Type2",  "Soil_Type3",
+        "Soil_Type4",  "Soil_Type5",  "Soil_Type6",  "Soil_Type7",  "Soil_Type8",  "Soil_Type9",
+        "Soil_Type10",  "Soil_Type11",  "Soil_Type12",  "Soil_Type13",  "Soil_Type14",
+        "Soil_Type15",  "Soil_Type16",  "Soil_Type17",  "Soil_Type18",  "Soil_Type19",
+        "Soil_Type20",  "Soil_Type21",  "Soil_Type22",  "Soil_Type23",  "Soil_Type24",
+        "Soil_Type25",  "Soil_Type26",  "Soil_Type27",  "Soil_Type28",  "Soil_Type29",
+        "Soil_Type30",  "Soil_Type31",  "Soil_Type32",  "Soil_Type33",  "Soil_Type34",
+        "Soil_Type35",  "Soil_Type36",  "Soil_Type37",  "Soil_Type38",  "Soil_Type39",
+        "Soil_Type40",   "Covertype"]
     m = {'model_pars': {
         ### LightGBM API model   #######################################
-         'model_class':  'torch_tabular.py::model'
+         'model_class':  'torch_tabular.py::CategoryEmbeddingModelConfig'
         ,'model_pars' : { 'task': "classification",
                           'metrics' : ["f1","accuracy"],
                           'metrics_params' : [{"num_classes":num_classes},{}]
@@ -381,7 +432,6 @@ def test(nrows=1000):
                                          'colcat' : colcat,
                                          'coly' : target_name
                               }
-
           ###################################################  
           ,'train': {'Xtrain': X_train,
                      'ytrain': y_train,
@@ -392,34 +442,48 @@ def test(nrows=1000):
                  'predict': {'X': X_valid}
 
           ### Filter data rows   ##################################################################
-         ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 }
+         ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+
+        
+         ### Added continuous & sparse features ###
+         'cols_model_type2': {
+             'colcontinuous':   cols_continuous_features ,
+            'colsparse' : cols_sparse_features, 
+          },
          }
       }
 
+      ##### Running loop
+      ll = [('torch_tabular.py::CategoryEmbeddingModelConfig' )]
 
-    log('Setup model..')
-    model = Model(model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
-
-    log('\n\nTraining the model..')
-    fit(data_pars=m['data_pars'], compute_pars= m['compute_pars'], out_pars=None)
-    log('Training completed!\n\n')
-
-    log('Predict data..')
-    ypred, ypred_proba = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
-    log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
+      for cfg in ll :
+        m['model_pars']['model_class'] = cfg[0]
 
 
-    log('Saving model..')    
-    save(path= "ztmp/data/output/torch_tabular")
-    #  os.path.join(root, 'data\\output\\torch_tabular\\model'))
 
-    log('Load model..')
-    model, session = load_model(path="ztmp/data/output/torch_tabular")
-    #os.path.join(root, 'data\\output\\torch_tabular\\model'))
+        log('Setup model..')
+        model = Model(model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
 
-    log('Model architecture:')
-    log(model.model)
+        log('\n\nTraining the model..')
+        fit(data_pars=m['data_pars'], compute_pars= m['compute_pars'], out_pars=None)
+        log('Training completed!\n\n')
 
+        log('Predict data..')
+        ypred, ypred_proba = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
+        log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
+
+
+        log('Saving model..')
+        save(path= "ztmp/data/output/torch_tabular")
+        #  os.path.join(root, 'data\\output\\torch_tabular\\model'))
+
+        log('Load model..')
+        model, session = load_model(path="ztmp/data/output/torch_tabular")
+        #os.path.join(root, 'data\\output\\torch_tabular\\model'))
+
+        log('Model architecture:')
+        log(model.model)
+        reset()
 
 
 def test3():
@@ -505,7 +569,7 @@ def test2(nrow=10000):
 
 
 if __name__ == "__main__":
-    import fire
-    fire.Fire()
-    # test(500)
+    # import fire
+    # fire.Fire()
+    test(500)
 
