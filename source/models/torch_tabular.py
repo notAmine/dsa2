@@ -38,11 +38,13 @@ from pathlib import Path
 try :
     print("**************************************** Importing DataConfig ****************************************")
     from pytorch_tabular import TabularModel
-    from pytorch_tabular.models import CategoryEmbeddingModelConfig, TabNetModelConfig,NodeConfig,
+    from pytorch_tabular.models import CategoryEmbeddingModelConfig, TabNetModelConfig,NodeConfig
     from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig, ExperimentConfig
     print("**************************************** Imported DataConfig ****************************************")
 except :
     os.system("pip install pytorch_tabular[all]")
+
+MODEL_LIST = "CategoryEmbeddingModelConfig, TabNetModelConfig,NodeConfig".split(",")
 
 # torch.manual_seed(0)
 # np.random.seed(0)
@@ -85,6 +87,7 @@ class Model(object):
             )
 
             class_name   = model_pars.get('model_class',  "CategoryEmbeddingModelConfig" ).split("::")[-1]
+            assert class_name in MODEL_LIST, "nota vailable"
             model_class  = globals()[ class_name]
             model_config = model_class( **model_pars['model_pars']   )
             # model_config     = CategoryEmbeddingModelConfig( **model_pars['model_pars'],   )
