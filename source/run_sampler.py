@@ -345,17 +345,13 @@ def transform(model_name, path_model, dfX, cols_family, model_dict):
     modelx = map_model(model_name)
     modelx.reset()
     log(modelx, path_model)
-    #log(os.getcwd())
     sys.path.append( root)    #### Needed due to import source error
 
 
     log("#### Load model  ############################################")
     print(path_model + "/model/model.pkl")
-    # modelx.model = load(path_model + "/model//model.pkl")
-    modelx.model = load(path_model + "/model.pkl")
+    modelx.model = modelx.load(path_model + "/model.pkl")
 
-    # stats = load(path_model + "/model/info.pkl")
-    # colsX       = load(path_model + "/model/colsX.pkl")   ## column name
     colsX       = load(path_model + "/colsX.pkl")   ## column name
 
     # coly  = load( path_model + "/model/coly.pkl"   )
@@ -374,10 +370,9 @@ def transform(model_name, path_model, dfX, cols_family, model_dict):
     return dfX
 
 
-
 ####################################################################################################
 ############CLI Command ############################################################################
-def run_predict(config_name, config_path, n_sample=-1,
+def run_transform(config_name, config_path, n_sample=-1,
                 path_data=None, path_output=None, pars={}, model_dict=None):
 
     model_dict = model_dict_load(model_dict, config_path, config_name, verbose=True)
@@ -424,6 +419,7 @@ def run_predict(config_name, config_path, n_sample=-1,
 
     if return_mode == 'dict' :
         return { 'dfXy' : dfXy,  'stats' : stats   }
+
 
     else :
         log("#### Export ##################################################################")
