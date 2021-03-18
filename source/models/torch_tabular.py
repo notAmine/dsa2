@@ -451,12 +451,12 @@ def test(nrows=1000):
             'colsparse' : cols_sparse_features, 
           },
          }
-      }
+    }
 
-      ##### Running loop
-      ll = [('torch_tabular.py::CategoryEmbeddingModelConfig' )]
+    ##### Running loop
+    ll = [('torch_tabular.py::CategoryEmbeddingModelConfig' )]
 
-      for cfg in ll :
+    for cfg in ll :
         m['model_pars']['model_class'] = cfg[0]
 
 
