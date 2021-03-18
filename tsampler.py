@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 ### Usage:
-  python tsampler.py  train_sampler        --config  config1
-  python tsampler.py  transform_sampler    --config  config1
+  python tsampler.py  train_sampler        --config  config_sampler
+  python tsampler.py  transform_sampler    --config  config_sampler
 
 
 
