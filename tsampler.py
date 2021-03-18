@@ -157,15 +157,6 @@ def config_sampler() :
 ########## Profile data #############################################################
 from core_run import  data_profile
 # def data_profile(path_data="", path_output="", n_sample= 5000):
-"""
-
-def data_profile(path_data="", path_output="", n_sample= 5000):
-   from source.run_feature_profile import run_profile
-   run_profile(path_data   = path_data,
-               path_output = path_output + "/profile/",
-               n_sample    = n_sample,
-              )
-"""
 
 
 
@@ -174,21 +165,6 @@ def data_profile(path_data="", path_output="", n_sample= 5000):
 ### def preprocess(config="", nsample=1000):
 from core_run import preprocess
 
-"""
-def preprocess(config=None, nsample=None):
-    config_name  = config  if config is not None else config_default
-    mdict        = globals()[config_name]()
-    m            = mdict["global_pars"]
-    print(mdict)
-
-    from source import run_preprocess
-    run_preprocess.run_preprocess(config_name   =  config_name,
-                                  config_path   =  m["config_path"],
-                                  n_sample      =  nsample if nsample is not None else m["n_sample"],
-
-                                  ### Optonal
-                                  mode          =  "run_preprocess")
-"""
 
 
 
@@ -200,6 +176,30 @@ from core_run import train_sampler
 
 
 
+def test_batch():
+   mdict = config_sampler()
+   
+   ll = [
+     ('CTGAN', { })
+
+   ]
+
+   for m in ll :
+     mdict['model_pars']['model_class'] = m[0]
+     mdict['model_pars']['model_pars']  = m[1]
+
+    config_uri, config_name = get_config_path(config)
+
+    mdict = get_global_pars(  config_uri)
+    m     = mdict['global_pars']
+    log(mdict)
+    from source import run_sampler
+    run_sampler.run_train(config_name     =  None,
+                        config_path       =  None,
+                        n_sample          =  nsample if nsample is not None else m['n_sample'],
+                        model_dict= mdict
+                        # use_mlmflow       =  False
+                        )
 
 
 ####################################################################################
