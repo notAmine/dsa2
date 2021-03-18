@@ -333,24 +333,24 @@ def test(nrows=1000):
     if not datafile.exists():
         wget.download(url, datafile.as_posix())
 
-    target_name = ["Covertype"]
+    coly        = ["Covertype"]
     colcat      = [ "Wilderness_Area1", "Wilderness_Area2", "Wilderness_Area3", "Wilderness_Area4", "Soil_Type1", "Soil_Type2", "Soil_Type3", "Soil_Type4", "Soil_Type5", "Soil_Type6", "Soil_Type7", "Soil_Type8", "Soil_Type9", "Soil_Type10", "Soil_Type11", "Soil_Type12", "Soil_Type13", "Soil_Type14", "Soil_Type15", "Soil_Type16", "Soil_Type17", "Soil_Type18", "Soil_Type19", "Soil_Type20", "Soil_Type21", "Soil_Type22", "Soil_Type23", "Soil_Type24", "Soil_Type25", "Soil_Type26", "Soil_Type27", "Soil_Type28", "Soil_Type29", "Soil_Type30", "Soil_Type31", "Soil_Type32", "Soil_Type33", "Soil_Type34", "Soil_Type35", "Soil_Type36", "Soil_Type37", "Soil_Type38", "Soil_Type39", "Soil_Type40"
                   ]
     colnum      = [ "Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology", "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways", "Hillshade_9am", "Hillshade_Noon", "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"
     ]
 
-    feature_columns = colnum + colcat + target_name
+    feature_columns = colnum + colcat + coly
     df = pd.read_csv(datafile, header=None, names=feature_columns, nrows=1000)
 
 
     #### Matching Big dict  ##################################################
     X = df
-    y = df[target_name].astype('uint8')
+    y = df[coly].astype('uint8')
     log('y', np.sum(y[y==1]) )
 
     X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, stratify=y)
     X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
-    num_classes = len(set(y_train_full[target_name].values.ravel()))
+    num_classes = len(set(y_train_full[coly].values.ravel()))
     log(X_train)
 
 
@@ -361,23 +361,8 @@ def test(nrows=1000):
 
     def pre_process_fun(y):
         return int(y)
-    """
-        dense features : ["Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology",
-        "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways",
-        "Hillshade_9am"  "Hillshade_Noon",  "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"]
 
-        sparse features :  ["Wilderness_Area1",  "Wilderness_Area2", "Wilderness_Area3",  
-        "Wilderness_Area4",  "Soil_Type1",  "Soil_Type2",  "Soil_Type3",
-        "Soil_Type4",  "Soil_Type5",  "Soil_Type6",  "Soil_Type7",  "Soil_Type8",  "Soil_Type9",
-        "Soil_Type10",  "Soil_Type11",  "Soil_Type12",  "Soil_Type13",  "Soil_Type14",
-        "Soil_Type15",  "Soil_Type16",  "Soil_Type17",  "Soil_Type18",  "Soil_Type19",
-        "Soil_Type20",  "Soil_Type21",  "Soil_Type22",  "Soil_Type23",  "Soil_Type24",
-        "Soil_Type25",  "Soil_Type26",  "Soil_Type27",  "Soil_Type28",  "Soil_Type29",
-        "Soil_Type30",  "Soil_Type31",  "Soil_Type32",  "Soil_Type33",  "Soil_Type34",
-        "Soil_Type35",  "Soil_Type36",  "Soil_Type37",  "Soil_Type38",  "Soil_Type39",
-        "Soil_Type40",   "Covertype"]
 
-    """
     cols_continuous_features = ["Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology",
         "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways",
         "Hillshade_9am" , "Hillshade_Noon",  "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"]
@@ -391,7 +376,9 @@ def test(nrows=1000):
         "Soil_Type25",  "Soil_Type26",  "Soil_Type27",  "Soil_Type28",  "Soil_Type29",
         "Soil_Type30",  "Soil_Type31",  "Soil_Type32",  "Soil_Type33",  "Soil_Type34",
         "Soil_Type35",  "Soil_Type36",  "Soil_Type37",  "Soil_Type38",  "Soil_Type39",
-        "Soil_Type40",   "Covertype"]
+        "Soil_Type40",  ]
+
+
     m = {'model_pars': {
         ### LightGBM API model   #######################################
          'model_class':  'torch_tabular.py::CategoryEmbeddingModelConfig'
@@ -433,7 +420,7 @@ def test(nrows=1000):
 
           ,'cols_model_group_custom' :  { 'colnum' : colnum,
                                          'colcat' : colcat,
-                                         'coly' : target_name
+                                         'coly' : coly
                               }
           ###################################################  
           ,'train': {'Xtrain': X_train,
