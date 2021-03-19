@@ -149,14 +149,12 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
 
 ########################### Using Sparse Tensor  ################################################
-def read_dataset(pattern, batch_size, mode=tf.estimator.ModeKeys.TRAIN, truncate=None):
+def get_dataset_tuple_keras(pattern, batch_size, mode=tf.estimator.ModeKeys.TRAIN, truncate=None):
     """  ACTUAL Data reading
 
     """
     import os, json, math, shutil
-    import numpy as np
     import tensorflow as tf
-    print("Tensorflow version " + tf.__version__)
 
     DATA_BUCKET = "gs://{}/flights/chapter8/output/".format(BUCKET)
     TRAIN_DATA_PATTERN = DATA_BUCKET + "train*"
@@ -168,13 +166,12 @@ def read_dataset(pattern, batch_size, mode=tf.estimator.ModeKeys.TRAIN, truncate
     DEFAULTS     = [[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],\
                     ['na'],[0.0],[0.0],[0.0],[0.0],['na'],['na']]
 
-
     def pandas_to_dataset(training_df, coly):
         import numpy as np
         import pandas as pd
         import tensorflow as tf
 
-        tf.enable_eager_execution()
+        # tf.enable_eager_execution()
         # features = ['feature1', 'feature2', 'feature3']
         print(training_df)
         training_dataset = (
@@ -210,10 +207,9 @@ def read_dataset(pattern, batch_size, mode=tf.estimator.ModeKeys.TRAIN, truncate
 
 
 
-def get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref, **kw):
+def input_template_feed_keras(Xtrain, cols_type_received, cols_ref, **kw):
     """
-       Create sparse data struccture from dataframe data  to Feed Keras
-
+       Create sparse data struccture in KERAS  To plug with model
     https://github.com/GoogleCloudPlatform/data-science-on-gcp/blob/master/09_cloudml/flights_model_tf2.ipynb
 
     :return:
@@ -308,91 +304,6 @@ def get_dataset2(data_pars=None, task_type="train", **kw):
         raise Exception(f' {data_type} data_type Not implemented ')
 
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
-
-
-
-
-
-    import tensorflow as tf
-    NBUCKETS = 10
-
-    real = { colname : tf.feature_column.numeric_column(colname)
-              for colname in colnumeric
-    }
-
-    inputs = {        colname : tf.keras.layers.Input(name=colname, shape=(), dtype='float32')
-              for colname in real.keys()
-    }
-
-
-    sparse = {
-          'carrier': tf.feature_column.categorical_column_with_vocabulary_list('carrier',
-                      vocabulary_list='AS,VX,F9,UA,US,WN,HA,EV,MQ,DL,OO,B6,NK,AA'.split(',')),
-          'origin' : tf.feature_column.categorical_column_with_hash_bucket('origin', hash_bucket_size=1000),
-          'dest'   : tf.feature_column.categorical_column_with_hash_bucket('dest', hash_bucket_size=1000)
-    }
-
-    inputs.update({
-        colname : tf.keras.layers.Input(name=colname, shape=(), dtype='string')
-              for colname in sparse.keys()
-    })
-
-
-    latbuckets = np.linspace(20.0, 50.0, NBUCKETS).tolist()  # USA
-    lonbuckets = np.linspace(-120.0, -70.0, NBUCKETS).tolist() # USA
-    disc = {}
-    disc.update({
-           'd_{}'.format(key) : tf.feature_column.bucketized_column(real[key], latbuckets)
-              for key in ['dep_lat', 'arr_lat']
-    })
-    disc.update({
-           'd_{}'.format(key) : tf.feature_column.bucketized_column(real[key], lonbuckets)
-              for key in ['dep_lon', 'arr_lon']
-    })
-
-    # cross columns that make sense in combination
-    sparse['dep_loc'] = tf.feature_column.crossed_column([disc['d_dep_lat'], disc['d_dep_lon']], NBUCKETS*NBUCKETS)
-    sparse['arr_loc'] = tf.feature_column.crossed_column([disc['d_arr_lat'], disc['d_arr_lon']], NBUCKETS*NBUCKETS)
-    sparse['dep_arr'] = tf.feature_column.crossed_column([sparse['dep_loc'], sparse['arr_loc']], NBUCKETS ** 4)
-    #sparse['ori_dest'] = tf.feature_column.crossed_column(['origin', 'dest'], hash_bucket_size=1000)
-
-    # embed all the sparse columns
-    embed = {
-           'embed_{}'.format(colname) : tf.feature_column.embedding_column(col, 10)
-              for colname, col in sparse.items()
-    }
-    real.update(embed)
-
-
-    # one-hot encode the sparse columns
-    sparse = { colname : tf.feature_column.indicator_column(col)
-              for colname, col in sparse.items()
-    }
-
-    def wide_and_deep_classifier(inputs, linear_feature_columns, dnn_feature_columns, dnn_hidden_units):
-        deep = tf.keras.layers.DenseFeatures(dnn_feature_columns, name='deep_inputs')(inputs)
-        layers = [int(x) for x in dnn_hidden_units.split(',')]
-        for layerno, numnodes in enumerate(layers):
-            deep = tf.keras.layers.Dense(numnodes, activation='relu', name='dnn_{}'.format(layerno+1))(deep)
-        wide = tf.keras.layers.DenseFeatures(linear_feature_columns, name='wide_inputs')(inputs)
-        both = tf.keras.layers.concatenate([deep, wide], name='both')
-        output = tf.keras.layers.Dense(1, activation='sigmoid', name='pred')(both)
-        model = tf.keras.Model(inputs, output)
-        model.compile(optimizer='adam',
-                      loss='binary_crossentropy',
-                      metrics=['accuracy'])
-        return model
-
-    DNN_HIDDEN_UNITS = 10
-    model = wide_and_deep_classifier(
-        inputs,
-        linear_feature_columns = sparse.values(),
-        dnn_feature_columns = real.values(),
-        dnn_hidden_units = DNN_HIDDEN_UNITS)
-    tf.keras.utils.plot_model(model, 'flights_model.png', show_shapes=False, rankdir='LR')
-    X_tuple = (sparse, real, real)
-    return X_tuple
-
 
 
 
@@ -655,8 +566,6 @@ def Modelsparse2():
               for colname in real.keys()
     }
 
-
-
     sparse = {
           'carrier': tf.feature_column.categorical_column_with_vocabulary_list('carrier',
                       vocabulary_list='AS,VX,F9,UA,US,WN,HA,EV,MQ,DL,OO,B6,NK,AA'.split(',')),
@@ -747,12 +656,16 @@ def Modelsparse():
                       metrics=['accuracy'])
         return model
 
+    sparse, real =  input_template_feed_keras(Xtrain, cols_type_received, cols_ref, **kw)
+
     DNN_HIDDEN_UNITS = 10
     model = wide_and_deep_classifier(
         inputs,
         linear_feature_columns = sparse.values(),
         dnn_feature_columns = real.values(),
         dnn_hidden_units = DNN_HIDDEN_UNITS)
-    tf.keras.utils.plot_model(model, 'flights_model.png', show_shapes=False, rankdir='LR')
+    #tf.keras.utils.plot_model(model, 'flights_model.png', show_shapes=False, rankdir='LR')
+    return model
+
 
 
