@@ -23,7 +23,6 @@ except :
   from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
   from tensorflow.keras import layers
 
-
 ####################################################################################################
 verbosity =2
 
@@ -149,51 +148,65 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
+########################### Using Sparse Tensor  ################################################
+def read_dataset(pattern, batch_size, mode=tf.estimator.ModeKeys.TRAIN, truncate=None):
+    """  ACTUAL Data reading
 
-
-def get_dataset2(data_pars=None, task_type="train", **kw):
     """
-      return tuple of Tensoflow
-    """
-    # log(data_pars)
-    data_type = data_pars.get('type', 'ram')
-    cols_ref  = cols_ref_formodel
+    import os, json, math, shutil
+    import numpy as np
+    import tensorflow as tf
+    print("Tensorflow version " + tf.__version__)
 
-    if data_type == "ram":
-        # cols_ref_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input' ]
-        ### dict  colgroup ---> list of colname
-        cols_type_received     = data_pars.get('cols_model_type2', {} )  ##3 Sparse, Continuous
+    DATA_BUCKET = "gs://{}/flights/chapter8/output/".format(BUCKET)
+    TRAIN_DATA_PATTERN = DATA_BUCKET + "train*"
+    EVAL_DATA_PATTERN = DATA_BUCKET + "test*"
 
-        if task_type == "predict":
-            d = data_pars[task_type]
-            Xtrain       = d["X"]
-            Xtuple_train = get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref)
-            return Xtuple_train
-
-        if task_type == "eval":
-            d = data_pars[task_type]
-            Xtrain, ytrain  = d["X"], d["y"]
-            Xtuple_train    = get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref)
-            return Xtuple_train, ytrain
-
-        if task_type == "train":
-            d = data_pars[task_type]
-            Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
-
-            ### dict  colgroup ---> list of df
-            Xtuple_train = get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref)
-            Xtuple_test  = get_dataset_tuple_keras(Xtest, cols_type_received, cols_ref)
+    CSV_COLUMNS  = ('ontime,dep_delay,taxiout,distance,avg_dep_delay,avg_arr_delay' + \
+                    ',carrier,dep_lat,dep_lon,arr_lat,arr_lon,origin,dest').split(',')
+    LABEL_COLUMN = 'ontime'
+    DEFAULTS     = [[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],\
+                    ['na'],[0.0],[0.0],[0.0],[0.0],['na'],['na']]
 
 
-            log2("Xtuple_train", Xtuple_train)
+    def pandas_to_dataset(training_df, coly):
+        import numpy as np
+        import pandas as pd
+        import tensorflow as tf
 
-            return Xtuple_train, ytrain, Xtuple_test, ytest
+        tf.enable_eager_execution()
+        # features = ['feature1', 'feature2', 'feature3']
+        print(training_df)
+        training_dataset = (
+            tf.data.Dataset.from_tensor_slices(
+                (
+                    tf.cast(training_df[features].values, tf.float32),
+                    tf.cast(training_df[coly].values, tf.int32)
+                )
+            )
+        )
 
+        for features_tensor, target_tensor in training_dataset:
+            print(f'features:{features_tensor} target:{target_tensor}')
+        return training_dataset
 
-    elif data_type == "file":
-        raise Exception(f' {data_type} data_type Not implemented ')
+    def load_dataset(pattern, batch_size=1):
+      return tf.data.experimental.make_csv_dataset(pattern, batch_size, CSV_COLUMNS, DEFAULTS)
 
-    raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
+    def features_and_labels(features):
+      label = features.pop('ontime') # this is what we will train for
+      return features, label
+
+    dataset = load_dataset(pattern, batch_size)
+    dataset = dataset.map(features_and_labels)
+
+    if mode == tf.estimator.ModeKeys.TRAIN:
+        dataset = dataset.shuffle(batch_size*10)
+        dataset = dataset.repeat()
+        dataset = dataset.prefetch(1)
+    if truncate is not None:
+        dataset = dataset.take(truncate)
+    return dataset
 
 
 
@@ -249,6 +262,52 @@ def get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref, **kw):
 
     X_tuple = (dict_sparse, dict_dense, dict_dense2 )
     return X_tuple
+
+
+
+
+def get_dataset2(data_pars=None, task_type="train", **kw):
+    """
+      return tuple of Tensoflow
+    """
+    # log(data_pars)
+    data_type = data_pars.get('type', 'ram')
+    cols_ref  = cols_ref_formodel
+
+    if data_type == "ram":
+        # cols_ref_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input' ]
+        ### dict  colgroup ---> list of colname
+        cols_type_received     = data_pars.get('cols_model_type2', {} )  ##3 Sparse, Continuous
+
+        if task_type == "predict":
+            d = data_pars[task_type]
+            Xtrain       = d["X"]
+            Xtuple_train = get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref)
+            return Xtuple_train
+
+        if task_type == "eval":
+            d = data_pars[task_type]
+            Xtrain, ytrain  = d["X"], d["y"]
+            Xtuple_train    = get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref)
+            return Xtuple_train, ytrain
+
+        if task_type == "train":
+            d = data_pars[task_type]
+            Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
+
+            ### dict  colgroup ---> list of df
+            Xtuple_train = get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref)
+            Xtuple_test  = get_dataset_tuple_keras(Xtest, cols_type_received, cols_ref)
+
+            log2("Xtuple_train", Xtuple_train)
+
+            return Xtuple_train, ytrain, Xtuple_test, ytest
+
+
+    elif data_type == "file":
+        raise Exception(f' {data_type} data_type Not implemented ')
+
+    raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
 
