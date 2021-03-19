@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-python torch_tabular.py test --nrows 500
+python torch_tabular.py test --nrows 1000
 
 
 https://github.com/arita37/pytorch_tabular
@@ -38,7 +38,7 @@ from pathlib import Path
 try :
     print("**************************************** Importing DataConfig ****************************************")
     from pytorch_tabular import TabularModel
-    from pytorch_tabular.models import CategoryEmbeddingModelConfig, TabNetModelConfig,NodeConfig
+    from pytorch_tabular.models import CategoryEmbeddingModelConfig, TabNetModelConfig, NodeConfig
     from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig, ExperimentConfig
     print("**************************************** Imported DataConfig ****************************************")
 except :
@@ -89,10 +89,20 @@ class Model(object):
             )
 
             class_name   = model_pars.get('model_class',  "CategoryEmbeddingModelConfig" ).split("::")[-1]
-            print("before split =", model_pars.get('model_class',  "NO model_class key" ))
-            print("model class name =", class_name)
-            assert class_name in MODEL_LIST, "nota vailable"
-            model_class  = globals()[ class_name]
+            assert class_name in MODEL_LIST, "ModelConfig not available"
+
+            # Pick the needed ModelConfig
+            model_class = globals()[ class_name ]
+
+            #model_class = None
+            #if class_name == "CategoryEmbeddingModelConfig":
+            #    model_class = CategoryEmbeddingModelConfig
+            #elif class_name == "TabNetModelConfig":
+            #    model_class = TabNetModelConfig
+            #else:
+            #    model_class = NodeConfig
+
+            # model_class  = globals()[class_name]
             model_config = model_class( **model_pars['model_pars']   )
 
             trainer_config   = TrainerConfig( **compute_pars.get('compute_pars', {} )) # For testing quickly, max_epochs=1 )
@@ -156,7 +166,6 @@ def reset():
     global model, session
     model, session = None, None
 
-#D:\dsa2\source\models\ztmp\data\output\torch_tabular\model\torch_checkpoint
 def save(path=None, info=None):
     """ Custom saving
     """
@@ -238,7 +247,7 @@ def get_dataset_tuple(Xtrain, cols_type_received, cols_ref):
     :param cols_ref:
     :return:
     """
-    if len(cols_ref) < 1 :
+    if len(cols_ref) <= 1 :
         return Xtrain
 
     Xtuple_train = []
@@ -251,10 +260,7 @@ def get_dataset_tuple(Xtrain, cols_type_received, cols_ref):
         # Add the columns of this group to the list
         Xtuple_train.append( Xtrain[cols_i] )
 
-    if len(cols_ref) == 1 :
-        return Xtuple_train[0]  ### No tuple
-    else :
-        return Xtuple_train
+    return Xtuple_train
 
 
 def get_dataset(data_pars=None, task_type="train", **kw):
@@ -305,24 +311,11 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 ############ Test  #################################################################################
 
 
-def test(
-    model_config="CategoryEmbeddingModelConfig", 
-    nrows=1000
-    ):
+def test(nrows=1000):
     """
-        model_config : [CategoryEmbeddingModelConfig, TabNetModelConfig, NodeConfig] These are the supported ModelConfigs
         nrows : take first nrows from dataset
     """
-    
-    # Make sure the given model config is one of the supported by pytorch_tabular models
-    available_model_configs = {
-        "CategoryEmbeddingModelConfig" : 'torch_tabular.py::CategoryEmbeddingModelConfig', 
-        "TabNetModelConfig" : 'torch_tabular.py::TabNetModelConfig', 
-        "NodeConfig" : 'torch_tabular.py::NodeConfig'
-    }
-    assert model_config in available_model_configs, "Given ModelConfig not supported, enter one of ['CategoryEmbeddingModelConfig', 'TabNetModelConfig', 'NodeConfig']"
-    model_config = available_model_configs[model_config]
-    
+
     # Dense features
     colnum = ["Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology",
         "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways",
@@ -387,7 +380,7 @@ def test(
     m = {'model_pars': {
         ### LightGBM API model   #######################################
         # Specify the ModelConfig for pytorch_tabular
-        'model_class':  model_config
+        'model_class':  "torch_tabular.py::CategoryEmbeddingModelConfig"
         
         # Type of target prediction, evaluation metrics
         ,'model_pars' : { 'task': "classification",
@@ -452,35 +445,44 @@ def test(
     }
 
     ##### Running loop
+    ll = [
+        'torch_tabular.py::CategoryEmbeddingModelConfig',
+        'torch_tabular.py::TabNetModelConfig', 
+        'torch_tabular.py::NodeConfig'
+    ]
+    for cfg in ll:
 
-    log('Setup model..')
-    model = Model(model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
+        # Set the ModelConfig
+        m['model_pars']['model_class'] = cfg
 
-    log('\n\nTraining the model..')
-    fit(data_pars=m['data_pars'], compute_pars= m['compute_pars'], out_pars=None)
-    log('Training completed!\n\n')
+        log('Setup model..')
+        model = Model(model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
 
-    log('Predict data..')
-    ypred, ypred_proba = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
-    log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
+        log('\n\nTraining the model..')
+        fit(data_pars=m['data_pars'], compute_pars= m['compute_pars'], out_pars=None)
+        log('Training completed!\n\n')
 
-    if model_config != "torch_tabular.py::NodeConfig":
-        log('Saving model..')
-        save(path= "ztmp/data/output/torch_tabular")
-        #  os.path.join(root, 'data\\output\\torch_tabular\\model'))
+        log('Predict data..')
+        ypred, ypred_proba = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
+        log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
 
-        log('Load model..')
-        model, session = load_model(path="ztmp/data/output/torch_tabular")
-        #os.path.join(root, 'data\\output\\torch_tabular\\model'))
-    else:
-        log('\n*** !!! Saving Bug in pytorch_tabular for NodeConfig !!! ***\n')
-        
-    log('Model architecture:')
-    log(model.model)
+        if cfg != "torch_tabular.py::NodeConfig":
+            log('Saving model..')
+            save(path= "ztmp/data/output/torch_tabular")
+            #  os.path.join(root, 'data\\output\\torch_tabular\\model'))
 
-    log('Model config:')
-    log(model.model.config._config_name)
-    reset()
+            log('Load model..')
+            model, session = load_model(path="ztmp/data/output/torch_tabular")
+            #os.path.join(root, 'data\\output\\torch_tabular\\model'))
+        else:
+            log('\n*** !!! Saving Bug in pytorch_tabular for NodeConfig !!! ***\n')
+            
+        log('Model architecture:')
+        log(model.model)
+
+        log('Model config:')
+        log(model.model.config._config_name)
+        reset()
 
 
 def test3():
@@ -568,6 +570,6 @@ def test2(nrow=10000):
 if __name__ == "__main__":
     import fire
     fire.Fire()
-    
+    # test()
 
 
