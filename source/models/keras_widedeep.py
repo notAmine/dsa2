@@ -148,68 +148,40 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
-########################### Using Sparse Tensor  ################################################
-def get_dataset_tuple_keras(pattern, batch_size, mode=tf.estimator.ModeKeys.TRAIN, truncate=None):
-    """  ACTUAL Data reading
+########################################################################################################
+########################### Using Sparse Tensor  #######################################################
+def ModelCustom2():
+    # Build a wide-and-deep model.
+    def wide_and_deep_classifier(inputs, linear_feature_columns, dnn_feature_columns, dnn_hidden_units):
+        deep = tf.keras.layers.DenseFeatures(dnn_feature_columns, name='deep_inputs')(inputs)
+        layers = [int(x) for x in dnn_hidden_units.split(',')]
+        for layerno, numnodes in enumerate(layers):
+            deep = tf.keras.layers.Dense(numnodes, activation='relu', name='dnn_{}'.format(layerno+1))(deep)
+        wide = tf.keras.layers.DenseFeatures(linear_feature_columns, name='wide_inputs')(inputs)
+        both = tf.keras.layers.concatenate([deep, wide], name='both')
+        output = tf.keras.layers.Dense(1, activation='sigmoid', name='pred')(both)
+        model = tf.keras.Model(inputs, output)
+        model.compile(optimizer='adam',
+                      loss='binary_crossentropy',
+                      metrics=['accuracy'])
+        return model
 
-    """
-    import os, json, math, shutil
-    import tensorflow as tf
+    sparse, real =  input_template_feed_keras(cols_type_received, cols_ref)
 
-    DATA_BUCKET = "gs://{}/flights/chapter8/output/".format(BUCKET)
-    TRAIN_DATA_PATTERN = DATA_BUCKET + "train*"
-    EVAL_DATA_PATTERN = DATA_BUCKET + "test*"
-
-    CSV_COLUMNS  = ('ontime,dep_delay,taxiout,distance,avg_dep_delay,avg_arr_delay' + \
-                    ',carrier,dep_lat,dep_lon,arr_lat,arr_lon,origin,dest').split(',')
-    LABEL_COLUMN = 'ontime'
-    DEFAULTS     = [[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],\
-                    ['na'],[0.0],[0.0],[0.0],[0.0],['na'],['na']]
-
-    def pandas_to_dataset(training_df, coly):
-        import numpy as np
-        import pandas as pd
-        import tensorflow as tf
-
-        # tf.enable_eager_execution()
-        # features = ['feature1', 'feature2', 'feature3']
-        print(training_df)
-        training_dataset = (
-            tf.data.Dataset.from_tensor_slices(
-                (
-                    tf.cast(training_df[features].values, tf.float32),
-                    tf.cast(training_df[coly].values, tf.int32)
-                )
-            )
-        )
-
-        for features_tensor, target_tensor in training_dataset:
-            print(f'features:{features_tensor} target:{target_tensor}')
-        return training_dataset
-
-    def load_dataset(pattern, batch_size=1):
-      return tf.data.experimental.make_csv_dataset(pattern, batch_size, CSV_COLUMNS, DEFAULTS)
-
-    def features_and_labels(features):
-      label = features.pop('ontime') # this is what we will train for
-      return features, label
-
-    dataset = load_dataset(pattern, batch_size)
-    dataset = dataset.map(features_and_labels)
-
-    if mode == tf.estimator.ModeKeys.TRAIN:
-        dataset = dataset.shuffle(batch_size*10)
-        dataset = dataset.repeat()
-        dataset = dataset.prefetch(1)
-    if truncate is not None:
-        dataset = dataset.take(truncate)
-    return dataset
-
+    DNN_HIDDEN_UNITS = 10
+    model = wide_and_deep_classifier(
+        inputs,
+        linear_feature_columns = sparse.values(),
+        dnn_feature_columns = real.values(),
+        dnn_hidden_units = DNN_HIDDEN_UNITS)
+    #tf.keras.utils.plot_model(model, 'flights_model.png', show_shapes=False, rankdir='LR')
+    return model
 
 
 def input_template_feed_keras(Xtrain, cols_type_received, cols_ref, **kw):
     """
-       Create sparse data struccture in KERAS  To plug with model
+       Create sparse data struccture in KERAS  To plug with MODEL:
+       No data, just virtual data
     https://github.com/GoogleCloudPlatform/data-science-on-gcp/blob/master/09_cloudml/flights_model_tf2.ipynb
 
     :return:
@@ -254,12 +226,66 @@ def input_template_feed_keras(Xtrain, cols_type_received, cols_ref, **kw):
 
     ### Embed
     dict_embed  = { 'em_{}'.format(colname) : embedding_column(col, 10) for colname, col in dict_sparse.items()}
-    dict_dense2 = {**dict_dense, **dict_embed}
 
-    X_tuple = (dict_sparse, dict_dense, dict_dense2 )
-    return X_tuple
+    dict_dnn    = {**dict_embed,  **dict_dense}
+    dict_linear = {**dict_sparse, **dict_dense}
+
+    return (dict_linear, dict_dnn )
 
 
+
+def get_dataset_tuple_keras(pattern, batch_size, mode=tf.estimator.ModeKeys.TRAIN, truncate=None):
+    """  ACTUAL Data reading :
+           Dataframe ---> TF Dataset  --> feed Keras model
+
+    """
+    import os, json, math, shutil
+    import tensorflow as tf
+
+    DATA_BUCKET = "gs://{}/flights/chapter8/output/".format(BUCKET)
+    TRAIN_DATA_PATTERN = DATA_BUCKET + "train*"
+    EVAL_DATA_PATTERN = DATA_BUCKET + "test*"
+
+    CSV_COLUMNS  = ('ontime,dep_delay,taxiout,distance,avg_dep_delay,avg_arr_delay' + \
+                    ',carrier,dep_lat,dep_lon,arr_lat,arr_lon,origin,dest').split(',')
+    LABEL_COLUMN = 'ontime'
+    DEFAULTS     = [[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],\
+                    ['na'],[0.0],[0.0],[0.0],[0.0],['na'],['na']]
+
+    def pandas_to_dataset(training_df, coly):
+        # tf.enable_eager_execution()
+        # features = ['feature1', 'feature2', 'feature3']
+        print(training_df)
+        training_dataset = (
+            tf.data.Dataset.from_tensor_slices(
+                (
+                    tf.cast(training_df[features].values, tf.float32),
+                    tf.cast(training_df[coly].values, tf.int32)
+                )
+            )
+        )
+
+        for features_tensor, target_tensor in training_dataset:
+            print(f'features:{features_tensor} target:{target_tensor}')
+        return training_dataset
+
+    def load_dataset(pattern, batch_size=1):
+      return tf.data.experimental.make_csv_dataset(pattern, batch_size, CSV_COLUMNS, DEFAULTS)
+
+    def features_and_labels(features):
+      label = features.pop('ontime') # this is what we will train for
+      return features, label
+
+    dataset = load_dataset(pattern, batch_size)
+    dataset = dataset.map(features_and_labels)
+
+    if mode == tf.estimator.ModeKeys.TRAIN:
+        dataset = dataset.shuffle(batch_size*10)
+        dataset = dataset.repeat()
+        dataset = dataset.prefetch(1)
+    if truncate is not None:
+        dataset = dataset.take(truncate)
+    return dataset
 
 
 def get_dataset2(data_pars=None, task_type="train", **kw):
@@ -279,25 +305,25 @@ def get_dataset2(data_pars=None, task_type="train", **kw):
             d = data_pars[task_type]
             Xtrain       = d["X"]
             Xtuple_train = get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref)
-            return Xtuple_train
+            return Xytuple_train
 
         if task_type == "eval":
             d = data_pars[task_type]
             Xtrain, ytrain  = d["X"], d["y"]
             Xtuple_train    = get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref)
-            return Xtuple_train, ytrain
+            return Xytuple_train
 
         if task_type == "train":
             d = data_pars[task_type]
             Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
 
             ### dict  colgroup ---> list of df
-            Xtuple_train = get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref)
-            Xtuple_test  = get_dataset_tuple_keras(Xtest, cols_type_received, cols_ref)
+            Xytuple_train = get_dataset_tuple_keras(Xtrain, ytrain, cols_type_received, cols_ref)
+            Xytuple_test  = get_dataset_tuple_keras(Xtest, ytest, cols_type_received, cols_ref)
 
-            log2("Xtuple_train", Xtuple_train)
+            log2("Xtuple_train", Xytuple_train)
 
-            return Xtuple_train, ytrain, Xtuple_test, ytest
+            return Xytuple_train, Xytuple_test
 
 
     elif data_type == "file":
@@ -638,34 +664,6 @@ def Modelsparse2():
         dnn_feature_columns = real.values(),
         dnn_hidden_units = DNN_HIDDEN_UNITS)
     tf.keras.utils.plot_model(model, 'flights_model.png', show_shapes=False, rankdir='LR')
-
-
-def Modelsparse():
-    # Build a wide-and-deep model.
-    def wide_and_deep_classifier(inputs, linear_feature_columns, dnn_feature_columns, dnn_hidden_units):
-        deep = tf.keras.layers.DenseFeatures(dnn_feature_columns, name='deep_inputs')(inputs)
-        layers = [int(x) for x in dnn_hidden_units.split(',')]
-        for layerno, numnodes in enumerate(layers):
-            deep = tf.keras.layers.Dense(numnodes, activation='relu', name='dnn_{}'.format(layerno+1))(deep)
-        wide = tf.keras.layers.DenseFeatures(linear_feature_columns, name='wide_inputs')(inputs)
-        both = tf.keras.layers.concatenate([deep, wide], name='both')
-        output = tf.keras.layers.Dense(1, activation='sigmoid', name='pred')(both)
-        model = tf.keras.Model(inputs, output)
-        model.compile(optimizer='adam',
-                      loss='binary_crossentropy',
-                      metrics=['accuracy'])
-        return model
-
-    sparse, real =  input_template_feed_keras(Xtrain, cols_type_received, cols_ref, **kw)
-
-    DNN_HIDDEN_UNITS = 10
-    model = wide_and_deep_classifier(
-        inputs,
-        linear_feature_columns = sparse.values(),
-        dnn_feature_columns = real.values(),
-        dnn_hidden_units = DNN_HIDDEN_UNITS)
-    #tf.keras.utils.plot_model(model, 'flights_model.png', show_shapes=False, rankdir='LR')
-    return model
 
 
 
