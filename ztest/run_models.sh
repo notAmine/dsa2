@@ -15,7 +15,10 @@ python model_vaemdn.py test
 python model_bayesian_pyro.py test
 
 
-python keras_widedeep.py test
+python keras_widedeep.py test 
+
+
+python model_sampler.py test
 
 
 
