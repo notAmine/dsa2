@@ -556,9 +556,9 @@ def test_helper(model_pars, data_pars, compute_pars, Xpred):
 
 
 if __name__ == "__main__":
-    test()
-    # import fire
-    # fire.Fire()
+    # test()
+    import fire
+    fire.Fire()
 
 
 
