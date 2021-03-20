@@ -209,3 +209,6 @@ mlflow_local.db
 /example/mfactor
 /source/models/repo/TruncatedGaussianMixtureVAE/ztmp_checkpoint/model_.pth
 /source/__pycache__
+/source/models/repo/VAEM/data/bank/bank-additional
+/source/models/repo/VAEM/data/bank/bank
+/source/models/saved_weights/bank/checkpoint
