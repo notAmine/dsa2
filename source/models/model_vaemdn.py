@@ -210,11 +210,11 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
 
 
     early_stopping = EarlyStopping(monitor='loss', patience=3)
-    path_check     = compute_pars.get('path_checkpoint', 'ztmp/model_dir/check.ckpt')
-    os.makedirs(os.path.dirname( os.path.abspath(path_check)) , exist_ok= True)
-    model_ckpt     = ModelCheckpoint(filepath =  path_check,
-                                     save_best_only = True, monitor='loss')
-    cpars['callbacks'] =  [early_stopping, model_ckpt]
+    path_check     = compute_pars.get('path_checkpoint', 'ztmp/model_dir/check_ckpt')
+    #os.makedirs(os.path.abspath(path_check) , exist_ok= True)
+    #model_ckpt     = ModelCheckpoint(filepath =  path_check,
+    #                                 save_best_only = True, monitor='loss')
+    cpars['callbacks'] =  [early_stopping] # , model_ckpt]
     # cpars['callbacks'] = {}
 
     ### Fake label
