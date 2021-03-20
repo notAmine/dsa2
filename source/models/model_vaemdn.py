@@ -8,24 +8,15 @@ Multi Density Variationnal Autoencoder
 import os, pandas as pd, numpy as np, sklearn, copy
 from sklearn.model_selection import train_test_split
 
-from keras.layers import Lambda, Input, Dense, Reshape
-from keras.datasets import mnist
-from keras.losses import mse, binary_crossentropy
-from keras.utils import plot_model
-from keras import backend as K
 import tensorflow as tf
-import numpy as np
-import tensorflow
-
-try :
-  import keras
-  from keras.callbacks import EarlyStopping, ModelCheckpoint
-  from keras import layers
-except :
-  from tensorflow import keras
-  from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-  from tensorflow.keras import layers
-
+from tensorflow import keras
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from tensorflow.keras import layers
+from tensorflow.keras.layers import Lambda, Input, Dense, Reshape
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.losses import mse, binary_crossentropy
+from tensorflow.keras.utils import plot_model
+from tensorflow.keras import backend as K
 
 ####################################################################################################
 verbosity =2
@@ -168,15 +159,6 @@ def get_model(model_pars):
     vae.compile(optimizer='adam')
     print(vae.summary() )
     return vae
-
-
-
-
-
-
-
-
-
 
 
 
