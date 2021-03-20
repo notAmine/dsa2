@@ -53,24 +53,46 @@ def test_dataset_classifier_covtype(nrows=500):
 
 def test_dataset_regress_fake(nrows=500):
     from sklearn import datasets as sklearn_datasets
-    coly = 'y'
-    X, y = sklearn_datasets.make_regression(
+    coly   = 'y'
+    colnum = ["colnum_" +str(i) for i in range(0, 17) ]
+    colcat = ['colcat_1']
+    X, y    = sklearn_datasets.make_regression(
         n_samples=1000,
         n_features=17,
         n_targets=1,
         n_informative=17
     )
-    X = pd.DataFrame(
-        X,
-        columns= [ "col_" +str(i) for i in range(0, 17) ]
-    )
-    X[coly] = y.reshape(-1, 1)
-    y = pd.DataFrame(y.reshape(-1, 1), columns=['y'])
+    df         = pd.DataFrame(X,  columns= colnum)
+    df[coly]   = y.reshape(-1, 1)
 
-    log('X',X)
-    log('y', y)
+    for ci in colcat :
+      df[colcat] = np.random.randint(0,1, len(df))
 
     return df, colnum, colcat, coly
+
+
+
+
+def test_dataset_classi_fake(nrows=500):
+    from sklearn import datasets as sklearn_datasets
+    ndim=11
+    coly   = 'y'
+    colnum = ["colnum_" +str(i) for i in range(0, ndim) ]
+    colcat = ['colcat_1']
+    X, y    = sklearn_datasets.make_classification(
+        n_samples=1000,
+        n_features=ndim,
+        n_targets=1,
+        n_informative=ndim
+    )
+    df         = pd.DataFrame(X,  columns= colnum)
+    df[coly]   = y.reshape(-1, 1)
+
+    for ci in colcat :
+      df[colcat] = np.random.randint(0,1, len(df))
+
+    return df, colnum, colcat, coly
+
 
 
 
