@@ -36,14 +36,13 @@ Args:
 import os, sys,  numpy as np,  pandas as pd, wget, copy
 from pathlib import Path
 try :
-    print("**************************************** Importing DataConfig ****************************************")
     from pytorch_tabular import TabularModel
     from pytorch_tabular.models import CategoryEmbeddingModelConfig, TabNetModelConfig, NodeConfig
     from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig, ExperimentConfig
-    print("**************************************** Imported DataConfig ****************************************")
+    print("**************************************** Imported pytorch_tabular ****************************************")
 except :
     print(" !! Couldn't import DataConfig, pip install ****************************************")
-    cmd ="python -m pip install git+https://github.com/manujosephv/pytorch_tabular.git@82a30fe2ad1cc8c4f883d86d5f63925e67a0a015 "
+    cmd ="python -m pip install git+https://github.com/manujosephv/pytorch_tabular.git@82a30fe2ad1cc8c4f883d86d5f63925e67a0a015 --no-deps"
     # cmd = "pip install pytorch_tabular[all]"
     os.system(cmd)
 
@@ -140,7 +139,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     val   = pd.concat((val, ytest), axis=1)
 
     ###############################################################
-    model.model.fit(train=train, validation=val, **cpars)
+    model.model.fit(train=train, validation=val) # , **cpars)
 
 
 
@@ -311,8 +310,6 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
 ####################################################################################################
 ############ Test  #################################################################################
-
-
 def test(nrows=1000):
     """
         nrows : take first nrows from dataset
@@ -387,7 +384,11 @@ def test(nrows=1000):
         # Type of target prediction, evaluation metrics
         ,'model_pars' : { 'task': "classification",
                         'metrics' : ["f1","accuracy"],
-                        'metrics_params' : [{"num_classes":num_classes},{}]
+                        'metrics_params' : [{"num_classes":num_classes},{}],
+
+                        # 'layers' : "1024-512-512",  # Number of nodes in each layer
+                        # 'activation' : "LeakyReLU", # Activation between each layers
+                        'learning_rate' :  1e-3
                         }  
 
         , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
@@ -396,9 +397,7 @@ def test(nrows=1000):
         ### Pipeline for data processing ##############################
         'pipe_list': [  #### coly target prorcessing
         {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
-
         {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
-        {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
 
         #### catcol INTO integer,   colcat into OneHot
         {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
@@ -408,7 +407,12 @@ def test(nrows=1000):
             }
         },
 
-    'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
+    'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
+
+      'compute_pars' :{  ### Specif
+        'batch_size' :1024,'max_epochs' :1, 'gpus': 0
+
+      }
                     },
 
     'data_pars': { 'n_sample' : n_sample,
@@ -479,11 +483,11 @@ def test(nrows=1000):
         else:
             log('\n*** !!! Saving Bug in pytorch_tabular for NodeConfig !!! ***\n')
             
-        log('Model architecture:')
-        log(model.model)
+        log('Model architecture:', model.model )
+        log('Model config:', model.model.config._config_name)
+        log('Predict data..')
+        ypred, ypred_proba = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
 
-        log('Model config:')
-        log(model.model.config._config_name)
         reset()
 
 
