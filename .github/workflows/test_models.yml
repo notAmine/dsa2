@@ -97,6 +97,8 @@ jobs:
       run: |
            python -c "import core_run;   print(core_run)"
            python -c "import os, numpy ; print(os)"
+           conda list
+           pip list
            # python -c "import tensorflow, torch ; print(tensorflow); print(torch)"
 
     ########  Test running 
