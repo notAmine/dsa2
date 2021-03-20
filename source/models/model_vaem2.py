@@ -192,8 +192,14 @@ def encode2(data_decode,list_discrete,records_d,fast_plot):
     Data_train_decomp, Data_train_noisy_decomp,mask_train_decomp,Data_test_decomp,mask_test_comp,mask_test_decomp,cat_dims,DIM_FLT,dic_var_type = data_decode
     # vae = active_learning.p_vae_active_learning(Data_train_decomp, Data_train_noisy_decomp,mask_train_decomp,Data_test_decomp,mask_test_comp,mask_test_decomp,cat_dims,DIM_FLT,dic_var_type,args,list_discrete,records_d)
 
-    model = p_vae_active_learning(Data_train_decomp, Data_train_noisy_decomp,mask_train_decomp,Data_test_decomp,mask_test_comp,mask_test_decomp,
-                                  cat_dims,DIM_FLT,dic_var_type,args,list_discrete,records_d)
+    model = p_vae_active_learning(Data_train_decomp,
+                                  Data_train_noisy_decomp,
+                                  mask_train_decomp,
+                                  Data_test_decomp,
+                                  mask_test_comp,
+                                  mask_test_decomp,
+                                  cat_dims,DIM_FLT,dic_var_type,
+                                  args,list_discrete,records_d)
 
     tf.reset_default_graph()
     ### Impute missing data. Fthe mask to be zeros
@@ -201,9 +207,8 @@ def encode2(data_decode,list_discrete,records_d,fast_plot):
     x_recon,z_posterior,x_recon_cat_p = model.get_imputation( Data_train_noisy_decomp, mask_train_decomp*0,cat_dims,dic_var_type) ## one hot already cpverted to integer
 
 
-    x_real = process.compress_data(Data_train_decomp,cat_dims, dic_var_type) ## x_real still needs conversion
+    x_real       = process.compress_data(Data_train_decomp,cat_dims, dic_var_type) ## x_real still needs conversion
     x_real_cat_p = Data_train_decomp[:,0:(cat_dims.sum()).astype(int)]
-
 
     # max_Data = 0.7
     # min_Data = 0.3
@@ -224,13 +229,13 @@ def encode2(data_decode,list_discrete,records_d,fast_plot):
         g = g.map_upper(plt.scatter,marker='+')
         g = g.map_lower(sns.kdeplot, cmap="hot",shade=True,bw=.1)
         g.set(xlim=(min_Data,max_Data), ylim = (min_Data,max_Data))
-    Data_fake_noisy= x_recon
-    Data_fake = process.invert_noise(Data_fake_noisy,list_discrete_comp,records_d)
+    Data_fake_noisy = x_recon
+    Data_fake       = process.invert_noise(Data_fake_noisy,list_discrete_comp,records_d)
 
-    Data_std = (Data_fake - x_real.min(axis=0)) / (x_real.max(axis=0) - x_real.min(axis=0))
+    Data_std  = (Data_fake - x_real.min(axis=0)) / (x_real.max(axis=0) - x_real.min(axis=0))
     Data_fake = Data_std * (max_Data - min_Data) + min_Data
+    sub_id    = [1,2,10]
 
-    sub_id = [1,2,10]
     """
     if fast_plot ==1:
         g = sns.pairplot(pd.DataFrame(Data_fake[:,sub_id]).sample(min(1000,x_real.shape[0])),diag_kind = 'kde')
@@ -259,7 +264,7 @@ def decode2(data_decode,scaling_factor,list_discrete,records_d):
         args,list_discrete,records_d)
 
 
-
+    """
     npzfile = np.load(args.output_dir+'/UCI_rmse_curve_SING.npz')
     IC_SING=npzfile['information_curve']*scaling_factor[-1]
     plt.figure(0)
@@ -278,7 +283,7 @@ def decode2(data_decode,scaling_factor,list_discrete,records_d):
                ncol=1, borderaxespad=0.,prop={'size': 20}, frameon=False)
     ax1.ticklabel_format(useOffset=False)
     plt.show()
-
+    """
     return vae
 
 
