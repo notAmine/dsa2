@@ -64,8 +64,6 @@ jobs:
       with:
         path: /opt/hostedtoolcache/Python/
         key: ${{ runner.os }}-pipenv-${{ hashFiles('**/install/py36.txt') }}
-
-
           
 
     - name: Install numpy
@@ -102,8 +100,8 @@ jobs:
            # python -c "import tensorflow, torch ; print(tensorflow); print(torch)"
 
     ########  Test running 
-    - name: run_mlflow
-      run: chmod -R 777 . && ztest/test_models.sh   # 2>&1 | tee   /home/runner/work/mlmodels/mlmodels_store/log_import/log_optim.py
+    - name: run_models
+      run: chmod -R 777 . && ztest/run_models.sh   # 2>&1 | tee   /home/runner/work/mlmodels/mlmodels_store/log_import/log_optim.py
 
 
 
