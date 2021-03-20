@@ -176,7 +176,7 @@ class Model(object):
 
         ### get model params  #######################################################
         mdict_default = {
-             'original_dim' : 15
+             'original_dim' : 15,
              'class_num':           5
             ,'intermediate_dim':    64
             ,'intermediate_dim_2':  16
@@ -211,9 +211,9 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
 
     early_stopping = EarlyStopping(monitor='loss', patience=3)
     path_check     = compute_pars.get('path_checkpoint', 'ztmp/model_dir/check.ckpt')
-    os.makedirs(os.path.dirname(path_check) , exist_ok= True)
+    os.makedirs(os.path.dirname( os.path.abspath(path_check)) , exist_ok= True)
     model_ckpt     = ModelCheckpoint(filepath =  path_check,
-                                     save_best_only=True, monitor='loss')
+                                     save_best_only = True, monitor='loss')
     cpars['callbacks'] =  [early_stopping, model_ckpt]
     # cpars['callbacks'] = {}
 
@@ -276,7 +276,7 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     """
     # log(data_pars)
     if data_pars.get('dataset_name', '') == 'correlation' :
-       x_train, ytrain = get_mydata_correl(data_pars)
+       x_train, ytrain = dataset_correl(data_pars)
        return x_train, ytrain
 
 
@@ -363,7 +363,7 @@ def load_model(path=""):
     model0      = pickle.load(open(f"{path}/model.pkl", mode='rb'))
 
     model = Model()  # Empty model
-    model.model        = get_model( model0.model_pars)
+    model.model        = VAEMDN( model0.model_pars)
     model.model_pars   = model0.model_pars
     model.compute_pars = model0.compute_pars
 
@@ -501,7 +501,7 @@ def test():
 
 
     ###  Tester #########################################################
-    Xpred,_ = dataset_correl(adata_pars)
+    Xpred,_ = dataset_correl()
     test_helper(model_pars, data_pars, compute_pars, Xpred)
 
 
