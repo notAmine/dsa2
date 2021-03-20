@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 
+python model_bayesian_pyro.py      test
+
+
 """
 import logging
 import os
@@ -410,7 +413,6 @@ def test(nrows=1000):
         'model_bayesian_pyro.py::BayesianRegression',
     ]
     for cfg in ll:
-
         # Set the ModelConfig
         m['model_pars']['model_class'] = cfg
 
@@ -436,13 +438,16 @@ def test(nrows=1000):
         log('Model architecture:')
         log(model.model)
 
+        log('Predict data..check')
+        ypred, ypred_proba = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
+
         reset()
 
 
 
 if __name__ == "__main__":
-    # import fire
-    # fire.Fire()
-    test()
+    import fire
+    fire.Fire()
+
 
 
