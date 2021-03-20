@@ -194,7 +194,8 @@ class Model(object):
 
         #### Model setup ################################
         self.model_pars['model_pars'] = mdict
-        self.model                    = VAEMDN(model_pars['model_pars'])
+        print(mdict)
+        self.model                    = VAEMDN( self.model_pars['model_pars'])
         log2(self.model_pars, self.model)
         self.model.summary()
 
@@ -363,7 +364,7 @@ def load_model(path=""):
     model0      = pickle.load(open(f"{path}/model.pkl", mode='rb'))
 
     model = Model()  # Empty model
-    model.model        = VAEMDN( model0.model_pars)
+    model.model        = VAEMDN( model0.model_pars['model_pars'])
     model.model_pars   = model0.model_pars
     model.compute_pars = model0.compute_pars
 
