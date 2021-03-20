@@ -3,7 +3,7 @@
 """
 
 """
-import logging, os, pandas as pd
+import logging, os, pandas as pd, numpy as np
 from sklearn.model_selection import train_test_split
 
 ####################################################################################################
@@ -71,6 +71,132 @@ def test_dataset_regress_fake(nrows=500):
     log('y', y)
 
     return df, colnum, colcat, coly
+
+
+
+
+###################################################################################################################
+
+def tf_data_create_sparse(Xtrain, cols_type_received:dict= {'cols_sparse' : ['col1', 'col2'],
+                                                     'cols_num'    : ['cola', 'colb']
+
+                                                     },
+                           cols_ref:list=  [ 'col_sparse', 'col_num'  ],
+                           **kw):
+    """
+
+       Create sparse data struccture in KERAS  To plug with MODEL:
+       No data, just virtual data
+    https://github.com/GoogleCloudPlatform/data-science-on-gcp/blob/master/09_cloudml/flights_model_tf2.ipynb
+
+    :return:
+    """
+    from tensorflow.feature_column import (categorical_column_with_hash_bucket,
+        numeric_column, embedding_column, bucketized_column, crossed_column, indicator_column)
+
+    dict_cat_sparse, dict_dense = {}, {}
+    for cols_groupname in cols_ref :
+        assert cols_groupname in cols_type_received, "Error missing colgroup in config data_pars[cols_model_type] "
+
+        if cols_groupname == "cols_sparse" :
+           col_list = cols_type_received[cols_groupname]
+           for coli in col_list :
+               m_bucket = min(500, int( Xtrain[coli].nunique()) )
+               dict_cat_sparse[coli] = categorical_column_with_hash_bucket(coli, hash_bucket_size= m_bucket)
+
+        if cols_groupname == "cols_dense" :
+           col_list = cols_type_received[cols_groupname]
+           for coli in col_list :
+               dict_dense[coli] = numeric_column(coli)
+
+        if cols_groupname == "cols_cross" :
+           col_list = cols_type_received[cols_groupname]
+           for coli in col_list :
+               m_bucketi = min(500, int( Xtrain[coli[0]].nunique()) )
+               m_bucketj = min(500, int( Xtrain[coli[1]].nunique()) )
+               dict_cat_sparse[coli[0]+"-"+coli[1]] = crossed_column(coli[0], coli[1], m_bucketi * m_bucketj)
+
+        if cols_groupname == "cols_discretize" :
+           col_list = cols_type_received[cols_groupname]
+           for coli in col_list :
+               bucket_list = np.linspace(min, max, 100).tolist()
+               dict_cat_sparse[coli +"_bin"] = bucketized_column(numeric_column(coli), bucket_list)
+
+
+    #### one-hot encode the sparse columns
+    dict_cat_sparse = { colname : indicator_column(col)  for colname, col in dict_cat_sparse.items()}
+
+    ### Embed
+    dict_cat_embed  = { 'em_{}'.format(colname) : embedding_column(col, 10) for colname, col in dict_cat_sparse.items()}
+
+
+    #### TO Customisze
+    #dict_dnn    = {**dict_cat_embed,  **dict_dense}
+    # dict_linear = {**dict_cat_sparse, **dict_dense}
+
+    return  dict_cat_sparse, dict_cat_embed, dict_dense,
+
+
+
+
+def tf_data_pandas_to_dataset(training_df, colsX, coly):
+    # tf.enable_eager_execution()
+    # features = ['feature1', 'feature2', 'feature3']
+    import tensorflow as tf
+    print(training_df)
+    training_dataset = (
+        tf.data.Dataset.from_tensor_slices(
+            (
+                tf.cast(training_df[colsX].values, tf.float32),
+                tf.cast(training_df[coly].values, tf.int32)
+            )
+        )
+    )
+
+    for features_tensor, target_tensor in training_dataset:
+        print(f'features:{features_tensor} target:{target_tensor}')
+    return training_dataset
+
+
+
+def tf_data_file_to_dataset(pattern, batch_size, mode=tf.estimator.ModeKeys.TRAIN, truncate=None):
+    """  ACTUAL Data reading :
+           Dataframe ---> TF Dataset  --> feed Keras model
+
+    """
+    import os, json, math, shutil
+    import tensorflow as tf
+
+    DATA_BUCKET = "gs://{}/flights/chapter8/output/".format(BUCKET)
+    TRAIN_DATA_PATTERN = DATA_BUCKET + "train*"
+    EVAL_DATA_PATTERN = DATA_BUCKET + "test*"
+
+    CSV_COLUMNS  = ('ontime,dep_delay,taxiout,distance,avg_dep_delay,avg_arr_delay' + \
+                    ',carrier,dep_lat,dep_lon,arr_lat,arr_lon,origin,dest').split(',')
+    LABEL_COLUMN = 'ontime'
+    DEFAULTS     = [[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],\
+                    ['na'],[0.0],[0.0],[0.0],[0.0],['na'],['na']]
+
+    def load_dataset(pattern, batch_size=1):
+      return tf.data.experimental.make_csv_dataset(pattern, batch_size, CSV_COLUMNS, DEFAULTS)
+
+    def features_and_labels(features):
+      label = features.pop('ontime') # this is what we will train for
+      return features, label
+
+    dataset = load_dataset(pattern, batch_size)
+    dataset = dataset.map(features_and_labels)
+
+    if mode == tf.estimator.ModeKeys.TRAIN:
+        dataset = dataset.shuffle(batch_size*10)
+        dataset = dataset.repeat()
+        dataset = dataset.prefetch(1)
+    if truncate is not None:
+        dataset = dataset.take(truncate)
+    return dataset
+
+
+
 
 
 
