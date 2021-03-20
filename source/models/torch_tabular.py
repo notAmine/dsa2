@@ -1,11 +1,9 @@
 # pylint: disable=C0321,C0103,C0301,E1305,E1121,C0302,C0330,C0111,W0613,W0611,R1705
 # -*- coding: utf-8 -*-
 """
-
 python torch_tabular.py test --nrows 1000
 
 https://github.com/arita37/pytorch_tabular
-
 https://github.com/manujosephv/pytorch_tabular/tree/main/pytorch_tabular/models
 
 
@@ -34,19 +32,29 @@ import os, sys,  numpy as np,  pandas as pd, wget, copy
 from pathlib import Path
 try :
     from pytorch_tabular import TabularModel
-    from pytorch_tabular.models import CategoryEmbeddingModelConfig, TabNetModelConfig, NodeConfig
+    from pytorch_tabular.models import (CategoryEmbeddingModelConfig, TabNetModelConfig, NodeConfig,
+                                        CategoryEmbeddingMDNConfig,  AutoIntConfig )
+
     from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig, ExperimentConfig
+
 except :
     print(" !! Couldn't import pytorch_tabular, pip install ****************************************")
     cmd ="python -m pip install git+https://github.com/manujosephv/pytorch_tabular.git@82a30fe2ad1cc8c4f883d86d5f63925e67a0a015 "
     # cmd = "pip install pytorch_tabular[all]"
     os.system(cmd)
     from pytorch_tabular import TabularModel
-    from pytorch_tabular.models import CategoryEmbeddingModelConfig, TabNetModelConfig, NodeConfig
+    from pytorch_tabular.models import (CategoryEmbeddingModelConfig, TabNetModelConfig, NodeConfig,
+                                        CategoryEmbeddingMDNConfig,  AutoIntConfig )
     from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig, ExperimentConfig
 
+
 print(TabularModel)
-MODEL_LIST = "CategoryEmbeddingModelConfig,TabNetModelConfig,NodeConfig".split(",")
+MODEL_DICT = { "CategoryEmbeddingModelConfig":  CategoryEmbeddingModelConfig ,
+    "TabNetModelConfig" : TabNetModelConfig ,
+    "NodeConfig" : NodeConfig,
+    "CategoryEmbeddingMDNConfig": CategoryEmbeddingMDNConfig,
+    "AutoIntConfig" :  AutoIntConfig
+}
 
 # torch.manual_seed(0)
 # np.random.seed(0)
@@ -89,20 +97,20 @@ class Model(object):
             )
 
             class_name   = model_pars.get('model_class',  "CategoryEmbeddingModelConfig" ).split("::")[-1]
-            assert class_name in MODEL_LIST, "ModelConfig not available"
+            assert class_name in MODEL_DICT, "ModelConfig not available"
 
             # Pick the needed ModelConfig
             #model_class = globals()[ class_name ]
 
             model_class = None
-            if class_name == "CategoryEmbeddingModelConfig":
-                model_class = CategoryEmbeddingModelConfig
-            elif class_name == "TabNetModelConfig":
-                model_class = TabNetModelConfig
-            else:
-                model_class = NodeConfig
+            # if class_name == "CategoryEmbeddingModelConfig":
+            #    model_class = CategoryEmbeddingModelConfig
+            #elif class_name == "TabNetModelConfig":
+            #    model_class = TabNetModelConfig
+            #else:
+            #    model_class = NodeConfig
 
-            # model_class  = globals()[class_name]
+            model_class  = MODEL_DICT[class_name]
             model_config = model_class( **model_pars['model_pars']   )
 
             trainer_config   = TrainerConfig( **compute_pars.get('compute_pars', {} )) # For testing quickly, max_epochs=1 )
@@ -462,14 +470,14 @@ def test(nrows=1000):
 
     """
     ll = [
-        'torch_tabular.py::CategoryEmbeddingModelConfig',
-        'torch_tabular.py::TabNetModelConfig', 
-        'torch_tabular.py::NodeConfig'
+        ('torch_tabular.py::CategoryEmbeddingModelConfig', {}),
+        ('torch_tabular.py::TabNetModelConfig', {} ),
+        ('torch_tabular.py::NodeConfig', {})
     ]
     for cfg in ll:
 
         # Set the ModelConfig
-        m['model_pars']['model_class'] = cfg
+        m['model_pars']['model_class'] = cfg[0]
 
         log('Setup model..')
         model = Model(model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
