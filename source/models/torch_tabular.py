@@ -38,7 +38,7 @@ try :
     from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig, ExperimentConfig
 except :
     print(" !! Couldn't import pytorch_tabular, pip install ****************************************")
-    cmd ="python -m pip install git+https://github.com/manujosephv/pytorch_tabular.git@82a30fe2ad1cc8c4f883d86d5f63925e67a0a015 --no-deps"
+    cmd ="python -m pip install git+https://github.com/manujosephv/pytorch_tabular.git@82a30fe2ad1cc8c4f883d86d5f63925e67a0a015 "
     # cmd = "pip install pytorch_tabular[all]"
     os.system(cmd)
     from pytorch_tabular import TabularModel
