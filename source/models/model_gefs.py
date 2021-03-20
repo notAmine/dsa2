@@ -186,31 +186,15 @@ def get_dataset(data_pars=None, task_type="train", **kw):
         
 ####################################################################################################        
 ############ Test ##################################################################################
-def pd_colcat_get_catcount(df):
+def pd_colcat_get_catcount(df, colcat:list=None):
     """  Learns the number of categories in each variable and standardizes the df.
         ncat: numpy m The number of categories of each variable. One if the variable is continuous.
     """
-    def is_continuous(v_array):
-        """ Returns true if df was sampled from a continuous variables, and false
-        """
-        observed = v_array[~np.isnan(v_array)]  # not consider missing values for this.
-        rules    = [np.min(observed) < 0,
-                    np.sum((observed) != np.round(observed)) > 0,
-                    len(np.unique(observed)) > min(30, len(observed) / 3)]
-        if any(rules):
-            return True
-        else:
-            return False
-
-
     df   = df.copy()
-    ncat = np.ones(df.shape[1])
-    for i,col in enumerate(df.columns) :
-        if is_continuous(df[:, i]) :
-            continue
-        else :
-            df[col] = df[col].astype(int)
-            ncat[i] = df[col].nunique()
+    ncat = {col: 1 for  col in df.columns }
+    for i,col in enumerate(colcat) :
+            df[col]   = df[col].astype(int)
+            ncat[col] = df[col].nunique()
     return ncat
 
 
@@ -331,8 +315,25 @@ def test_helper(model_pars, data_pars, compute_pars):
     log('Model successfully loaded!\n\n')
 
     log('Model architecture:')
-    log(model.summary())
+    log(model.model)
 
+    log('Predict data..')
+    ypred, ypred_proba = predict(Xpred=None, data_pars=data_pars, compute_pars=compute_pars)
+    log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
+
+
+
+def is_continuous(v_array):
+    """ Returns true if df was sampled from a continuous variables, and false
+    """
+    observed = v_array[~np.isnan(v_array)]  # not consider missing values for this.
+    rules    = [np.min(observed) < -1,
+                np.sum((observed) != np.round(observed)) > 0,
+                len(np.unique(observed)) > min(30, len(observed) / 3)]
+    if any(rules):
+        return True
+    else:
+        return False
 
 
 def test2():
