@@ -126,7 +126,7 @@ def load_data(): #(list_flt,list_cat,list_discrete,max_Data,min_Data,rs):
     label_column="y"
     matrix1 = bank_raw.copy()
 
-    matrix1 = matrix1.iloc[:1000,:]
+    matrix1 = matrix1.iloc[:5000,:]
     print(matrix1.shape, matrix1.columns)
     process.encode_catrtogrial_column(matrix1, ["job"])
     process.encode_catrtogrial_column(matrix1, ["marital"])
