@@ -6,18 +6,15 @@ python model_bayesian_pyro.py      test
 
 
 """
-import os
+import os,  numpy as np, pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
+from sklearn.model_selection import train_test_split
 
 import pyro
 import pyro.distributions as dist
 from pyro.infer import SVI, Trace_ELBO
 from pyro.infer.autoguide import AutoDiagonalNormal
 from pyro.nn import PyroModule, PyroSample
-
-from sklearn.model_selection import train_test_split
 import torch
 from torch import nn
 
