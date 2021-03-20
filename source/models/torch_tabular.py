@@ -4,17 +4,14 @@
 
 python torch_tabular.py test --nrows 1000
 
-
 https://github.com/arita37/pytorch_tabular
 
-
-BUg  
-
-anaconda3\envs\dsa2\lib\site-packages\pytorch_tabular\tabular_model.py"
-# Need to add max_epochs, min_epochs to fix the bug
-tabular_model._prepare_trainer(10, 1)
+https://github.com/manujosephv/pytorch_tabular/tree/main/pytorch_tabular/models
 
 
+
+Bug  
+    cmd ="python -m pip install git+https://github.com/manujosephv/pytorch_tabular.git@82a30fe2ad1cc8c4f883d86d5f63925e67a0a015 --no-deps"
 
 The core model which orchestrates everything from initializing the datamodule, the model, trainer, etc.
 Args:
@@ -39,14 +36,16 @@ try :
     from pytorch_tabular import TabularModel
     from pytorch_tabular.models import CategoryEmbeddingModelConfig, TabNetModelConfig, NodeConfig
     from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig, ExperimentConfig
-    print("**************************************** Imported pytorch_tabular ****************************************")
 except :
-    print(" !! Couldn't import DataConfig, pip install ****************************************")
+    print(" !! Couldn't import pytorch_tabular, pip install ****************************************")
     cmd ="python -m pip install git+https://github.com/manujosephv/pytorch_tabular.git@82a30fe2ad1cc8c4f883d86d5f63925e67a0a015 --no-deps"
     # cmd = "pip install pytorch_tabular[all]"
     os.system(cmd)
+    from pytorch_tabular import TabularModel
+    from pytorch_tabular.models import CategoryEmbeddingModelConfig, TabNetModelConfig, NodeConfig
+    from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig, ExperimentConfig
 
-
+print(TabularModel)
 MODEL_LIST = "CategoryEmbeddingModelConfig,TabNetModelConfig,NodeConfig".split(",")
 
 # torch.manual_seed(0)
@@ -451,6 +450,17 @@ def test(nrows=1000):
     }
 
     ##### Running loop
+    """
+    Neural Oblivious Decision Ensembles for Deep Learning on 
+    Tabular Data is a model presented in ICLR 2020 and 
+    according to the authors have beaten well-tuned Gradient Boosting models on many datasets.
+
+    TabNet: Attentive Interpretable Tabular Learning is another model coming out 
+    of Google Research which uses Sparse Attention in multiple steps 
+    of decision making to model the output.
+
+
+    """
     ll = [
         'torch_tabular.py::CategoryEmbeddingModelConfig',
         'torch_tabular.py::TabNetModelConfig', 
