@@ -81,7 +81,7 @@ def tf_data_create_sparse(cols_type_received:dict= {'cols_sparse' : ['col1', 'co
                                                      'cols_num'    : ['cola', 'colb']
 
                                                      },
-                           cols_ref:list=  [ 'col_sparse', 'col_num'  ], Xtrain:pd.DataFrame=None
+                           cols_ref:list=  [ 'col_sparse', 'col_num'  ], Xtrain:pd.DataFrame=None,
                            **kw):
     """
 
