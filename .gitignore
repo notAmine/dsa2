@@ -212,3 +212,4 @@ mlflow_local.db
 /source/models/repo/VAEM/data/bank/bank-additional
 /source/models/repo/VAEM/data/bank/bank
 /source/models/saved_weights/bank/checkpoint
+/source/models/saved_weights/bank
