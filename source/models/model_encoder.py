@@ -15,10 +15,15 @@ Main isssue is the number of rows change  !!!!
     Afte preprocessing, over sample, under-sample.
 """
 import os, sys, copy
-import pandas as pd, numpy as np,  sklearn
-
 sys.path.append( os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/")
 ### import util_feature
+
+import pandas as pd, numpy as np,  sklearn
+from sklearn.cluster import KMeans, DBSCAN, Birch
+from sklearn.decomposition import TruncatedSVD, MiniBatchSparsePCA, FastICA
+
+from umap import UMAP
+
 
 ### SDV
 try:
@@ -45,9 +50,14 @@ from imblearn.combine import SMOTEENN, SMOTETomek
 from imblearn.under_sampling import NearMiss
 
 
+### MMAE
+try:
+  from mmae.multimodal_autoencoder import MultimodalAutoencoder
+except:
+    os.system("pip install mmae[keras]")
 ####################################################################################################
 # CONSTANTS
-SDV_MODELS = ['TVAE', 'CTGAN', 'PAR'] # The Synthetic Data Vault Models
+SDV_MODLES = ['TVAE', 'CTGAN', 'PAR'] # The Synthetic Data Vault Models
 IMBLEARN_MODELS = ['SMOTE', 'SMOTEENN', 'SMOTETomek', 'NearMiss']
 verbosity = 3
 
@@ -63,6 +73,60 @@ def log2(*s):
 def log3(*s):
     if verbosity >= 3 :
        print(*s, flush=True)
+
+
+####################################################################################################
+def autoencoder_multimodal():
+    """
+    pip install mmae[keras]
+    :return:
+    """
+    # Remove 'tensorflow.' from the next line if you use just Keras
+    from tensorflow.keras.datasets import mnist
+    from mmae.multimodal_autoencoder import MultimodalAutoencoder
+
+
+    # Load example data
+    (x_train, y_train), (x_validation, y_validation) = mnist.load_data()
+    x_train = x_train.astype('float32') / 255.0
+    y_train = y_train.astype('float32') / 255.0
+    x_validation = x_validation.astype('float32') / 255.0
+    y_validation = y_validation.astype('float32') / 255.0
+
+
+    data = [x_train, y_train]
+    validation_data = [x_validation, y_validation]
+
+    # Set network parameters
+    input_shapes = [x_train.shape[1:], (1,)]
+    # Number of units of each layer of encoder network
+    hidden_dims = [128, 64, 8]
+    # Output activation functions for each modality
+    output_activations = ['sigmoid', 'relu']
+
+    optimizer = 'adam'
+    # Loss functions corresponding to a noise model for each modality
+    loss = ['bernoulli_divergence', 'poisson_divergence']
+    # Construct autoencoder network
+    autoencoder = MultimodalAutoencoder(input_shapes, hidden_dims,
+                                        output_activations)
+    autoencoder.compile(optimizer, loss)
+
+
+    # Train model where input and output are the same
+    autoencoder.fit(data, epochs=100, batch_size=256,
+                    validation_data=validation_data)
+
+    #To obtain a latent representation of the training data:
+    latent_data = autoencoder.encode(data)
+
+    #To decode the latent representation:
+    reconstructed_data = autoencoder.decode(latent_data)
+
+    #Encoding and decoding can also be merged into the following single statement:
+    reconstructed_data = autoencoder.predict(data)
+
+
 
 
 
@@ -98,7 +162,7 @@ def fit(data_pars: dict=None, compute_pars: dict=None, out_pars: dict=None, **kw
 
     cpars = copy.deepcopy(compute_pars.get("compute_pars", {}))
 
-    if ytrain is not None and model.model_pars['model_class'] not in SDV_MODELS :  ###with label
+    if ytrain is not None and model.model_pars['model_class'] not in SDV_MODLES :  ###with label
        model.model.fit(Xtrain_tuple, ytrain, **cpars)
     else :
        model.model.fit(Xtrain_tuple, **cpars)
@@ -122,7 +186,7 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
     # log(data_pars)
     mpars = compute_pars.get("metrics_pars", {'aggregate': True})
 
-    if model.model_pars['model_class'] in SDV_MODELS:
+    if model.model_pars['model_class'] in SDV_MODLES:
         evals = evaluate(Xnew, Xval, **mpars )
         return evals
     else:
@@ -143,11 +207,14 @@ def transform(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     """
 
     global model, session
-    name = model.model_pars['model_class']
+    post_process_fun = model.model_pars.get('post_process_fun', None)
+    if post_process_fun is None:
+        def post_process_fun(y):
+            return y
 
     #######
     if Xpred is None:
-        if name in IMBLEARN_MODELS:
+        if model.model_pars['model_class'] in IMBLEARN_MODELS:
             Xpred_tuple, y = get_dataset(data_pars, task_type="eval")
 
         else:
@@ -158,7 +225,7 @@ def transform(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
         cols_ref_formodel = cols_type
         split             = kw.get("split", False)
 
-        if name in IMBLEARN_MODELS:
+        if model.model_pars['model_class'] in IMBLEARN_MODELS:
             if isinstance(Xpred, tuple) and len(Xpred) == 2:
                 x, y = Xpred
                 Xpred_tuple = get_dataset_tuple(x, cols_type, cols_ref_formodel, split)
@@ -170,10 +237,10 @@ def transform(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
             Xpred_tuple       = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel, split)
 
     Xnew= None
-    if name in SDV_MODELS :
+    if model.model_pars['model_class'] in SDV_MODLES :
        Xnew = model.model.sample(compute_pars.get('n_sample_generation', 100) )
 
-    elif name in IMBLEARN_MODELS :   ### Sampler
+    elif model.model_pars['model_class'] in IMBLEARN_MODELS :   ### Sampler
        # fit_resample(x ,y ) ==> resample dataset, it returns x,y after resampling
        # Xnew ==> tuple(x, y) after resmapling
        Xnew = model.model.fit_resample( Xpred_tuple, y, **compute_pars.get('compute_pars', {}) )
@@ -374,6 +441,27 @@ def test():
     #             }
     # test_helper(model_pars, data_pars, compute_pars)
 
+    log("test Umap")
+
+
+
+
+
+
+    log("test Umap 2")
+
+
+
+
+
+
+
+    log("test Umap 3")
+
+
+
+
+
     log("test 5")
 
 
@@ -476,6 +564,81 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+def autoEncoder(df):
+    """"
+    (4) Autoencoder
+    An autoencoder is a type of artificial neural network used to learn efficient data codings in an unsupervised manner.
+    The aim of an autoencoder is to learn a representation (encoding) for a set of data, typically for dimensionality reduction,
+    by training the network to ignore noise.
+    (i) Feed Forward
+    The simplest form of an autoencoder is a feedforward, non-recurrent
+    neural network similar to single layer perceptrons that participate in multilayer perceptrons
+    """
+    from sklearn.preprocessing import minmax_scale
+    import tensorflow as tf
+    import pandas as pd
+    import numpy as np
+
+    def encoder_dataset(df, drop=None, dimesions=20):
+        # encode categorical columns
+        cat_columns = df.select_dtypes(['category']).columns
+        df[cat_columns] = df[cat_columns].apply(lambda x: x.cat.codes)
+        print(cat_columns)
+
+        # encode objects columns
+        from sklearn.preprocessing import OrdinalEncoder
+
+        def encode_objects(X_train):
+            oe = OrdinalEncoder()
+            oe.fit(X_train)
+            X_train_enc = oe.transform(X_train)
+            return X_train_enc
+
+        selected_cols = df.select_dtypes(['object']).columns
+        df[selected_cols] = encode_objects(df[selected_cols])
+
+        # df = df[[c for c in df.columns if c not in df.select_dtypes(['object']).columns]]
+        if drop:
+            train_scaled = minmax_scale(df.drop(drop,axis=1).values, axis = 0)
+        else:
+           train_scaled = minmax_scale(df.values, axis = 0)
+        return train_scaled
+    # define the number of encoding dimensions
+    encoding_dim = pars.get('dimesions', 2)
+    # define the number of features
+
+    train_scaled = encoder_dataset(df, pars.get('drop',None), encoding_dim)
+
+    print("train scaled: ", train_scaled)
+    ncol = train_scaled.shape[1]
+
+
+    input_dim = tf.keras.Input(shape = (ncol, ))
+    # Encoder Layers
+    encoded1      = tf.keras.layers.Dense(3000, activation = 'relu')(input_dim)
+    encoded2      = tf.keras.layers.Dense(2750, activation = 'relu')(encoded1)
+    encoded3      = tf.keras.layers.Dense(2500, activation = 'relu')(encoded2)
+    encoded4      = tf.keras.layers.Dense(750, activation = 'relu')(encoded3)
+    encoded5      = tf.keras.layers.Dense(500, activation = 'relu')(encoded4)
+    encoded6      = tf.keras.layers.Dense(250, activation = 'relu')(encoded5)
+    encoded7      = tf.keras.layers.Dense(encoding_dim, activation = 'relu')(encoded6)
+
+    encoder       = tf.keras.Model(inputs = input_dim, outputs = encoded7)
+    encoded_input = tf.keras.Input(shape = (encoding_dim, ))
+
+    encoded_train = pd.DataFrame(encoder.predict(train_scaled),index=df.index)
+    encoded_train = encoded_train.add_prefix('encoded_')
+    if 'drop' in pars :
+        drop = pars['drop']
+        encoded_train = pd.concat((df[drop],encoded_train),axis=1)
+
+    return encoded_train
+    # df_out = mapper.encoder_dataset(df.copy(), ["Close_1"], 15); df_out.head()
 
 
 
@@ -604,6 +767,8 @@ def pd_augmentation_sdv(df, col=None, pars={})  :
 
     log('###### augmentation complete ######')
     return df_new, col
+
+
 
 
 
