@@ -77,11 +77,11 @@ def test_dataset_regress_fake(nrows=500):
 
 ###################################################################################################################
 
-def tf_data_create_sparse(Xtrain, cols_type_received:dict= {'cols_sparse' : ['col1', 'col2'],
+def tf_data_create_sparse(cols_type_received:dict= {'cols_sparse' : ['col1', 'col2'],
                                                      'cols_num'    : ['cola', 'colb']
 
                                                      },
-                           cols_ref:list=  [ 'col_sparse', 'col_num'  ],
+                           cols_ref:list=  [ 'col_sparse', 'col_num'  ], Xtrain:pd.DataFrame=None
                            **kw):
     """
 
@@ -94,6 +94,13 @@ def tf_data_create_sparse(Xtrain, cols_type_received:dict= {'cols_sparse' : ['co
     from tensorflow.feature_column import (categorical_column_with_hash_bucket,
         numeric_column, embedding_column, bucketized_column, crossed_column, indicator_column)
 
+    ### Unique values :
+    col_unique = {}
+
+    if Xtrain is not None :
+        for coli in cols_type_received['col_sparse'] :
+                col_unique[coli] = int( Xtrain[coli].nunique())
+
     dict_cat_sparse, dict_dense = {}, {}
     for cols_groupname in cols_ref :
         assert cols_groupname in cols_type_received, "Error missing colgroup in config data_pars[cols_model_type] "
@@ -101,7 +108,7 @@ def tf_data_create_sparse(Xtrain, cols_type_received:dict= {'cols_sparse' : ['co
         if cols_groupname == "cols_sparse" :
            col_list = cols_type_received[cols_groupname]
            for coli in col_list :
-               m_bucket = min(500, int( Xtrain[coli].nunique()) )
+               m_bucket = min(500, col_unique.get(coli, 500) )
                dict_cat_sparse[coli] = categorical_column_with_hash_bucket(coli, hash_bucket_size= m_bucket)
 
         if cols_groupname == "cols_dense" :
@@ -112,8 +119,8 @@ def tf_data_create_sparse(Xtrain, cols_type_received:dict= {'cols_sparse' : ['co
         if cols_groupname == "cols_cross" :
            col_list = cols_type_received[cols_groupname]
            for coli in col_list :
-               m_bucketi = min(500, int( Xtrain[coli[0]].nunique()) )
-               m_bucketj = min(500, int( Xtrain[coli[1]].nunique()) )
+               m_bucketi = min(500, col_unique.get(coli, 500) )
+               m_bucketj = min(500, col_unique.get(coli, 500) )
                dict_cat_sparse[coli[0]+"-"+coli[1]] = crossed_column(coli[0], coli[1], m_bucketi * m_bucketj)
 
         if cols_groupname == "cols_discretize" :
