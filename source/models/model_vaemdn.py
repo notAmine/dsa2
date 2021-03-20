@@ -52,7 +52,7 @@ def sampling(args):
 
 
 cols_ref_formodel = ['none']  ### No column group
-def get_model(model_pars):
+def VAEMDN(model_pars):
     
     original_dim       = model_pars['original_dim']
     class_num          = model_pars['class_num']
@@ -176,6 +176,7 @@ class Model(object):
 
         ### get model params  #######################################################
         mdict_default = {
+             'original_dim' : 15
              'class_num':           5
             ,'intermediate_dim':    64
             ,'intermediate_dim_2':  16
@@ -188,12 +189,12 @@ class Model(object):
         mdict = model_pars.get('model_pars', mdict_default)
 
         ### Dynamic Dimension : data_pars  ---> model_pars dimension  ###############
-        mdict['original_dim'] = np.uint32( data_pars['signal_dimension']*(data_pars['signal_dimension']-1)/2)
+        # mdict['original_dim'] = np.uint32( data_pars['signal_dimension']*(data_pars['signal_dimension']-1)/2)
 
 
         #### Model setup ################################
         self.model_pars['model_pars'] = mdict
-        self.model  = get_model(model_pars['model_pars'])
+        self.model                    = VAEMDN(model_pars['model_pars'])
         log2(self.model_pars, self.model)
         self.model.summary()
 
@@ -317,7 +318,6 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
-
 def get_label(encoder, x_train, dummy_train, class_num=5, batch_size=256):
     [z_mean, z_log_var, z, mu, c, c_outlier, pi] = encoder.predict(
         [x_train, dummy_train], batch_size=batch_size)
@@ -390,7 +390,15 @@ def load_info(path=""):
 
 
 ##################################################################################
-def get_mydata_correl(data_pars):
+def dataset_correl(n_rows=100):
+    data_pars = {'dataset_name':  'correlation'}
+    data_pars['state_num']           = 10
+    data_pars['time_len']            = 500
+    data_pars['signal_dimension']    = 15
+    data_pars['CNR']                 = 1
+    data_pars['window_len']          = 11
+    data_pars['half_window_len']     = 5
+    
     state_num = data_pars['state_num']
     time_len = data_pars['time_len']
     signal_dimension = data_pars['signal_dimension']
@@ -454,20 +462,16 @@ def get_mydata_correl(data_pars):
 
 
 def test():
-    ### Custom dataset
-    adata_pars = {'dataset_name':  'correlation'}
-    adata_pars['state_num']           = 10
-    adata_pars['time_len']            = 500
-    adata_pars['signal_dimension']    = 15
-    adata_pars['CNR']                 = 1
-    adata_pars['window_len']          = 11
-    adata_pars['half_window_len']     = 5
-    X,y = get_mydata_correl(adata_pars)
-
-
-    ####
+    ######### Custom dataset
+    m_signal_dim = 15
+    X,y = dataset_correl(n_rows=100)
+    
+    ######### size of NN (nb of correl)
+    n_width = np.uint32( m_signal_dim * (m_signal_dim-1)/2)
+    
+    ######### Data
     d = {'task_type' : 'train', 'data_type': 'ram',}
-    d['signal_dimension'] = 15
+    # d['signal_dimension'] = 15
 
     d["train"] ={
       "Xtrain":  X[:10,:],
@@ -475,10 +479,11 @@ def test():
       "Xtest":   X[10:1000,:],
       "ytest":   y[10:1000,:],    ## Nor Used
     }
-
     data_pars= d
+    
+    ########## Data
     m                       = {}
-    m['original_dim']       = np.uint32( adata_pars['signal_dimension']*(adata_pars['signal_dimension']-1)/2)
+    m['original_dim']       = n_width
     m['class_num']          = 5
     m['intermediate_dim']   = 64
     m['intermediate_dim_2'] = 16
@@ -495,8 +500,8 @@ def test():
     compute_pars['compute_pars'] = {'epochs': 1, }   ## direct feed
 
 
-    ### Meta Class #########################################################
-    Xpred,_ = get_mydata_correl(adata_pars)
+    ###  Tester #########################################################
+    Xpred,_ = dataset_correl(adata_pars)
     test_helper(model_pars, data_pars, compute_pars, Xpred)
 
 
@@ -515,11 +520,9 @@ def test_helper(model_pars, data_pars, compute_pars, Xpred):
     ypred, ypred_proba = predict(Xpred=Xpred, data_pars=data_pars, compute_pars=compute_pars)
     log(f'Top 5 y_pred: {np.squeeze(ypred)[:3]}')
 
-    #
     log('Saving model..')
     log( model.model.summary() )
     save(path= root + '/model_dir/')
-
 
     log('Load model..')
     model, session = load_model(path= root + "/model_dir/")
@@ -533,16 +536,14 @@ def test_helper(model_pars, data_pars, compute_pars, Xpred):
 
 
 
-
-
-
-
 if __name__ == "__main__":
     # test()
     import fire
     fire.Fire()
 
 
+    
+    
 
 
 def a():
