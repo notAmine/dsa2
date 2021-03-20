@@ -42,9 +42,11 @@ try :
     from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig, ExperimentConfig
     print("**************************************** Imported DataConfig ****************************************")
 except :
-    print("**************************************** !! Couldn't import DataConfig !! ****************************************")
+    print(" !! Couldn't import DataConfig, pip install ****************************************")
+    cmd ="python -m pip install git+https://github.com/manujosephv/pytorch_tabular.git@82a30fe2ad1cc8c4f883d86d5f63925e67a0a015 "
+    # cmd = "pip install pytorch_tabular[all]"
+    os.system(cmd)
 
-    # os.system("pip install pytorch_tabular[all]")
 
 MODEL_LIST = "CategoryEmbeddingModelConfig,TabNetModelConfig,NodeConfig".split(",")
 
@@ -92,15 +94,15 @@ class Model(object):
             assert class_name in MODEL_LIST, "ModelConfig not available"
 
             # Pick the needed ModelConfig
-            model_class = globals()[ class_name ]
+            #model_class = globals()[ class_name ]
 
-            #model_class = None
-            #if class_name == "CategoryEmbeddingModelConfig":
-            #    model_class = CategoryEmbeddingModelConfig
-            #elif class_name == "TabNetModelConfig":
-            #    model_class = TabNetModelConfig
-            #else:
-            #    model_class = NodeConfig
+            model_class = None
+            if class_name == "CategoryEmbeddingModelConfig":
+                model_class = CategoryEmbeddingModelConfig
+            elif class_name == "TabNetModelConfig":
+                model_class = TabNetModelConfig
+            else:
+                model_class = NodeConfig
 
             # model_class  = globals()[class_name]
             model_config = model_class( **model_pars['model_pars']   )
