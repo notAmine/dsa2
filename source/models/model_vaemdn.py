@@ -471,7 +471,7 @@ def test():
     n_width = np.uint32( m_signal_dim * (m_signal_dim-1)/2)
     
     ######### Data
-    d = {'task_type' : 'train', 'data_type': 'ram',}
+    d = {'task_type' : 'train', 'data_type': 'ram', }
     # d['signal_dimension'] = 15
 
     d["train"] ={
