@@ -3,32 +3,28 @@
 """
 
 """
+import logging
 import os
 from functools import partial
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.linear_model import Ridge
-import sklearn
-
-from torch import nn
-from pyro.nn import PyroModule
-import logging
-
-import torch
-import matplotlib.pyplot as plt
-import seaborn as sns
-from torch.distributions import constraints
-
 import pyro
 import pyro.distributions as dist
 import pyro.optim as optim
+import seaborn as sns
+import sklearn
+import torch
 from pyro.infer import SVI, Trace_ELBO
 from pyro.infer.autoguide import AutoDiagonalNormal
-from pyro.nn import PyroSample
+from pyro.nn import PyroModule, PyroSample
+from sklearn.linear_model import Ridge, ElasticNet, ElasticNetCV, Lasso
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
+from torch import nn
+from torch.distributions import constraints
 
 ####################################################################################################
 VERBOSE = False
@@ -37,6 +33,31 @@ def log(*s):
     print(*s, flush=True)
 
 
+####################################################################################################
+class BayesianRegression(PyroModule):
+    def __init__(self, in_features:int=17, out_features:int=1):
+        super().__init__()
+        self.linear = PyroModule[nn.Linear](in_features, out_features)
+        self.linear.weight = PyroSample(dist.Normal(0., 1.).expand([out_features, in_features]).to_event(2))
+        self.linear.bias   = PyroSample(dist.Normal(0., 10.).expand([out_features]).to_event(1))
+
+    def forward(self, x, y=None):
+        sigma = pyro.sample("sigma", dist.Uniform(0., 10.))
+        mean = self.linear(x).squeeze(-1)
+        with pyro.plate("data", x.shape[0]):
+            obs = pyro.sample("obs", dist.Normal(mean, sigma), obs=y)
+        return mean
+
+
+MODEL_LIST = [  BayesianRegression ]
+
+def model_class_loader(m_name, class_list):
+  class_list_dict = { myclass.__name__ : myclass for myclass in class_list }
+  class_name = m_name.split("::")[-1]
+  return class_list_dict.get(class_name, BayesianRegression)
+
+
+####################################################################################################
 ####################################################################################################
 global model, session
 
@@ -55,24 +76,15 @@ class Model(object):
             self.model = None
         else:
             ###############################################################
-            class BayesianRegression(PyroModule):
-                def __init__(self, in_features, out_features):
-                    super().__init__()
-                    self.linear = PyroModule[nn.Linear](in_features, out_features)
-                    self.linear.weight = PyroSample(dist.Normal(0., 1.).expand([out_features, in_features]).to_event(2))
-                    self.linear.bias = PyroSample(dist.Normal(0., 10.).expand([out_features]).to_event(1))
+            model_class = model_class_loader(model_pars['model_class'], MODEL_LIST ) 
 
-                def forward(self, x, y=None):
-                    sigma = pyro.sample("sigma", dist.Uniform(0., 10.))
-                    mean = self.linear(x).squeeze(-1)
-                    with pyro.plate("data", x.shape[0]):
-                        obs = pyro.sample("obs", dist.Normal(mean, sigma), obs=y)
-                    return mean
+            #input_width = model_pars['model_pars']['input_width']
+            #y_width     = model_pars['model_pars'].get('y_width', 1)
+            # mdefault = {'input_width': 2, 'y_width': 1 }
+            mpars    = model_pars.get('model_pars', {})  ## default already in model
 
-            input_width = model_pars['model_pars']['input_width']
-            y_width = model_pars['model_pars'].get('y_width', 1)
-            self.model = BayesianRegression(input_width, y_width)
-            self.guide = None
+            self.model  = model_class(**mpars)   # (input_width, y_width)
+            self.guide  = None
             self.pred_summary = None  ### All MC summary
 
             if VERBOSE: log(self.guide, self.model)
@@ -86,9 +98,9 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
 
     Xtrain = torch.tensor(Xtrain.values, dtype=torch.float)
-    Xtest = torch.tensor(Xtest.values, dtype=torch.float)
+    Xtest  = torch.tensor(Xtest.values, dtype=torch.float)
     ytrain = torch.tensor(ytrain.values, dtype=torch.float)
-    ytest = torch.tensor(ytest.values, dtype=torch.float)
+    ytest  = torch.tensor(ytest.values, dtype=torch.float)
 
     if VERBOSE: log(Xtrain, model.model)
 
@@ -134,8 +146,8 @@ def predict(Xpred=None, data_pars={}, compute_pars=None, out_pars={}, **kw):
 
     max_size = compute_pars2.get('max_size', len(Xpred))
 
-    Xpred = Xpred.iloc[:max_size, :]
-    Xpred_ = torch.tensor(Xpred.values, dtype=torch.float)
+    Xpred    = Xpred.iloc[:max_size, :]
+    Xpred_   = torch.tensor(Xpred.values, dtype=torch.float)
 
     ###### Post processing normalization
     post_process_fun = model.model_pars.get('post_process_fun', None)
@@ -179,7 +191,10 @@ def predict(Xpred=None, data_pars={}, compute_pars=None, out_pars={}, **kw):
     print('stored in model.pred_summary')
     # print(  dd['y_mean'], dd['y_mean'].shape )
     # import pdb; pdb.set_trace()
-    return dd['y_mean']
+    ypred_proba = None  ### No proba
+    if compute_pars.get("probability", False):
+         ypred_proba = model.model.predict_proba(Xpred)
+    return dd['y_mean'], ypred_proba
 
 
 def reset():
@@ -248,8 +263,8 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
-
-
+########################################################################################################################
+########################################################################################################################
 def y_norm(y, inverse=True, mode='boxcox'):
     ## Normalize the input/output
     if mode == 'boxcox':
@@ -277,55 +292,42 @@ def y_norm(y, inverse=True, mode='boxcox'):
             return y
 
 
+def test_dataset_regress_fake(nrows=500):
+    from sklearn import datasets as sklearn_datasets
+    coly   = 'y'
+    colnum = ["colnum_" +str(i) for i in range(0, 17) ]
+    colcat = ['colcat_1']
+    X, y    = sklearn_datasets.make_regression(
+        n_samples=1000,
+        n_features=17,
+        n_targets=1,
+        n_informative=17
+    )
+    df         = pd.DataFrame(X,  columns= colnum)
+    df[coly]   = y.reshape(-1, 1)
+
+    for ci in colcat :
+      df[colcat] = np.random.randint(0,1, len(df))
+
+    return df, colnum, colcat, coly
+
 
 def test(nrows=1000):
     """
         nrows : take first nrows from dataset
     """
-
-    # Dense features
-    colnum = ["Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology",]
-
-    # Sparse features
-    colcat = ["Wilderness_Area1",  "Wilderness_Area2", "Wilderness_Area3",  
-        "Wilderness_Area4",  "Soil_Type1",  "Soil_Type2",  "Soil_Type3",
-        "Soil_Type4",  "Soil_Type5",  "Soil_Type6",  "Soil_Type7",  "Soil_Type8",  "Soil_Type9",  ]
-    
-    # Target column
-    coly        = ["Covertype"]
-
-    log("start")
-    global model, session
-
-    root = os.path.join(os.getcwd() ,"ztmp")
-
-
-    BASE_DIR = Path.home().joinpath( root, 'data/input/covtype/')
-    datafile = BASE_DIR.joinpath('covtype.data.gz')
-    datafile.parent.mkdir(parents=True, exist_ok=True)
-    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/covtype/covtype.data.gz"
-    
-    # Download the dataset in case it's missing
-    if not datafile.exists():
-        wget.download(url, datafile.as_posix())
-
-    # Read nrows of only the given columns 
-    feature_columns = colnum + colcat + coly
-    df = pd.read_csv(datafile, header=None, names=feature_columns, nrows=nrows)
-
-
-    #### Matching Big dict  ##################################################
-    X = df
-
     #### Regression PLEASE RANDOM VALUES AS TEST
-    y = np.random.random(0,1, len(df))  
-    log('y', y)
+    ### Fake Regression dataset
+    df, colcat, colnum, coly = test_dataset_regress_fake()
+    X = df[colcat+ colnum]
+    y = df[coly]
+
 
     # Split the df into train/test subsets
-    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, stratify=y)
-    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
-    num_classes = len(set(y_train_full[coly].values.ravel()))
-    log(X_train)
+    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, )#stratify=y) Regression no classes to stratify to
+    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021,)# stratify=y_train_full)
+    # num_classes = len(set(y_train_full[coly].values.ravel()))
+    log("X_train", X_train)
 
 
     cols_input_type_1 = []
@@ -343,7 +345,8 @@ def test(nrows=1000):
         'model_class':  ""
         
         # Type of target prediction, evaluation metrics
-        ,'model_pars' : {'input_width': 112, } 
+        ,'model_pars' : {'input_width': 18,  'y_width': 1 } 
+
 
         , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
         , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
@@ -363,7 +366,7 @@ def test(nrows=1000):
             }
         },
 
-    'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
+    'compute_pars': { 'metric_list': ['accuracy_score', 'median_absolute_error']
                     },
 
     'data_pars': { 'n_sample' : n_sample,
@@ -377,7 +380,7 @@ def test(nrows=1000):
                             ]
 
         ,'cols_model_group_custom' :  { 'colnum' : colnum,
-                                        'colcat' : colcat_binto_onehot,
+                                        'colcat' : colcat,
                                         'coly' : coly
                                       }
 
@@ -404,7 +407,7 @@ def test(nrows=1000):
 
     ##### Running loop
     ll = [
-        'model_bayesian_pyro.py::CategoryEmbeddingModelConfig',
+        'model_bayesian_pyro.py::BayesianRegression',
     ]
     for cfg in ll:
 
@@ -433,8 +436,6 @@ def test(nrows=1000):
         log('Model architecture:')
         log(model.model)
 
-        log('Model config:')
-        log(model.model.config._config_name)
         reset()
 
 
