@@ -33,7 +33,8 @@ from pathlib import Path
 try :
     from pytorch_tabular import TabularModel
     from pytorch_tabular.models import (CategoryEmbeddingModelConfig, TabNetModelConfig, NodeConfig,
-                                        CategoryEmbeddingMDNConfig,  AutoIntConfig )
+                                        CategoryEmbeddingMDNConfig, MixtureDensityHeadConfig ,
+                                        AutoIntConfig )
 
     from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig, ExperimentConfig
 
@@ -76,8 +77,7 @@ global model, session
 
 def init(*kw, **kwargs):
     global model, session
-    model = Model(*kw, **kwargs)
-    session = None
+    model, session = Model(*kw, **kwargs), None
 
 
 class Model(object):
@@ -99,19 +99,16 @@ class Model(object):
             class_name   = model_pars.get('model_class',  "CategoryEmbeddingModelConfig" ).split("::")[-1]
             assert class_name in MODEL_DICT, "ModelConfig not available"
 
-            # Pick the needed ModelConfig
-            #model_class = globals()[ class_name ]
-
-            model_class = None
-            # if class_name == "CategoryEmbeddingModelConfig":
-            #    model_class = CategoryEmbeddingModelConfig
-            #elif class_name == "TabNetModelConfig":
-            #    model_class = TabNetModelConfig
-            #else:
-            #    model_class = NodeConfig
-
+            # Pick the needed ModelConfig  ####################################
             model_class  = MODEL_DICT[class_name]
-            model_config = model_class( **model_pars['model_pars']   )
+            if class_name == "CategoryEmbeddingMDNConfig" :  ### Mixture Desnsity Model
+                ## Check https://github.com/manujosephv/pytorch_tabular/blob/main/tests/test_mdn.py#L99
+                self.model_pars['model_pars']['mdn_config'] = MixtureDensityHeadConfig(num_gaussian=  self.model_pars['model_pars']['num_gaussian'])
+                del self.model_pars['model_pars']['num_gaussian']
+
+
+            model_config     = model_class( **self.model_pars['model_pars']  )
+            ###################################################################
 
             trainer_config   = TrainerConfig( **compute_pars.get('compute_pars', {} )) # For testing quickly, max_epochs=1 )
             optimizer_config = OptimizerConfig(**compute_pars.get('optimizer_pars', {} ))
@@ -317,28 +314,16 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
 ####################################################################################################
 ############ Test  #################################################################################
-def test(nrows=1000):
-    """
-        nrows : take first nrows from dataset
-    """
+def test_dataset_covtype(nrows=1000):
 
     # Dense features
     colnum = ["Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology",
-        "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways",
-        "Hillshade_9am" , "Hillshade_Noon",  "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"]
+        "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways", "Hillshade_9am" , "Hillshade_Noon",  "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"]
 
     # Sparse features
-    colcat = ["Wilderness_Area1",  "Wilderness_Area2", "Wilderness_Area3",  
-        "Wilderness_Area4",  "Soil_Type1",  "Soil_Type2",  "Soil_Type3",
-        "Soil_Type4",  "Soil_Type5",  "Soil_Type6",  "Soil_Type7",  "Soil_Type8",  "Soil_Type9",
-        "Soil_Type10",  "Soil_Type11",  "Soil_Type12",  "Soil_Type13",  "Soil_Type14",
-        "Soil_Type15",  "Soil_Type16",  "Soil_Type17",  "Soil_Type18",  "Soil_Type19",
-        "Soil_Type20",  "Soil_Type21",  "Soil_Type22",  "Soil_Type23",  "Soil_Type24",
-        "Soil_Type25",  "Soil_Type26",  "Soil_Type27",  "Soil_Type28",  "Soil_Type29",
-        "Soil_Type30",  "Soil_Type31",  "Soil_Type32",  "Soil_Type33",  "Soil_Type34",
-        "Soil_Type35",  "Soil_Type36",  "Soil_Type37",  "Soil_Type38",  "Soil_Type39",
-        "Soil_Type40",  ]
-    
+    colcat = ["Wilderness_Area1",  "Wilderness_Area2", "Wilderness_Area3",
+        "Wilderness_Area4",  "Soil_Type1",  "Soil_Type2",  "Soil_Type3", "Soil_Type4",  "Soil_Type5",  "Soil_Type6",  "Soil_Type7",  "Soil_Type8",  "Soil_Type9", "Soil_Type10",  "Soil_Type11",  "Soil_Type12",  "Soil_Type13",  "Soil_Type14", "Soil_Type15",  "Soil_Type16",  "Soil_Type17",  "Soil_Type18",  "Soil_Type19", "Soil_Type40",  ]
+
     # Target column
     coly        = ["Covertype"]
 
@@ -352,18 +337,26 @@ def test(nrows=1000):
     datafile = BASE_DIR.joinpath('covtype.data.gz')
     datafile.parent.mkdir(parents=True, exist_ok=True)
     url = "https://archive.ics.uci.edu/ml/machine-learning-databases/covtype/covtype.data.gz"
-    
+
     # Download the dataset in case it's missing
     if not datafile.exists():
         wget.download(url, datafile.as_posix())
 
-    # Read nrows of only the given columns 
+    # Read nrows of only the given columns
     feature_columns = colnum + colcat + coly
     df = pd.read_csv(datafile, header=None, names=feature_columns, nrows=nrows)
+    return df, colnum, colcat, coly
 
+
+def test(nrows=1000):
+    """
+        nrows : take first nrows from dataset
+    """
+    global model, session
+    df, colnum, colcat, coly = test_dataset_covtype()
 
     #### Matching Big dict  ##################################################
-    X = df
+    X = df[ colnum + colcat ]
     y = df[coly].astype('uint8')
     log('y', np.sum(y[y==1]) )
 
@@ -384,7 +377,6 @@ def test(nrows=1000):
 
 
     m = {'model_pars': {
-        ### LightGBM API model   #######################################
         # Specify the ModelConfig for pytorch_tabular
         'model_class':  "torch_tabular.py::CategoryEmbeddingModelConfig"
         
@@ -410,9 +402,7 @@ def test(nrows=1000):
         {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
         {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
 
-        ],
-            }
-        },
+        ],  }},
 
     'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
 
@@ -437,18 +427,14 @@ def test(nrows=1000):
                                         'coly' : coly
                             }
         ###################################################  
-        ,'train': {'Xtrain': X_train,
-                    'ytrain': y_train,
-                        'Xtest': X_valid,
-                        'ytest': y_valid},
-                'eval': {'X': X_valid,
-                        'y': y_valid},
+        ,'train': {'Xtrain': X_train,   'ytrain': y_train,
+                   'Xtest': X_valid,    'ytest': y_valid},
+                'eval': {'X': X_valid,  'y': y_valid},
                 'predict': {'X': X_valid}
 
         ### Filter data rows   ##################################################################
         ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
 
-        
         ### Added continuous & sparse features groups ###
         'cols_model_type2': {
             'colcontinuous':   colnum ,
@@ -458,7 +444,8 @@ def test(nrows=1000):
     }
 
     ##### Running loop
-    """
+    """https://github.com/manujosephv/pytorch_tabular/blob/main/tests/test_mdn.py
+    
     Neural Oblivious Decision Ensembles for Deep Learning on 
     Tabular Data is a model presented in ICLR 2020 and 
     according to the authors have beaten well-tuned Gradient Boosting models on many datasets.
@@ -467,19 +454,36 @@ def test(nrows=1000):
     of Google Research which uses Sparse Attention in multiple steps 
     of decision making to model the output.
 
+    Mixed Density Network
+
 
     """
     ll = [
+        ## AttributeError: module 'pytorch_lightning.metrics.functional' has no attribute 'MeanAbsoluteError'
+        #('torch_tabular.py::CategoryEmbeddingMDNConfig', { 'task' :"regression",
+        #                                                   'mdn_config': None, 'num_gaussian': 2,
+        #                                                     'metrics' : ["MeanAbsoluteError"],
+        #                                                   'metrics_params' : [{}], }
+        #
+        #),
+
         ('torch_tabular.py::CategoryEmbeddingModelConfig', {}),
         ('torch_tabular.py::TabNetModelConfig', {} ),
-        ('torch_tabular.py::NodeConfig', {})
+        ('torch_tabular.py::NodeConfig', {}),
+
+        ('torch_tabular.py::AutoIntConfig', {}) ,
+
+
     ]
     for cfg in ll:
-
+        reset()
         # Set the ModelConfig
         m['model_pars']['model_class'] = cfg[0]
+        m['model_pars']['model_pars']  = {**m['model_pars']['model_pars'] , **cfg[1] }
+        log2('\n\n#### model_dict', m)
 
-        log('Setup model..')
+
+        log('\n### Setup model..', cfg)
         model = Model(model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
 
         log('\n\nTraining the model..')
@@ -506,41 +510,23 @@ def test(nrows=1000):
         log('Predict data..')
         ypred, ypred_proba = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
 
-        reset()
+
 
 
 def test3():
     pass
 
 
-def test2(nrow=10000):
+def test2(nrows=10000):
     """
        python source/models/torch_tabular.py test
 
     """
     global model, session
 
-    #X = np.random.rand(10000,20)
-    #y = np.random.binomial(n=1, p=0.5, size=[10000])
 
-    BASE_DIR = Path.home().joinpath('data/input/covtype/')
-    datafile = BASE_DIR.joinpath('covtype.data.gz')
-    datafile.parent.mkdir(parents=True, exist_ok=True)
-    url = "https://archive.ics.uci.edu/ml/machine-learning-databases/covtype/covtype.data.gz"
-    if not datafile.exists():
-        wget.download(url, datafile.as_posix())
-
-    target_name = ["Covertype"]
-
-    colcat = [ "Wilderness_Area1", "Wilderness_Area2", "Wilderness_Area3", "Wilderness_Area4", "Soil_Type1", "Soil_Type2", "Soil_Type3", "Soil_Type4", "Soil_Type5", "Soil_Type6", "Soil_Type7", "Soil_Type8", "Soil_Type9", "Soil_Type10", "Soil_Type11", "Soil_Type12", "Soil_Type13", "Soil_Type14", "Soil_Type15", "Soil_Type16", "Soil_Type17", "Soil_Type18", "Soil_Type19", "Soil_Type20", "Soil_Type21", "Soil_Type22", "Soil_Type23", "Soil_Type24", "Soil_Type25", "Soil_Type26", "Soil_Type27", "Soil_Type28", "Soil_Type29", "Soil_Type30", "Soil_Type31", "Soil_Type32", "Soil_Type33", "Soil_Type34", "Soil_Type35", "Soil_Type36", "Soil_Type37", "Soil_Type38", "Soil_Type39", "Soil_Type40"
-                      ]
-
-    colnum = [ "Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology", "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways", "Hillshade_9am", "Hillshade_Noon", "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"
-    ]
-
-    feature_columns = (  colnum + colcat + target_name)
-
-    df = pd.read_csv(datafile, header=None, names=feature_columns, nrows= nrows)
+    df,colcat, colnum, coly = test_dataset_covtype(1000)
+    target_name =  coly
 
     df.head()
     train, test = train_test_split(df, random_state=42)
@@ -574,8 +560,7 @@ def test2(nrow=10000):
         trainer_config=trainer_config,
         # experiment_config=experiment_config,
     )
-    
-    
+
     tabular_model.fit(  train=train, validation=val)
     result = tabular_model.evaluate(val)
     log(result)
