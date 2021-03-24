@@ -2,32 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 
-python torch_tabular.py test --nrows 1000
+python torch_rvae.py test --nrows 1000
 
-
-https://github.com/arita37/pytorch_tabular
-https://github.com/manujosephv/pytorch_tabular/tree/main/pytorch_tabular/models
-
-
-
-Bug  
-    cmd ="python -m pip install git+https://github.com/manujosephv/pytorch_tabular.git@82a30fe2ad1cc8c4f883d86d5f63925e67a0a015 --no-deps"
- 
-The core model which orchestrates everything from initializing the datamodule, the model, trainer, etc.
-Args:
-    config (Optional[Union[DictConfig, str]], optional): Single OmegaConf DictConfig object or
-        the path to the yaml file holding all the config parameters. Defaults to None.
-    data_config (Optional[Union[DataConfig, str]], optional): DataConfig object or path to the yaml file. Defaults to None.
-    model_config (Optional[Union[ModelConfig, str]], optional): A subclass of ModelConfig or path to the yaml file.
-        Determines which model to run from the type of config. Defaults to None.
-    optimizer_config (Optional[Union[OptimizerConfig, str]], optional): OptimizerConfig object or path to the yaml file.
-        Defaults to None.
-    trainer_config (Optional[Union[TrainerConfig, str]], optional): TrainerConfig object or path to the yaml file.
-        Defaults to None.
-    experiment_config (Optional[Union[ExperimentConfig, str]], optional): ExperimentConfig object or path to the yaml file.
-        If Provided configures the experiment tracking. Defaults to None.
-    model_callable (Optional[Callable], optional): If provided, will override the model callable that will be loaded from the config.
-        Typically used when providing Custom Models
 
 """
 import os, sys,  numpy as np,  pandas as pd, wget, copy
