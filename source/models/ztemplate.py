@@ -1,40 +1,113 @@
 # pylint: disable=C0321,C0103,C0301,E1305,E1121,C0302,C0330,C0111,W0613,W0611,R1705
 # -*- coding: utf-8 -*-
 """
-
-ipython source/models/ztemplate.py  test  --pdb
-
-
+Template explanation
 
 """
-import os, pandas as pd, numpy as np, sklearn, copy
-from sklearn.model_selection import train_test_split
 
-####################################################################################################
-verbosity =2
 
-def log(*s):
-    print(*s, flush=True)
-
-def log2(*s):
-    if verbosity >= 2 :
-      print(*s, flush=True)
 
 
 ####################################################################################################
-#### Your model input
-cols_ref_formodel = ['cols_group_1_name' ]
+#### Generic Wrappers   ############################################################################
+"""
+Meta Class Model wraps sub-models
+Global variable : model, session  stores Model
+
+model_pars :   Aribitrary dict for model params
+compute_pars:  Arbitray dict for model compute (ie epochs=1)
+data_pars:     Arbitrary dict for data definition
+
+"""
+
+class Model(object):
+    def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
+        model.model =  YOUR_MODEL_CLASS
+
+
+def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
+    global model, session
+    ...
+    return None
+
+
+def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
+    global model, session
+    ...
+
+    return ypred, ypred_proba
+
+
+def reset():
+    global model, session
+    model, session = None, None
+
+
+def save(path=None, info=None):
+    import dill as pickle, copy
+    global model, session
+    ...
+
+
+def load_model(path=""):
+    global model, session
+    import dill as pickle
+    ...
+    return model
+
+
+####################################################################################################
+####################################################################################################
 
 
 
-class Modelcustom(object):
 
-    def __init__(n_wide_cross, n_wide,n_deep, n_feat=8, m_EMBEDDING=10, loss='mse', metric = 'mean_squared_error'):
+
+####################################################################################################
+#### Your custom model input
+class my_Model(object):
+
+    def __init__(cpars):
         """
-            YOUR MODEL definition
+        YOUR   custom MODEL definition
 
         """
-        pass
+        n_wide = cpars['n_wide']
+
+
+        ###### Your model Definition
+
+
+
+
+
+
+####################################################################################################
+#### Dictionary definition
+model_pars = {
+    'model_pars' :   Dict to pass to YOUR MODEL
+    'model_class' :  Name of your Class
+
+}
+
+data_pars = {
+    'tf_feature':  dict of tf_feature columns
+
+    'ram' {
+        'train'
+        'test'
+        'val'
+    }
+
+}
+
+
+compute_pars = {
+    'compute_pars' :   Dict to pass to YOUR MODEL compute pars
+
+}
+
+
 
 
 
