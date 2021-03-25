@@ -596,19 +596,22 @@ def test(config=''):
     linear,dnn,inputs = prepare.get_features()
     
     model_pars = {
-        'loss' : 'binary_crossentropy',
-        'optimizer':'adam',
-        'metric': ['accuracy'],
-        'hidden_units': '64,32,16'
-    }
+        'model_class': 'keras_widedeep.py::ModelCustom',
+        'model_pars' :{
+            'loss' : 'binary_crossentropy',
+            'optimizer':'adam',
+            'metric': ['accuracy'],
+            'hidden_units': '64,32,16'
+        }
+    },
 
     data_pars = {
-        'inputs': inputs,
+        'inputs':      inputs,
         'linear_cols': linear.values(),
-        'dnn_cols': dnn.values(),
-        'train': train_df,
-        'test': test_df,
-        'val': val_df
+        'dnn_cols':    dnn.values(),
+        'train':       train_df,
+        'test':        test_df,
+        'val':         val_df
     }
 
     compute_pars = {
