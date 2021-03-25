@@ -65,19 +65,21 @@ def init(*kw, **kwargs):
 
 class Model(object):
     def __init__(self, model_pars=None, data_pars=None, compute_pars=None, global_pars=None):
-        self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
+        self.model_pars, self.compute_pars, self.data_pars, self.global_pars = model_pars, compute_pars, data_pars, global_pars
         if model_pars is None:
             self.model = None
             return 
         
+        
         # Fuse all params for RVAE 
         model_pars2 = copy.deepcopy(self.model_pars['model_pars'])
         model_pars2.update(self.compute_pars['compute_pars'])
+        model_pars2.update(self.compute_pars['log'])
         model_pars2.update(self.data_pars)
         model_pars2.update(self.global_pars)
 
     
-        self.args = namedtuple("args", model_pars.keys())(*model_pars2.values())
+        self.args = namedtuple("args", model_pars2.keys())(*model_pars2.values())
         self.model = RVAE( args=self.args)
         
         if VERBOSE: log(self.model)
@@ -95,8 +97,22 @@ def get_dataset(data_pars, task_type="train"):
     data_path   = data_pars["data_path"]
     batch_size  = data_pars["batch_size"]
 
-    if not clean:
+    if task_type == 'pred_encode':
+            train_loader, X_train, target_errors_train, dataset_obj,  attributes = utils.load_data(data_path, batch_size,
+                                            is_train=True,
+                                            get_data_idxs=False)
 
+            return X_train
+        
+    elif task_type == 'pred_decode':
+        train_loader, X_train, target_errors_train, dataset_obj,  attributes = utils.load_data(data_path, batch_size,
+                                        is_train=True,
+                                        get_data_idxs=False)
+
+        return target_errors_train
+
+    if not clean:
+    
         if task_type == 'train':
             train_loader, X_train, target_errors_train, dataset_obj,  attributes = utils.load_data(data_path, batch_size,
                                             is_train=True,
@@ -111,7 +127,13 @@ def get_dataset(data_pars, task_type="train"):
             )
 
             return test_loader, X_test, target_errors_test
-    
+        elif task_type == 'predict':
+            train_loader, _, _, _,  _ = utils.load_data(data_path, batch_size,
+                                            is_train=True,
+                                            get_data_idxs=False)
+
+            return train_loader
+        
     # -- clean versions for evaluation
     else:
 
@@ -137,7 +159,12 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
     global model, session
     session = None  # Session type for compute
-    
+    # print("CLEAN ? : ", data_pars["clean"])
+    train_loader, X_train, target_errors_train, dataset_obj, attributes = get_dataset(
+        data_pars, task_type='train'
+    )
+    model.model.train_loader = train_loader
+    model.model.dataset_obj = dataset_obj
     model.model.fit()
 
 
@@ -145,7 +172,9 @@ def encode(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dict
     global model, session
 
     if Xpred is None:
-        Xpred = get_dataset(data_pars, task_type='pred_encode')        
+        Xpred = get_dataset(data_pars, task_type='pred_encode')    
+        # print("#######################\n\nencode get_dataset : ")
+        # print(Xpred)    
         #Xpred = model.model.X_train
         
     Xnew_encoded = model.model.encode(Xpred)
@@ -167,10 +196,17 @@ def decode(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dict
     global model, session
     if Xpred is None: 
         log(" Decode requires Sampling")
-        Xpred = get_dataset(data_pars, task_type='pred_decode')        
+        # Can't get encoded data from dataset, it should be encoded
+        # Xpred = get_dataset(data_pars, task_type='pred_decode')   
+        # print("#######################\n\ndecode get_dataset : ")
+        # print(Xpred)         
         if Xpred is None : return None  
+    
+    # Get the tensor from dict
+    if type(Xpred) is dict:
+        Xpred = Xpred['z']['mu']
 
-    Xnew_original =  model.model.decode(Xpred['z']['mu'])
+    Xnew_original =  model.model.decode(Xpred)
     return Xnew_original
 
 
@@ -299,14 +335,38 @@ def compute_metrics(model, X, dataset_obj, args, epoch, losses_save,
                                     clean_loss_ret['mse_repair_dirtycells'], clean_loss_ret['mse_repair_cleancells']]
 
 
+def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
+    global model, session
 
+    if Xpred is None:
+        dataloader = get_dataset(data_pars, task_type='predict')
+        
+        # One batch to predict on
+        one_batch = next(iter(dataloader))
+
+        # Get X from batch
+        Xpred = one_batch[0]
+
+    ypred = model.model(Xpred)
+
+    return ypred
+
+    
 
 def eval(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dict={}, **kw):
     global model, session
     """
          Encode + Decode 
     """
-    pass
+
+    Xencoded = encode(Xpred=Xpred, data_pars=data_pars, compute_pars=compute_pars, out_pars=out_pars)
+
+    log("\nEncoded : ", Xencoded)
+
+    log('\nDecoding : ')
+    Xnew_original = decode(Xpred=Xencoded, data_pars=data_pars, compute_pars=compute_pars, out_pars=out_pars)
+    
+    log('\nDecoded : ', Xnew_original)
 
 
 
@@ -462,7 +522,7 @@ def test(nrows=1000):
 
             'compute_pars' :{
                 "cuda_on":False,
-                "number_epochs":2,
+                "number_epochs":1,
                 "l2_reg":0.0,
                 "lr":0.001,
                 "seqvae_bprop":False,
@@ -484,6 +544,9 @@ def test(nrows=1000):
 
         'data_pars': { 
             "batch_size":150,   ### Mini Batch from data
+            # Needed by getdataset
+            "clean" : False,
+            "data_path":   path_pkg + '/data_simple/Wine/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
 
         },
         
@@ -498,22 +561,34 @@ def test(nrows=1000):
 
 
     log('Setup model..')
-    model = Model(model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
+    model = Model(
+        model_pars=m['model_pars'], 
+        data_pars=m['data_pars'], 
+        compute_pars= m['compute_pars'], 
+        global_pars=m['global_pars']
+    )
     
     log('\n\nTraining the model..\n\n')
     fit(data_pars=m['data_pars'], compute_pars= m['compute_pars'], out_pars=None)
     log('\n\nTraining completed!\n\n')
 
-    log('\n\nEncoding...\n\n')
+    log('\n\n#################### Encoding... #################### \n\n')
     # Example
     Xencode = model.model.X_train
-    encoded_result = encode(Xencode, data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
+    encoded_result = encode(Xencode=Xencode, data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
     log(encoded_result)
 
-    log('\n\nDecoding...\n\n')
-    decoded_result = decode(encoded_result, data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
+    log('\n\n#################### Decoding... ####################\n\n')
+    decoded_result = decode(Xpred=encoded_result, data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
     log(decoded_result)
 
+    log('\n\n#################### Predicting... ####################\n\n')
+    ypred = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
+    log("\n\nPredicted : ", ypred)
+
+    log('\n\n#################### Evaluating... #################### \n\n')
+    eval(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
+    
     reset()
 
 
@@ -904,7 +979,10 @@ class RVAE(nn.Module):
 
         return p_params
 
-
+    # To match the required API
+    def predict(self, x_data, n_epoch=None, one_hot_categ=False, masking=False, drop_mask=[], in_aux_samples=[]):
+        return self.forward(x_data, n_epoch=None, one_hot_categ=False, masking=False, drop_mask=[], in_aux_samples=[])
+    
     def forward(self, x_data, n_epoch=None, one_hot_categ=False, masking=False, drop_mask=[], in_aux_samples=[]):
 
         q_params = self.encode(x_data, one_hot_categ, masking, drop_mask, in_aux_samples)
