@@ -13,7 +13,7 @@ pip install Keras==2.4.3
 import os, pandas as pd, numpy as np, sklearn, copy
 from sklearn.model_selection import train_test_split
 
-import tensorflow
+import tensorflow as tf
 try :
   import keras
   from keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -45,7 +45,7 @@ def init(*kw, **kwargs):
 
 cols_ref_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input']
 
-def Modelcustom(n_wide_cross, n_wide,n_deep, n_feat=8, m_EMBEDDING=10, loss='mse', metric = 'mean_squared_error'):
+'''def Modelcustom(n_wide_cross, n_wide,n_deep, n_feat=8, m_EMBEDDING=10, loss='mse', metric = 'mean_squared_error'):
 
         #### Wide model with the functional API
         col_wide_cross          = layers.Input(shape=(n_wide_cross,))
@@ -79,7 +79,7 @@ def Modelcustom(n_wide_cross, n_wide,n_deep, n_feat=8, m_EMBEDDING=10, loss='mse
         log2(model.summary())
 
         return model
-
+'''
 
 def get_dataset_tuple(Xtrain, cols_type_received, cols_ref):
     """  Split into Tuples to feed  Xyuple = (df1, df2, df3)
@@ -288,6 +288,375 @@ def get_dataset_tuple_keras(pattern, batch_size, mode=tf.estimator.ModeKeys.TRAI
     return dataset
 
 
+########################################################################################################################
+#                                                                                                                      #
+#                               Wide Deep Model Implementation with Tensorflow Data and Features                       #
+#                                                                                                                      #
+########################################################################################################################
+
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+import pathlib
+from tensorflow import feature_column
+from tensorflow.keras import layers
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt 
+tf.compat.v1.enable_eager_execution()
+
+def log(statement):
+    print(statement,flush=True)
+
+def ModelCustom(model_pars,data_pars):
+
+    loss       = model_pars['loss']
+    optimizer  = model_pars['optimizer']
+    metrics    = model_pars['metric']
+    dnn_hidden_units = model_pars['hidden_units']
+
+    inputs = data_pars['inputs']
+    linear_feature_columns = data_pars['linear_cols']
+    dnn_feature_columns = data_pars['dnn_cols']
+
+    deep = tf.keras.layers.DenseFeatures(dnn_feature_columns, name='deep_inputs')(inputs)
+    layers = [int(x) for x in dnn_hidden_units.split(',')]
+
+    for layerno, numnodes in enumerate(layers):
+        deep = tf.keras.layers.Dense(numnodes, activation='relu', name='dnn_{}'.format(layerno+1))(deep)  
+          
+    wide = tf.keras.layers.DenseFeatures(linear_feature_columns, name='wide_inputs')(inputs)
+    both = tf.keras.layers.concatenate([deep, wide], name='both')
+    output = tf.keras.layers.Dense(1, activation='sigmoid', name='pred')(both)
+    model = tf.keras.Model(inputs, output)
+    model.compile(optimizer=optimizer, loss=loss,  metrics=metrics)
+    return model
+
+
+
+class Model(object):
+    def __init__(self, model_pars=None, data_pars=None):
+        self.model_pars, self.data_pars= model_pars, data_pars
+        self.history = None
+        if model_pars is None:
+            self.model = None
+
+        else:
+            self.model = ModelCustom(model_pars,data_pars)
+            log(self.model.summary())
+        
+
+
+def fit(data_pars, compute_pars, out_pars=None):
+    """
+    """
+    global model, session
+    session = None  # Session type for compute
+
+    train_df = data_pars['train']
+    if 'val' in data_pars:
+        val_df = data_pars['val']
+    else:
+        val_df = None
+        validation_split = 0.2
+
+    if 'epochs' in compute_pars:
+
+        epochs = compute_pars['epochs']
+    else:
+        epochs = 10
+
+    if 'verbose' in compute_pars:
+        verbose = compute_pars['verbose']
+    else:
+        verbose = 1
+
+    if 'path_checkpoint' in compute_pars:
+        path_checkpoint = compute_pars['path_checkpoint']
+    else:
+        path_checkpoint = 'ztmp_checkpoint/model_.pth'
+
+    #cpars          = copy.deepcopy( compute_pars.get("compute_pars", {}))   ## issue with pickle
+    early_stopping = EarlyStopping(monitor='loss', patience=3)
+    model_ckpt     = ModelCheckpoint(filepath = path_checkpoint,save_best_only=True, monitor='loss')
+
+
+    if val_df:
+        hist = model.model.fit(train_df,epochs=epochs,verbose=verbose,validation_data=val_df)
+    else:
+        hist = model.model.fit(train_df,epochs=epochs,verbose=verbose,validation_split=validation_split)
+    model.model.history = hist
+
+    return model.model.history
+
+
+def predict(Xpred=None,data_pars=None, compute_pars=None, out_pars=None):
+    if Xpred is None :
+        Xpred = data_pars['test']
+
+    ypred2 = model.model.predict(Xpred)
+
+    log2(ypred2)
+    ypred = []
+
+    for i in ypred:
+        if i >= 0.5:
+            ypred.append(1)
+        else:
+            ypred.append(0)
+
+
+    ypred_proba = None  ### No proba
+    if compute_pars.get("probability", False):
+         ypred_proba = ypred2
+    return ypred, ypred_proba
+
+
+def reset():
+    global model, session
+    model, session = None, None
+
+
+def save(path=None,filename='Model_Keras'):
+    import dill as pickle, copy
+    if path != None:
+        path = path
+
+    else:
+        path = 'savedWeights_Keras_Model'
+    model.filename = filename
+    model.path = path
+    os.makedirs(path, exist_ok=True)
+    ### Keras
+    model.model.save(f"{path}/{filename}.h5")
+    log('Model Saved')
+
+
+def model_snapshot(self):
+    tf.keras.utils.plot_model(self.model, 'model.png', show_shapes=False, rankdir='LR')
+
+
+class PrepareFeatureColumns:
+
+    def __init__(self,dataframe):
+        
+        self.df = dataframe
+        self.real_columns = {}
+        self.sparse_columns = {}
+        self.feature_layer_inputs = {}
+
+    def __df_to_dataset(self,dataframe,target,shuffle=True, batch_size=32):
+
+        dataframe = dataframe.copy()
+        labels = dataframe.pop(target)
+        ds = tf.data.Dataset.from_tensor_slices((dict(dataframe), labels))
+        if shuffle:
+            ds = ds.shuffle(buffer_size=len(dataframe))
+        ds = ds.batch(batch_size)
+        return ds
+
+    def splitData(self,test_split=0.1,val_split=0.1):
+
+        train_df,test_df = train_test_split(self.df,test_size=test_split)
+        train_df,val_df = train_test_split(train_df,test_size=val_split)
+
+        log('Files Splitted')
+        self.train = train_df
+        self.val = val_df
+        self.test = test_df
+
+    def data_to_tensorflow(self,target,shuffle_train=True,shuffle_test=False,shuffle_val=False,batch_size=32):
+
+        self.train_df_tf = self.__df_to_dataset(self.train,target=target,shuffle=shuffle_train,batch_size=batch_size)
+        self.test_df_tf = self.__df_to_dataset(self.test,target=target,shuffle=shuffle_test,batch_size=batch_size)
+        self.val_df_tf = self.__df_to_dataset(self.val,target=target,shuffle=shuffle_val,batch_size=batch_size)
+
+        self.exampleData = self.test_df_tf #for visualization purposes
+        log('Datasets Converted to Tensorflow')
+        return self.train_df_tf,self.test_df_tf,self.val_df_tf
+
+    def numeric_columns(self,columnsName):
+        for header in columnsName:
+            numeric = feature_column.numeric_column(header)
+            self.real_columns[header] = numeric
+            self.feature_layer_inputs[header] = tf.keras.Input(shape=(1,), name=header)
+        return numeric
+
+
+    def bucketized_columns(self,columnsBoundaries):
+        for key,value in columnsBoundaries.items():
+            col = feature_column.numeric_column(key)
+            col_buckets = feature_column.bucketized_column(col,boundaries=value)
+            self.sparse_columns[key] = col_buckets
+        return col_buckets
+
+
+    def categorical_columns(self,indicator_column_names,output=False):
+        for col_name in indicator_column_names:
+            categorical_column = feature_column.categorical_column_with_vocabulary_list(col_name, list(self.df[col_name].unique()))
+            indicator_column = feature_column.indicator_column(categorical_column)
+            self.sparse_columns[col_name] = indicator_column
+            self.feature_layer_inputs[col_name] = tf.keras.Input(shape=(1,), name=col_name,dtype=tf.string)
+        
+        return indicator_column
+    
+    def hashed_columns(self,hashed_columns_dict):
+
+        for col_name,bucket_size in hashed_columns_dict.items():
+            hashedCol = feature_column.categorical_column_with_hash_bucket(col_name, hash_bucket_size=bucket_size)
+            hashedFeature = feature_column.indicator_column(hashedCol)
+            self.sparse_columns[col_name] = hashedFeature
+
+        return hashedFeature
+
+    def crossed_feature_columns(self,columns_crossed,nameOfLayer,bucket_size=10):
+        crossed_feature = feature_column.crossed_column(columns_crossed, hash_bucket_size=bucket_size)
+        crossed_feature = feature_column.indicator_column(crossed_feature)
+        self.sparse_columns[nameOfLayer] = crossed_feature
+
+        return crossed_feature
+
+    def embeddings_columns(self,columnsname):
+
+        for col_name,dimension in columnsname.items():
+            embCol = feature_column.categorical_column_with_vocabulary_list(col_name, self.df[col_name].unique())
+            embedding = feature_column.embedding_column(embCol, dimension=dimension)
+            self.real_columns[col_name] = embedding
+
+        return embedding
+
+    def transform_output(self,featureColumn):
+
+        feature_layer = layers.DenseFeatures(featureColumn)
+        example = next(iter(self.exampleData))[0]
+        log(feature_layer(example).numpy())
+
+    
+    def get_features(self):
+        return self.real_columns,self.sparse_columns,self.feature_layer_inputs
+
+
+
+
+
+
+
+
+def test(config=''):
+    """
+        Group of columns for the input model
+           cols_input_group = [ ]
+          for cols in cols_input_group,
+
+    :param config:
+    :return:
+    """
+
+    dataset_url = 'http://storage.googleapis.com/download.tensorflow.org/data/petfinder-mini.zip'
+    csv_file = 'datasets/petfinder-mini/petfinder-mini.csv'
+
+    tf.keras.utils.get_file('petfinder_mini.zip', dataset_url,
+                            extract=True, cache_dir='.')
+
+    print('Data Frame Loaded')
+    dataframe = pd.read_csv(csv_file)
+    #X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, random_state=2021, stratify=y)
+    #X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
+    dataframe['target'] = np.where(dataframe['AdoptionSpeed']==4, 0, 1)
+
+    # Drop un-used columns.
+    dataframe = dataframe.drop(columns=['AdoptionSpeed', 'Description'])
+    prepare = PrepareFeatureColumns(dataframe)
+
+    prepare.splitData()
+    train_df,test_df,val_df = prepare.data_to_tensorflow(target='target')
+
+    #Numeric Columns creation
+    numeric_columns = ['PhotoAmt', 'Fee', 'Age']
+    prepare.numeric_columns(numeric_columns)
+
+    #Categorical Columns
+    indicator_column_names = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize',
+                          'FurLength', 'Vaccinated', 'Sterilized', 'Health','Breed1']
+
+    prepare.categorical_columns(indicator_column_names)
+    
+    #Bucketized Columns
+    bucket_cols = {
+        'Age': [1,2,3,4,5]
+    }
+    prepare.bucketized_columns(bucket_cols)
+
+    
+
+    #Embedding Columns
+    embeddingCol = {
+        'Breed1':8
+    }
+    
+    linear,dnn,inputs = prepare.get_features()
+    
+    model_pars = {
+        'loss' : 'binary_crossentropy',
+        'optimizer':'adam',
+        'metric': ['accuracy'],
+        'hidden_units': '64,32,16'
+    }
+
+    data_pars = {
+        'inputs': inputs,
+        'linear_cols': linear.values(),
+        'dnn_cols': dnn.values(),
+        'train': train_df,
+        'test': test_df,
+        'val': val_df
+    }
+
+    compute_pars = {
+        'epochs':2,
+        'verbose': 1,
+        'path_checkpoint': 'checkpoint/model.pth'
+    }
+
+
+    ######## Run ###########################################
+    test_helper(model_pars, data_pars, compute_pars)
+
+def test_helper(model_pars, data_pars, compute_pars):
+    global model, session
+    root  = "ztmp/"
+    model = Model(model_pars=model_pars, data_pars=data_pars)
+
+    log('\n\nTraining the model..')
+    model.fit(data_pars=data_pars, compute_pars=compute_pars)
+
+    log('Predict data..')
+    ypred, ypred_proba = model.predict(data_pars=data_pars)
+    log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
+
+
+    log('Saving model..')
+    model.save(path= root + '/model_dir/')
+
+    log('Model architecture:')
+    log(model.model.summary())
+
+    log('Model Snapshot')
+    model.model_snapshot()
+
+####################################################################################################################
+if __name__ == '__main__':
+    import fire
+    fire.Fire(test)
+
+
+
+
+
+
+
+
+
+
 def get_dataset2(data_pars=None, task_type="train", **kw):
     """
       return tuple of Tensoflow
@@ -305,7 +674,7 @@ def get_dataset2(data_pars=None, task_type="train", **kw):
             d = data_pars[task_type]
             Xtrain       = d["X"]
             Xtuple_train = get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref)
-            return Xytuple_train
+            return Xtuple_train
 
         if task_type == "eval":
             d = data_pars[task_type]
@@ -330,247 +699,6 @@ def get_dataset2(data_pars=None, task_type="train", **kw):
         raise Exception(f' {data_type} data_type Not implemented ')
 
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
-
-
-
-class Model(object):
-    def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
-        self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
-        self.history = None
-        if model_pars is None:
-            self.model = None
-        else:
-            log2("data_pars", data_pars)
-
-            model_class = model_pars['model_class']  #
-
-            ### Dynamic shape of input
-            model_pars['model_pars']['n_wide_cross'] = len(data_pars['cols_model_type2']['cols_cross_input'])
-            model_pars['model_pars']['n_wide']       = len(data_pars['cols_model_type2']['cols_deep_input'])
-            model_pars['model_pars']['n_deep']       = len(data_pars['cols_model_type2']['cols_deep_input'])
-
-            model_pars['model_pars']['n_feat']       = model_pars['model_pars']['n_deep']
-
-            mdict = model_pars['model_pars']
-
-            self.model  = Modelcustom(**mdict)
-            log2(model_class, self.model)
-            self.model.summary()
-
-
-def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
-    """
-    """
-    global model, session
-    session = None  # Session type for compute
-
-    Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train")
-    cpars          = copy.deepcopy( compute_pars.get("compute_pars", {}))   ## issue with pickle
-    early_stopping = EarlyStopping(monitor='loss', patience=3)
-    model_ckpt     = ModelCheckpoint(filepath = compute_pars.get('path_checkpoint', 'ztmp_checkpoint/model_.pth'),
-                                     save_best_only=True, monitor='loss')
-    cpars['callbacks'] =  [early_stopping, model_ckpt]
-
-    assert 'epochs' in cpars, 'epoch missing'
-    hist = model.model.fit( Xtrain_tuple, ytrain,  **cpars)
-    model.history = hist
-
-
-
-def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
-    global model, session
-    if Xpred is None:
-        Xpred_tuple = get_dataset(data_pars, task_type="predict")
-    else :
-        cols_type   = data_pars.get('cols_model_type2', {})  ##
-        Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
-
-    log2(Xpred_tuple)
-    ypred = model.model.predict(Xpred_tuple )
-
-    ypred_proba = None  ### No proba
-    if compute_pars.get("probability", False):
-         ypred_proba = model.model.predict_proba(Xpred)
-    return ypred, ypred_proba
-
-
-def reset():
-    global model, session
-    model, session = None, None
-
-
-def save(path=None, info=None):
-    import dill as pickle, copy
-    global model, session
-    os.makedirs(path, exist_ok=True)
-
-    ### Keras
-    model.model.save(f"{path}/model_keras.h5")
-
-    ### Wrapper
-    modelx = Model()  # Empty model  Issue with pickle
-    modelx.model_pars   = model.model_pars
-    modelx.data_pars    = model.data_pars
-    modelx.compute_pars = model.compute_pars
-
-    pickle.dump(modelx, open(f"{path}/model.pkl", mode='wb'))  #
-    pickle.dump(info,   open(f"{path}/info.pkl", mode='wb'))  #
-
-
-def load_model(path=""):
-    global model, session
-    import dill as pickle
-
-    model_keras = keras.models.load_model(path + '/model_keras.h5' )
-    model0      = pickle.load(open(f"{path}/model.pkl", mode='rb'))
-
-    model = Model()  # Empty model
-    model.model = model_keras
-    model.model_pars = model0.model_pars
-    model.compute_pars = model0.compute_pars
-    session = None
-    return model, session
-
-
-def load_info(path=""):
-    import cloudpickle as pickle, glob
-    dd = {}
-    for fp in glob.glob(f"{path}/*.pkl"):
-        if not "model.pkl" in fp:
-            obj = pickle.load(open(fp, mode='rb'))
-            key = fp.split("/")[-1]
-            dd[key] = obj
-    return dd
-
-
-####################################################################################################
-############ Do not change #########################################################################
-def test(config=''):
-    """
-        Group of columns for the input model
-           cols_input_group = [ ]
-          for cols in cols_input_group,
-
-    :param config:
-    :return:
-    """
-
-    X = pd.DataFrame( np.random.rand(100,30), columns= [ 'col_' +str(i) for i in range(30)] )
-    y = pd.DataFrame( np.random.binomial(n=1, p=0.5, size=[100]), columns = ['coly'] )
-    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, random_state=2021, stratify=y)
-    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
-
-    log(X_train.shape, )
-    ##############################################################
-    ##### Generate column actual names from
-    colnum = [ 'col_0', 'col_11', 'col_8']
-    colcat = [ 'col_13', 'col_17', 'col_13', 'col_9']
-
-    cols_input_type_1 = {
-        'colnum' : colnum,
-        'colcat' : colcat
-    }
-
-    ###### Keras has 1 tuple input    ###########################
-    colg_input = {
-      'cols_cross_input':  ['colnum', 'colcat' ],
-      'cols_deep_input':   ['colnum', 'colcat' ],
-    }
-
-    cols_model_type2= {}
-    for colg, colist in colg_input.items() :
-        cols_model_type2[colg] = []
-        for colg_i in colist :
-          cols_model_type2[colg].extend( cols_input_type_1[colg_i] )
-
-
-    ##################################################################################
-    model_pars = {'model_class': 'WideAndDeep',
-                  'model_pars': {},
-                }
-    
-    n_sample = 100
-    data_pars = {'n_sample': n_sample,
-                  'cols_input_type': cols_input_type_1,
-
-                  'cols_model_group': ['colnum',
-                                       'colcat',
-                                       # 'colcross_pair'
-                                       ],
-
-                  'cols_model_type2' : cols_model_type2
-
-
-        ### Filter data rows   #######################3############################
-        , 'filter_pars': {'ymax': 2, 'ymin': -1}
-                  }
-
-    data_pars['train'] ={'Xtrain': X_train,  'ytrain': y_train,
-                         'Xtest': X_test,  'ytest': y_test}
-    data_pars['eval'] =  {'X': X_test,
-                          'y': y_test}
-    data_pars['predict'] = {'X': X_test}
-
-    compute_pars = { 'compute_pars' : { 'epochs': 2,
-                   } }
-
-    ######## Run ###########################################
-    test_helper(model_pars, data_pars, compute_pars)
-
-
-def test_helper(model_pars, data_pars, compute_pars):
-    global model, session
-    root  = "ztmp/"
-    model = Model(model_pars=model_pars, data_pars=data_pars, compute_pars=compute_pars)
-
-    log('\n\nTraining the model..')
-    fit(data_pars=data_pars, compute_pars=compute_pars, out_pars=None)
-
-    log('Predict data..')
-    ypred, ypred_proba = predict(Xpred=None, data_pars=data_pars, compute_pars=compute_pars)
-    log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
-
-    log('Evaluating the model..')
-    log(eval(data_pars=data_pars, compute_pars=compute_pars))
-    #
-    log('Saving model..')
-    save(path= root + '/model_dir/')
-
-    log('Load model..')
-    model, session = load_model(path= root + "/model_dir/")
-    log('Model successfully loaded!\n\n')
-
-    log('Model architecture:')
-    log(model.summary())
-
-
-#######################################################################################
-if __name__ == "__main__":
-    import fire
-    fire.Fire(test)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 def Modelsparse2():
     """
@@ -644,7 +772,7 @@ def Modelsparse2():
     # Build a wide-and-deep model.
     def wide_and_deep_classifier(inputs, linear_feature_columns, dnn_feature_columns, dnn_hidden_units):
         deep = tf.keras.layers.DenseFeatures(dnn_feature_columns, name='deep_inputs')(inputs)
-        layers = [int(x) for x in dnn_hidden_units.split(',')]
+        layers = dnn_hidden_units
         for layerno, numnodes in enumerate(layers):
             deep = tf.keras.layers.Dense(numnodes, activation='relu', name='dnn_{}'.format(layerno+1))(deep)
         wide = tf.keras.layers.DenseFeatures(linear_feature_columns, name='wide_inputs')(inputs)
@@ -664,6 +792,4 @@ def Modelsparse2():
         dnn_feature_columns = real.values(),
         dnn_hidden_units = DNN_HIDDEN_UNITS)
     tf.keras.utils.plot_model(model, 'flights_model.png', show_shapes=False, rankdir='LR')
-
-
 
