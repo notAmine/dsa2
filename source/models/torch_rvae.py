@@ -6,6 +6,7 @@ python torch_rvae.py test --nrows 1000
 
 
 """
+
 import os, sys,  numpy as np,  pandas as pd, wget, copy
 from pathlib import Path
 # torch.manual_seed(0)
@@ -14,16 +15,6 @@ from pathlib import Path
 # from torch.utils import data
 from sklearn.model_selection import train_test_split
 import torch
-
-
-######################################################################################################
-sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/repo/RVAE_MixedTypes/core_models/" )
-import main, train_eval_models
-
-root     = os.path.dirname(os.path.abspath(__file__)) 
-path_pkg =  root + "/repo/RVAE_MixedTypes/"
-
-
 
 import torch
 from torch import nn
@@ -36,13 +27,22 @@ import sys
 import json
 import os, errno
 
+
+######################################################################################################
+curr_path_path = os.path.dirname(os.path.abspath(__file__))
+curr_path_path = curr_path_path.replace("\\", "/")
+sys.path.append(os.path.join(curr_path_path, "repo/RVAE_MixedTypes/src/core_models/"))
+
+root     = os.path.dirname(os.path.abspath(__file__)) 
+path_pkg =  root + "/repo/RVAE_MixedTypes/"
+
+
+from core_models import main, train_eval_models
 from model_utils import nll_categ_global, nll_gauss_global
 from EmbeddingMul import EmbeddingMul
 import parser_arguments
 from train_eval_models import training_phase, evaluation_phase, repair_phase
 import utils
-
-
 
 
 ####################################################################################################
@@ -64,22 +64,72 @@ def init(*kw, **kwargs):
 
 
 class Model(object):
-    def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
+    def __init__(self, model_pars=None, data_pars=None, compute_pars=None, global_pars=None):
         self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
-
         if model_pars is None:
             self.model = None
+            return 
+        
+        # Fuse all params for RVAE 
+        model_pars2 = copy.deepcopy(self.model_pars['model_pars'])
+        model_pars2.update(self.compute_pars['compute_pars'])
+        model_pars2.update(self.data_pars)
+        model_pars2.update(self.global_pars)
 
-        else:
-            ###############################################################
-            dm          = data_pars['cols_model_group_custom']
+    
+        self.args = namedtuple("args", model_pars.keys())(*model_pars2.values())
+        self.model = RVAE( args=self.args)
+        
+        if VERBOSE: log(self.model)
 
 
-            self.model = None
-            self.guide = None
-            self.pred_summary = None  ### All MC summary
 
-            if VERBOSE: log(self.guide, self.model)
+def get_dataset(data_pars, task_type="train"):
+    """
+
+    :param data_pars:
+    :param task_type:
+    :return:
+    """
+    clean       = data_pars.get('clean', True)
+    data_path   = data_pars["data_path"]
+    batch_size  = data_pars["batch_size"]
+
+    if not clean:
+
+        if task_type == 'train':
+            train_loader, X_train, target_errors_train, dataset_obj,  attributes = utils.load_data(data_path, batch_size,
+                                            is_train=True,
+                                            get_data_idxs=False)
+
+            return train_loader, X_train, target_errors_train, dataset_obj, attributes
+        
+        elif task_type == 'test':
+
+            test_loader, X_test, target_errors_test, _, _ = utils.load_data(
+                data_path, batch_size, is_train=False
+            )
+
+            return test_loader, X_test, target_errors_test
+    
+    # -- clean versions for evaluation
+    else:
+
+        if task_type == 'train':
+            _, X_train_clean, _, _, _ = utils.load_data(
+                data_path, batch_size, is_train=True, is_clean=True, stdize_dirty=True
+            )
+
+            return X_train_clean
+
+        elif task_type == 'test':
+            _, X_test_clean, _, _, _ = utils.load_data(
+                data_path, batch_size, is_train=False, is_clean=True, stdize_dirty=True
+            )
+
+            return X_test_clean
+        
+        
 
 
 def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
@@ -87,33 +137,166 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
     global model, session
     session = None  # Session type for compute
-    cpars          = copy.deepcopy( compute_pars.get("compute_pars", {}))   ## issue with pickle
-
-    # if data_pars is not None :
-    Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train")
-
-
-
-
-
-
-
-
-    ###############################################################
-    model.model.fit(train=train, validation=val, **cpars)
-
-
+    
+    model.model.fit()
 
 
 def encode(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dict={}, **kw):
     global model, session
 
+    if Xpred is None:
+        Xpred = get_dataset(data_pars, task_type='pred_encode')        
+        #Xpred = model.model.X_train
+        
+    Xnew_encoded = model.model.encode(Xpred)
+    return Xnew_encoded
+
 
 
 
 def decode(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dict={}, **kw):
+    """
+       Specify the format required   due to sampling
+    :param Xpred:
+    :param data_pars:
+    :param compute_pars:
+    :param out_pars:
+    :param kw:
+    :return:
+    """
     global model, session
+    if Xpred is None: 
+        log(" Decode requires Sampling")
+        Xpred = get_dataset(data_pars, task_type='pred_decode')        
+        if Xpred is None : return None  
 
+    Xnew_original =  model.model.decode(Xpred['z']['mu'])
+    return Xnew_original
+
+
+
+
+def compute_metrics(model, X, dataset_obj, args, epoch, losses_save,
+                    logit_pi_prev, X_clean, target_errors, mode):
+
+    # get epoch metrics on outlier detection for train dataset
+    if args.outlier_model == "VAE":
+        # outlier analysis
+        loss_ret, metric_ret = evaluation_phase(model, X, dataset_obj, args, epoch)
+
+        # repair analysis
+        clean_loss_ret = repair_phase(model, X, X_clean, dataset_obj, args, target_errors, mode, epoch)
+
+    else:
+        # outlier analysis
+        loss_ret, metric_ret = evaluation_phase(model, X, dataset_obj, args, epoch,
+                                                            clean_comp_show=True,
+                                                            logit_pi_prev=logit_pi_prev,
+                                                            w_conv=True,
+                                                            mask_err=target_errors)
+
+        # repair analysis
+        clean_loss_ret = repair_phase(model, X, X_clean, dataset_obj, args, target_errors, mode, epoch)
+
+    log('\n\n\n\n')
+    log('====> ' + mode + ' set: Epoch: {} Avg. AVI loss: {:.3f}\tAvg. AVI NLL: {:.3f}\tAvg. AVI KLD_Z: {:.3f}\tAvg. AVI KLD_W: {:.3f}'.format(
+          epoch, loss_ret['eval_loss_vae'], loss_ret['eval_nll_vae'], loss_ret['eval_z_kld_vae'], loss_ret['eval_w_kld_vae']))
+
+    log('\n')
+    log('====> ' + mode + ' set: -- clean component | reparability (all data): p_recon(x_clean | x_dirty) -- \n \t\t Epoch: {} Avg. loss: {:.3f}\tAvg. NLL: {:.3f}\tAvg. KLD_Z: {:.3f}\tAvg. KLD_W: {:.3f}'.format(
+          epoch, clean_loss_ret['eval_loss_final_clean_all'], clean_loss_ret['eval_nll_final_clean_all'],
+          clean_loss_ret['eval_z_kld_final_clean_all'], clean_loss_ret['eval_w_kld_final_clean_all']))
+
+    log('====> ' + mode + ' set: -- clean component | reparability (dirty pos): p_recon(x_clean | x_dirty) -- \n \t\t Epoch: {} Avg. loss: {:.3f}\tAvg. NLL: {:.3f}\tAvg. KLD_Z: {:.3f}\tAvg. KLD_W: {:.3f}'.format(
+          epoch, clean_loss_ret['eval_loss_final_clean_dc'], clean_loss_ret['eval_nll_final_clean_dc'],
+          clean_loss_ret['eval_z_kld_final_clean_dc'], clean_loss_ret['eval_w_kld_final_clean_dc']))
+
+
+    log('====> ' + mode + ' set: cell error (lower bound dirty pos): {:.3f}, cell error (upper bound dirty pos): {:.3f}, cell error (repair dirty pos): {:.3f}, cell error (repair clean pos): {:.3f}'.format(
+          clean_loss_ret['mse_lower_bd_dirtycells'], clean_loss_ret['mse_upper_bd_dirtycells'], clean_loss_ret['mse_repair_dirtycells'], clean_loss_ret['mse_repair_cleancells']))
+
+
+    if args.inference_type == 'seqvae':
+        log('\n')
+        log('\n\nAdditional Info: Avg. SEQ-VAE Total loss: {:.3f}\tAvg. SEQ-VAE loss: {:.3f}\tAvg. SEQ-VAE NLL: {:.3f}\tAvg. SEQ-VAE KLD_Z: {:.3f}\tAvg. SEQ-VAE KLD_W: {:.3f}'.format(
+              loss_ret['eval_total_loss_seq'], loss_ret['eval_loss_seq'], loss_ret['eval_nll_seq'], loss_ret['eval_z_kld_seq'], loss_ret['eval_w_kld_seq']))
+
+
+    if args.outlier_model == "RVAE":
+        log('\n\n')
+        log('====> ' + mode + ' set: -- clean component: p_recon(x_dirty | x_dirty) -- \n \t\t Epoch: {} Avg. loss: {:.3f}\tAvg. NLL: {:.3f}\tAvg. KLD_Z: {:.3f}\tAvg. KLD_W: {:.3f}'.format(
+              epoch, loss_ret['eval_loss_final_clean'], loss_ret['eval_nll_final_clean'],
+              loss_ret['eval_z_kld_final_clean'], loss_ret['eval_w_kld_final_clean']))
+
+
+    # calc cell metrics
+    auc_cell_nll, auc_vec_nll, avpr_cell_nll, avpr_vec_nll = utils.cell_metrics(target_errors, metric_ret['nll_score'], weights=False)
+    if args.outlier_model == "RVAE":
+        auc_cell_pi, auc_vec_pi, avpr_cell_pi, avpr_vec_pi = utils.cell_metrics(target_errors, metric_ret['pi_score'], weights=True)
+    else:
+        auc_cell_pi, auc_vec_pi, avpr_cell_pi, avpr_vec_pi = 4*[-10]
+
+    # calc row metrics
+    auc_row_nll, avpr_row_nll = utils.row_metrics(target_errors, metric_ret['nll_score'], weights=False)
+    if args.outlier_model == "RVAE":
+        auc_row_pi, avpr_row_pi = utils.row_metrics(target_errors, metric_ret['pi_score'], weights=True)
+    else:
+        auc_row_pi, avpr_row_pi = 2*[-10]
+
+
+    if args.verbose_metrics_epoch:
+        log('         (Cell) Avg. ' + mode + ' AUC: {} '.format(auc_cell_nll))
+        log('         (Cell) Avg. ' + mode + ' AVPR: {} '.format(avpr_cell_nll))
+        log("\n\n")
+        if args.verbose_metrics_feature_epoch:
+            log('         AUC per feature: \n {}'.format(auc_vec_nll))
+            log('         AVPR per feature: \n {}'.format(avpr_vec_nll))
+            log("\n\n")
+        log('         (Row) ' + mode + ' AUC: {} '.format(auc_row_nll))
+        log('         (Row) ' + mode + ' AVPR: {} '.format(avpr_row_nll))
+
+        if args.outlier_model == "RVAE":
+            log('         (Cell) Avg. ' + mode + ' AUC: {} '.format(auc_cell_pi))
+            log('         (Cell) Avg. ' + mode + ' AVPR: {} '.format(avpr_cell_pi))
+            log("\n\n")
+            if args.verbose_metrics_feature_epoch:
+                log('         AUC per feature: \n {}'.format(auc_vec_pi))
+                log('         AVPR per feature: \n {}'.format(avpr_vec_pi))
+                log("\n\n")
+            log('         (Row) ' + mode + ' AUC: {} '.format(auc_row_pi))
+            log('         (Row) ' + mode + ' AVPR: {} '.format(avpr_row_pi))
+
+
+    # save to file step
+    if args.save_on:
+        if args.inference_type == 'vae':
+
+            loss_ret.update(dict.fromkeys(['eval_loss_seq','eval_nll_seq',
+                                           'eval_z_kld_seq','eval_w_kld_seq'],-10))
+
+        if args.outlier_model == "VAE":
+            loss_ret.update(dict.fromkeys(['eval_loss_final_clean','eval_nll_final_clean',
+                                           'eval_z_kld_final_clean','eval_w_kld_final_clean'],-10))
+
+            clean_loss_ret.update(dict.fromkeys(['eval_loss_final_clean','eval_nll_final_clean',
+                                           'eval_z_kld_final_clean','eval_w_kld_final_clean'],-10))
+
+        losses_save[mode][epoch] = [loss_ret['eval_loss_vae'], loss_ret['eval_nll_vae'],
+                                    loss_ret['eval_z_kld_vae'], loss_ret['eval_w_kld_vae'],
+                                    loss_ret['eval_loss_seq'], loss_ret['eval_nll_seq'],
+                                    loss_ret['eval_z_kld_seq'], loss_ret['eval_w_kld_seq'],
+                                    loss_ret['eval_loss_final_clean'], loss_ret['eval_nll_final_clean'],
+                                    loss_ret['eval_z_kld_final_clean'], loss_ret['eval_w_kld_final_clean'],
+                                    clean_loss_ret['eval_loss_final_clean_dc'], clean_loss_ret['eval_nll_final_clean_dc'],
+                                    clean_loss_ret['eval_z_kld_final_clean_dc'], clean_loss_ret['eval_w_kld_final_clean_dc'],
+                                    clean_loss_ret['eval_loss_final_clean_cc'], clean_loss_ret['eval_nll_final_clean_cc'],
+                                    clean_loss_ret['eval_z_kld_final_clean_cc'], clean_loss_ret['eval_w_kld_final_clean_cc'],
+                                    clean_loss_ret['eval_loss_final_clean_all'], clean_loss_ret['eval_nll_final_clean_all'],
+                                    clean_loss_ret['eval_z_kld_final_clean_all'], clean_loss_ret['eval_w_kld_final_clean_all'],
+                                    metric_ret['converg_norm_w'], auc_cell_nll, avpr_cell_nll, auc_row_nll, avpr_row_nll,
+                                    auc_cell_pi, avpr_cell_pi, auc_row_pi, avpr_row_pi,
+                                    clean_loss_ret['mse_lower_bd_dirtycells'], clean_loss_ret['mse_upper_bd_dirtycells'],
+                                    clean_loss_ret['mse_repair_dirtycells'], clean_loss_ret['mse_repair_cleancells']]
 
 
 
@@ -123,9 +306,7 @@ def eval(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dict={
     """
          Encode + Decode 
     """
-
-
-
+    pass
 
 
 
@@ -149,23 +330,6 @@ def save(path=None, info=None):
     pickle.dump(model,  open(path + "/model/model.pkl", mode='wb')) # , protocol=pickle.HIGHEST_PROTOCOL )
     pickle.dump(info, open(path   + "/model/info.pkl", mode='wb'))  # ,protocol=pickle.HIGHEST_PROTOCOL )
 
-
-def load_model(path=""):
-    global model, session
-    import cloudpickle as pickle
-    model0 = pickle.load(open(path + '/model/model.pkl', mode='rb'))
-         
-    model = Model()  # Empty model
-    model.model_pars   = model0.model_pars
-    model.compute_pars = model0.compute_pars
-    model.data_pars    = model0.data_pars
-
-    ### Custom part
-    # model.model        = TabularModel.load_from_checkpoint( "ztmp/data/output/torch_tabular/torch_checkpoint")
-    model.model        = TabularModel.load_from_checkpoint(  path +"/model/torch_checkpoint")
- 
-    session = None
-    return model, session
 
 
 def load_info(path=""):
@@ -207,7 +371,7 @@ def get_dataset_tuple(Xtrain, cols_type_received, cols_ref):
         return Xtuple_train
 
 
-def get_dataset(data_pars=None, task_type="train", **kw):
+def get_dataset2(data_pars=None, task_type="train", **kw):
     """
       return tuple of dataframes
     """
@@ -267,173 +431,104 @@ def test(nrows=1000):
         nrows : take first nrows from dataset
     """
     global model, session
-    df, colnum, colcat, coly = test_dataset_covtype()
-
-    #### Matching Big dict  ##################################################    
-    X = df
-    y = df[coly].astype('uint8')
-    log('y', np.sum(y[y==1]) )
-
-    # Split the df into train/test subsets
-    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, stratify=y)
-    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
-    num_classes = len(set(y_train_full[coly].values.ravel()))
-    log(X_train)
-
-
-
-
-
+    
     m = {'model_pars': {
-        ### LightGBM API model   #######################################
-        # Specify the ModelConfig for pytorch_tabular
-        'model_class':  "torch_tabular.py::CategoryEmbeddingModelConfig"
-        
-        # Type of target prediction, evaluation metrics
-        ,'model_pars' : { 
-                        # 'task': "classification",
-                        # 'metrics' : ["f1","accuracy"],
-                        # 'metrics_params' : [{"num_classes":num_classes},{}]
-                        }  
+            # Specify the model
+            'model_class':  "torch_tabular.py::RVAE",
+            # "load_model":False, 
+            # "load_model_path":None,
 
-        , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
-        , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
-
-        ### Pipeline for data processing ##############################
-        'pipe_list': [  #### coly target prorcessing
-        {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
-
-        {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
-        {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
-
-        #### catcol INTO integer,   colcat into OneHot
-        {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
-        {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
-
-        ],
+            'model_pars' : {
+                "activation":'relu',
+                "outlier_model":'RVAE',
+                "AVI":False,
+                "alpha_prior":0.95,
+                "embedding_size":50,
+                "is_one_hot":False,
+                "latent_dim":20,
+                "layer_size":400,
             }
+
+          
         },
 
-    'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
-                    },
+        'compute_pars': {
+            'log' :{
+                "log_interval":50,
+                "save_on":True,
+                "verbose_metrics_epoch":True,
+                "verbose_metrics_feature_epoch":False
+            },
 
-    'data_pars': { 'n_sample' : n_sample,
-        'download_pars' : None,
-        'cols_input_type' : cols_input_type_1,
-        ### family of columns for MODEL  #########################################################
-        'cols_model_group': [ 'colnum_bin',   'colcat_bin',
-                            ]
+            'compute_pars' :{
+                "cuda_on":False,
+                "number_epochs":2,
+                "l2_reg":0.0,
+                "lr":0.001,
+                "seqvae_bprop":False,
+                "seqvae_steps":4,
+                "seqvae_two_stage":False,
+                "std_gauss_nll":2.0,
+                "steps_2stage":4,
+                "inference_type":'vae',
+                "batch_size":150,
+            },
 
-        ,'cols_model_group_custom' :  { 'colnum' : colnum,
-                                        'colcat' : colcat,
-                                        'coly' : coly
-                            }
-        ###################################################  
-        ,'train': {'Xtrain': X_train, 'ytrain': y_train,
-                   'Xtest': X_valid,  'ytest':  y_valid},
-                'eval': {'X': X_valid,  'y': y_valid},
-                'predict': {'X': X_valid}
+            'metric_list': [
+                'accuracy_score',
+                'average_precision_score'
+            ],
 
-        ### Filter data rows   ##################################################################
-        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+            
+        },
 
+        'data_pars': { 
+            "batch_size":150,   ### Mini Batch from data
+
+        },
         
-        ### Added continuous & sparse features groups ###
-        'cols_model_type2': {
-            'colcontinuous':   colnum ,
-            'colsparse' : colcat, 
-        },
+        'global_pars' :{
+            "data_path":   path_pkg + '/data_simple/Wine/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
+            "output_path": path_pkg + '/outputs_experiments_i/Wine/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/RVAE_CVI',
+
         }
+        
     }
 
 
-    ll = [
-        ('torch_tabular.py::CategoryEmbeddingModelConfig', 
-            {   'task': "classification",
-                'metrics' : ["f1","accuracy"],
-                'metrics_params' : [{"num_classes":num_classes},{}]
-            }  
-        ),
 
+    log('Setup model..')
+    model = Model(model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
     
-    ]
-    for cfg in ll:
-        log("******************************************** New Model ********************************************")
-        log(f"******************************************** {cfg[0]} ********************************************")
-        reset()
-        # Set the ModelConfig
-        m['model_pars']['model_class'] = cfg[0]
-        m['model_pars']['model_pars']  = {**m['model_pars']['model_pars'] , **cfg[1] }
+    log('\n\nTraining the model..\n\n')
+    fit(data_pars=m['data_pars'], compute_pars= m['compute_pars'], out_pars=None)
+    log('\n\nTraining completed!\n\n')
 
-        log('Setup model..')
-        model = Model(model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
+    log('\n\nEncoding...\n\n')
+    # Example
+    Xencode = model.model.X_train
+    encoded_result = encode(Xencode, data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
+    log(encoded_result)
 
-        log('\n\nTraining the model..')
-        fit(data_pars=m['data_pars'], compute_pars= m['compute_pars'], out_pars=None)
-        log('Training completed!\n\n')
+    log('\n\nDecoding...\n\n')
+    decoded_result = decode(encoded_result, data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
+    log(decoded_result)
 
-        log('Predict data..')
-        ypred, ypred_proba = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
-        log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
-
-        if cfg != "torch_tabular.py::NodeConfig":
-            log('Saving model..')
-            save(path= "ztmp/data/output/torch_tabular")
-            #  os.path.join(root, 'data\\output\\torch_tabular\\model'))
-
-            log('Load model..')
-            model, session = load_model(path="ztmp/data/output/torch_tabular")
-            #os.path.join(root, 'data\\output\\torch_tabular\\model'))
-        else:
-            log('\n*** !!! Saving Bug in pytorch_tabular for NodeConfig !!! ***\n')
-            
-        log('Model architecture:')
-        log(model.model)
-
-        log('Model config:')
-        log(model.model.config._config_name)
-        reset()
-
-
-def test2(nrow=10000):
-    """
-       python source/models/torch_tabular.py test
-
-    """
-    global model, session
-
-
-if __name__ == "__main__":
-    import fire
-    fire.Fire()
-    # test()
+    reset()
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-#!/usr/bin/env python3
+########################################################################################################################
+########################################################################################################################
 class RVAE(nn.Module):
     def __init__(
         self, 
-        data_folder, 
         args):
 
         super(RVAE, self).__init__()
         # NOTE: for feat_select, (col_name, col_type, feat_size) in enumerate(dataset_obj.feat_info)
-        self.data_folder = data_folder
+        self.data_path = args.data_path
         self.args = args
         self.last_epoch = None
         # Load dataset and get dataset_obj
@@ -515,25 +610,25 @@ class RVAE(nn.Module):
         self.X_train, \
         self.target_errors_train, \
         dataset_obj, \
-        self.attributes = utils.load_data(self.data_folder, self.args.batch_size,
+        self.attributes = utils.load_data(self.args.data_path, self.args.batch_size,
                                         is_train=True,
                                         get_data_idxs=False)
 
         self.test_loader, self.X_test, self.target_errors_test, _, _ = utils.load_data(
-            self.args.data_folder, 
+            self.args.data_path, 
             self.args.batch_size, 
             is_train=False
         )
         # -- clean versions for evaluation
         _, self.X_train_clean, _, _, _ = utils.load_data(
-            self.args.data_folder, 
+            self.args.data_path, 
             self.args.batch_size,
             is_train=True, 
             is_clean=True, 
             stdize_dirty=True
         )
         _, self.X_test_clean, _, _, _ = utils.load_data(
-            self.args.data_folder, 
+            self.args.data_path, 
             self.args.batch_size, 
             is_train=False,
             is_clean=True, 
@@ -553,6 +648,9 @@ class RVAE(nn.Module):
             weight_decay=self.args.l2_reg
         )  # excludes frozen params / layers
 
+        logit_pi_prev_train = torch.tensor([])
+        logit_pi_prev_test = torch.tensor([])
+        
         # Run epochs
         for epoch in range(1, self.args.number_epochs + 1):
 
@@ -561,60 +659,52 @@ class RVAE(nn.Module):
             _train_loader, _dataset_obj = self.train_loader, self.dataset_obj
             training_phase(self, optimizer, _train_loader, self.args, epoch)
 
+            losses_save = {"train":{},"test":{}, "train_per_feature":{}, "test_per_feature":{}}
+
+            #Compute all the losses and metrics per epoch (Train set)
+            compute_metrics(self, self.X_train, _dataset_obj, self.args, epoch, losses_save,
+                            logit_pi_prev_train, self.X_train_clean, self.target_errors_train, mode="train")
+
+            #Test Phase
+            compute_metrics(self, self.X_test, self.dataset_obj, self.args, epoch, losses_save,
+                            logit_pi_prev_test, self.X_test_clean, self.target_errors_test, mode="test")
+
     
     def save(self):
         # structs for saving data
         losses_save = {"train":{},"test":{}, "train_per_feature":{}, "test_per_feature":{}}
-        # create folder for saving experiment data (if necessary)
-        folder_output = self.args.output_folder + "/" + self.args.outlier_model
+        # create path for saving experiment data (if necessary)
+        path_output = self.args.output_path + "/" + self.args.outlier_model
 
         ### Train Data
         self._save_to_csv(
-            self.X_train, 
-            self.X_train_clean, 
-            self.target_errors_train, 
-            self.attributes, 
-            losses_save,
-            self.dataset_obj, 
-            folder_output, 
-            self.args, 
-            self.last_epoch, 
-            mode='train'
+            self.X_train, self.X_train_clean, self.target_errors_train, self.attributes, losses_save, self.dataset_obj, path_output, self.args, self.last_epoch, mode='train'
         )
 
 
         ### Test Data
         self._save_to_csv(
-            self.X_test, 
-            self.X_test_clean, 
-            self.target_errors_test, 
-            self.attributes, 
-            losses_save,
-            self.dataset_obj, 
-            folder_output, 
-            self.args, 
-            self.last_epoch, 
-            mode='test'
+            self.X_test, self.X_test_clean, self.target_errors_test, self.attributes, losses_save, self.dataset_obj, path_output, self.args, self.last_epoch, mode='test'
         )
 
 
         # save model parameters
         self.cpu()
-        torch.save(self.state_dict(), folder_output + "/model_params.pth")
+        torch.save(self.state_dict(), path_output + "/model_params.pth")
 
         # save to .json file the args that were used for running the model
-        with open(folder_output + "/args_run.json", "w") as outfile:
+        with open(path_output + "/args_run.json", "w") as outfile:
             # json.dump(vars(self.args), outfile, indent=4, sort_keys=True)
             json.dump(dir(self.args), outfile, indent=4, sort_keys=True)
 
     def _save_to_csv(self, X_data, X_data_clean, target_errors, attributes, losses_save,
-                dataset_obj, folder_output, args, epoch, mode='train'):
+                dataset_obj, path_output, args, epoch, mode='train'):
 
         """ This method performs all operations needed to save the data to csv """
 
-        #Create saving folderes
+        #Create saving pathes
         try:
-            os.makedirs(folder_output)
+            os.makedirs(path_output)
         except OSError as e:
             if e.errno != errno.EEXIST:
                 raise
@@ -638,13 +728,13 @@ class RVAE(nn.Module):
         df_avpr_feat_cell = pd.DataFrame([], index=['AVPR_nll', 'AVPR_pi'], columns=attributes)
         df_avpr_feat_cell.loc['AVPR_nll'] = avpr_vec_nll
         df_avpr_feat_cell.loc['AVPR_pi'] = avpr_vec_pi
-        df_avpr_feat_cell.to_csv(folder_output + "/" + mode + "_avpr_features.csv")
+        df_avpr_feat_cell.to_csv(path_output + "/" + mode + "_avpr_features.csv")
 
         # store AUC for features (cell only)
         df_auc_feat_cell = pd.DataFrame([], index=['AUC_nll', 'AUC_pi'], columns=attributes)
         df_auc_feat_cell.loc['AUC_nll'] = auc_vec_nll
         df_auc_feat_cell.loc['AUC_pi'] = auc_vec_pi
-        df_auc_feat_cell.to_csv(folder_output + "/" + mode + "_auc_features.csv")
+        df_auc_feat_cell.to_csv(path_output + "/" + mode + "_auc_features.csv")
 
         ### Store data from Epochs
         columns = ['Avg. AVI Loss', 'Avg. AVI NLL', 'Avg. AVI KLD_Z', 'Avg. AVI KLD_W',
@@ -660,7 +750,7 @@ class RVAE(nn.Module):
         df_out = pd.DataFrame.from_dict(losses_save[mode], orient="index",
                                         columns=columns)
         df_out.index.name = "Epochs"
-        df_out.to_csv(folder_output + "/" + mode + "_epochs_data.csv")
+        df_out.to_csv(path_output + "/" + mode + "_epochs_data.csv")
 
         ### Store errors per feature
 
@@ -670,7 +760,7 @@ class RVAE(nn.Module):
         df_errors_repair.loc['error_repair_dirtycells'] = clean_loss_ret['errors_per_feature'][1].cpu()
         df_errors_repair.loc['error_upperbound_dirtycells'] = clean_loss_ret['errors_per_feature'][2].cpu()
         df_errors_repair.loc['error_repair_cleancells'] = clean_loss_ret['errors_per_feature'][3].cpu()
-        df_errors_repair.to_csv(folder_output + "/" + mode + "_error_repair_features.csv")
+        df_errors_repair.to_csv(path_output + "/" + mode + "_error_repair_features.csv")
 
 
     def get_inputs(self, x_data, one_hot_categ=False, masking=False, drop_mask=[], in_aux_samples=[]):
@@ -889,43 +979,101 @@ class RVAE(nn.Module):
 
         return loss_ret, nll_val, z_kld, w_kld 
 
-def test():
+
+
+def test_rvae():
     args={
-        "AVI":False, 
-        "activation":'relu', 
-        "alpha_prior":0.95, 
-        "batch_size":150, 
-        "cuda_on":False, 
-        "data_folder":'../data_simple/Wine/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
-        "embedding_size":50, 
-        "inference_type":'vae', 
-        "is_one_hot":False, 
-        "l2_reg":0.0, 
-        "latent_dim":20, 
-        "layer_size":400, 
-        "load_model":False, 
-        "load_model_path":None, 
-        "log_interval":50, 
-        "lr":0.001, 
-        "number_epochs":2, 
-        "outlier_model":'RVAE', 
-        "output_folder":'outputs_experiments_i/Wine/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/RVAE_CVI', 
-        "save_on":True, 
-        "seqvae_bprop":False, 
-        "seqvae_steps":4, 
-        "seqvae_two_stage":False, 
+        "AVI":False,
+        "activation":'relu',
+        "alpha_prior":0.95,
+        "batch_size":150,
+        "cuda_on":False,
+        "data_path":'../data_simple/Wine/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
+        "embedding_size":50,
+        "inference_type":'vae',
+        "is_one_hot":False,
+        "l2_reg":0.0,
+        "latent_dim":20,
+        "layer_size":400,
+        "load_model":False,
+        "load_model_path":None,
+        "log_interval":50,
+        "lr":0.001,
+        "number_epochs":2,
+        "outlier_model":'RVAE',
+        "output_path":'outputs_experiments_i/Wine/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/RVAE_CVI',
+        "save_on":True,
+        "seqvae_bprop":False,
+        "seqvae_steps":4,
+        "seqvae_two_stage":False,
         "std_gauss_nll":2.0,
-        "steps_2stage":4, 
-        "verbose_metrics_epoch":True, 
+        "steps_2stage":4,
+        "verbose_metrics_epoch":True,
         "verbose_metrics_feature_epoch":False
     }
     args = namedtuple("args", args.keys())(*args.values())
+    m = {'model_pars': {
+            # Specify the model
+            'model_class':  "torch_tabular.py::RVAE",
+            # "load_model":False,
+            # "load_model_path":None,
+            "activation":'relu',
+            "outlier_model":'RVAE',
+            "AVI":False,
+            "alpha_prior":0.95,
+            "embedding_size":50,
+            "is_one_hot":False,
+            "latent_dim":20,
+            "layer_size":400,
+          
 
+        },
+
+        'compute_pars': {
+            "cuda_on":False,
+            "number_epochs":2,
+            "l2_reg":0.0,
+            "lr":0.001,
+            "seqvae_bprop":False,
+            "seqvae_steps":4,
+            "seqvae_two_stage":False,
+            "std_gauss_nll":2.0,
+            "steps_2stage":4,
+            "inference_type":'vae',
+            'metric_list': [
+                'accuracy_score',
+                'average_precision_score'
+            ]
+        },
+
+        'data_pars': {
+            "data_path":'./data_simple/Wine/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
+            "output_path":'./outputs_experiments_i/Wine/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/RVAE_CVI',
+            "batch_size":150,
+        },
+        "log_interval":50,
+        "save_on":True,
+        "verbose_metrics_epoch":True,
+        "verbose_metrics_feature_epoch":False
+    }
+    model_pars = namedtuple("model_pars", m['model_pars'].keys())(*m['model_pars'].values())
+    compute_pars = namedtuple("compute_pars", m['compute_pars'].keys())(*m['compute_pars'].values())
+    data_pars = namedtuple("data_pars", m['data_pars'].keys())(*m['data_pars'].values())
+
+    m["model_pars"] = model_pars
+    m["compute_pars"] = compute_pars
+    m["data_pars"] = data_pars
+
+    m = namedtuple("m", m.keys())(*m.values())
+
+    log(m)
     model = RVAE(
-        data_folder=args.data_folder,
-        args=args
+        # data_path=m.data_path,
+        args=m
     )
+    log("################################## Training ##################################")
     model.fit()
+    log("################################## Save Model ##################################")
     model.save()
     
 if __name__ == "__main__":
