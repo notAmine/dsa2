@@ -54,7 +54,9 @@ def reset():
 ####################################################################################################
 cols_ref_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input']
 
-def WideDeep_dense(n_wide_cross, n_wide, n_deep, n_feat=8, m_EMBEDDING=10, loss='mse', metric ='mean_squared_error'):
+
+def WideDeep_dense(model_pars2):
+        #n_wide_cross, n_wide, n_deep, n_feat=8, m_EMBEDDING=10, loss='mse', metric ='mean_squared_error'):
         """
            Dense Model of DeepWide
         :param n_wide_cross: 
@@ -66,6 +68,17 @@ def WideDeep_dense(n_wide_cross, n_wide, n_deep, n_feat=8, m_EMBEDDING=10, loss=
         :param metric: 
         :return: 
         """
+        m = model_pars2
+        n_wide_cross = m.get('loss', 2)
+        n_wide = m.get('n_wide', 2)
+        n_deep = m.get('n_deep', 2)
+        n_feat = m.get('n_feat', 2)
+        m_EMBEDDING = m.get('m_embedding', 2)
+        loss      = m.get('loss', 'binary_crossentropy')
+        optimizer = m.get('optimizer', 'adam')
+        metrics   = m.get('metrics', ['accuracy'])
+        dnn_hidden_units = m.get('hidden_units', '64,32,16')
+
 
         #### Wide model with the functional API
         col_wide_cross          = layers.Input(shape=(n_wide_cross,))
@@ -75,7 +88,7 @@ def WideDeep_dense(n_wide_cross, n_wide, n_deep, n_feat=8, m_EMBEDDING=10, loss=
         predictions             = layers.Dense(1)(merged_layer)
         wide_model              = keras.Model(inputs=[col_wide_cross, col_wide], outputs=predictions)
 
-        wide_model.compile(loss = 'mse', optimizer='adam', metrics=[ metric ])
+        wide_model.compile(loss = 'mse', optimizer='adam', metrics= metrics)
         log2(wide_model.summary())
 
         #### Deep model with the Functional API
@@ -87,7 +100,7 @@ def WideDeep_dense(n_wide_cross, n_wide, n_deep, n_feat=8, m_EMBEDDING=10, loss=
 
         embed_out               = layers.Dense(1)(merged_layer)
         deep_model              = keras.Model(inputs=deep_inputs, outputs=embed_out)
-        deep_model.compile(loss='mse',   optimizer='adam',  metrics=[ metric ])
+        deep_model.compile(loss='mse',   optimizer='adam',  metrics= metrics)
         log2(deep_model.summary())
 
 
@@ -95,25 +108,24 @@ def WideDeep_dense(n_wide_cross, n_wide, n_deep, n_feat=8, m_EMBEDDING=10, loss=
         merged_out = layers.concatenate([wide_model.output, deep_model.output])
         merged_out = layers.Dense(1)(merged_out)
         model      = keras.Model( wide_model.input + [deep_model.input], merged_out)
-        model.compile(loss=loss,   optimizer='adam',  metrics=[ metric ])
+        model.compile(loss=loss,   optimizer='adam',  metrics= metrics)
         log2(model.summary())
 
         return model
 
 
-def WideDeep_sparse(model_pars, data_pars):
+def WideDeep_sparse(model_pars2):
     """
     
     """
-    loss      = model_pars.get('loss','binary_crossentropy')
-    optimizer = model_pars.get('optimizer','adam')
-    metrics   = model_pars.get('metrics',['accuracy'])
-    
-    dnn_hidden_units = model_pars.get('hidden_units','64,32,16')
+    loss      = model_pars2.get('loss', 'binary_crossentropy')
+    optimizer = model_pars2.get('optimizer', 'adam')
+    metrics   = model_pars2.get('metrics', ['accuracy'])
+    dnn_hidden_units = model_pars2.get('hidden_units', '64,32,16')
 
-    inputs                  = data_pars['inputs']
-    linear_feature_columns  = data_pars['linear_cols']
-    dnn_feature_columns     = data_pars['dnn_cols']
+    inputs                  = model_pars2['inputs']
+    linear_feature_columns  = model_pars2['linear_cols']
+    dnn_feature_columns     = model_pars2['dnn_cols']
 
 
     deep   = tf.keras.layers.DenseFeatures(dnn_feature_columns, name='deep_inputs')(inputs)
@@ -137,20 +149,20 @@ def WideDeep_sparse(model_pars, data_pars):
 class Model(object):
     global model,session
     def __init__(self, model_pars=None,  data_pars=None, compute_pars=None,):
-        self.model_pars, self.data_pars= model_pars, data_pars
+        self.model_pars, self.data_pars, self.compute_pars= model_pars, data_pars, compute_pars
         self.history = None
         if model_pars is None:
             self.model = None
 
         else:
             model_class = model_pars.get('model_class', 'WideDeep_sparse')        
-            if model_class == 'WideDeep_sparse' :                
+            if 'sparse' in model_class  :
                 cpars = model_pars['model_pars']
-                self.model = WideDeep_sparse(model_pars, data_pars)
-                
+                cpars = { **cpars, **data_pars['tf_sparse'] }
+                self.model = WideDeep_sparse(cpars)
             else : 
                 cpars = model_pars['model_pars']
-                self.model = WideDeep_dense( **cpars)
+                self.model = WideDeep_dense( cpars)
 
 
 #####################################################################################################
@@ -252,7 +264,6 @@ def model_summary(path="ztmp/"):
     os.makedirs(path, exist_ok=True)
     tf.keras.utils.plot_model(model.model, f'{path}/model.png', show_shapes=False, rankdir='LR')
     tf.keras.utils.plot_model(model.model, f'{path}/model_shapes.png', show_shapes=True, rankdir='LR')
-
 
 
 ########################################################################################################################
@@ -426,10 +437,6 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
 
 
-
-
-
-
 ########################################################################################################################
 ########################################################################################################################
 def test(config=''):
@@ -441,9 +448,8 @@ def test(config=''):
     :param config:
     :return:
     """
-
     dataset_url = 'http://storage.googleapis.com/download.tensorflow.org/data/petfinder-mini.zip'
-    csv_file = 'datasets/petfinder-mini/petfinder-mini.csv'
+    csv_file    = 'datasets/petfinder-mini/petfinder-mini.csv'
 
     tf.keras.utils.get_file('petfinder_mini.zip', dataset_url,extract=True, cache_dir='.')
 
@@ -470,18 +476,25 @@ def test(config=''):
 
     #Embedding Columns
     embeddingCol = {'Breed1':8}
-
-
     linear,dnn,inputs = prepare.get_features()
 
-    model_pars = {'loss' : 'binary_crossentropy','optimizer':'adam','metric': ['accuracy'],'hidden_units': '64,32,16'}
 
-    data_pars = {'inputs': inputs,'linear_cols': linear.values(),'dnn_cols': dnn.values(),'train': train_df,
+    ########## Dict ######################################################
+    model_pars = {
+        'model_class' : 'keras_widedeep.py::DeepWide_sparse',
+        'model_pars'  : {  'loss' : 'binary_crossentropy','optimizer':'adam','metric': ['accuracy'],'hidden_units': '64,32,16'}
+    }
+
+    data_pars = { 'tf_sparse' : { 'inputs': inputs,'linear_cols': linear.values(),'dnn_cols': dnn.values(),
+                   },
+                 'train': train_df,
                 'test': test_df,'val': val_df }
+
 
     compute_pars = {'epochs':2, 'verbose': 1,'path_checkpoint': 'checkpoint/model.pth','probability':True}
 
-    ######## Run ###########################################
+
+    ######## Run ##########################################################
     test_helper(model_pars, data_pars, compute_pars)
 
 
