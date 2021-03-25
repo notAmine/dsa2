@@ -273,7 +273,7 @@ class tf_FeatureColumns:
 
 
     """
-    def __init__(self,dataframe):
+    def __init__(self,dataframe=None):
         self.df = dataframe
         self.real_columns = {}
         self.sparse_columns = {}
@@ -288,7 +288,7 @@ class tf_FeatureColumns:
         ds = ds.batch(batch_size)
         return ds
 
-    def splitData(self,test_split=0.1,val_split=0.1):
+    def splitData(self,df=None, test_split=0.1,val_split=0.1):
         train_df,test_df = train_test_split(self.df,test_size=test_split)
         train_df,val_df = train_test_split(train_df,test_size=val_split)
         log('Files Splitted')
@@ -320,11 +320,12 @@ class tf_FeatureColumns:
         return col_buckets
 
 
-    def categorical_columns(self,indicator_column_names,output=False):
+    def categorical_columns(self,indicator_column_names, colcat_nunique=None, output=False):
         for col_name in indicator_column_names:
 
             ###Dependance on actual Data
-            nuniques =  list(self.df[col_name].unique())
+            #nuniques =  list(self.df[col_name].unique())
+            nuniques = colcat_unique[col_name]
 
             categorical_column = feature_column.categorical_column_with_vocabulary_list(col_name, nuniques )
             indicator_column   = feature_column.indicator_column(categorical_column)
