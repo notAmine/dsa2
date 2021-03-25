@@ -375,6 +375,7 @@ def reset():
     global model, session
     model, session = None, None
 
+
 def save(path=None, info=None):
     """ Custom saving
     """
@@ -904,15 +905,10 @@ class RVAE(nn.Module):
 
 
     def encode(self, x_data, one_hot_categ=False, masking=False, drop_mask=[], in_aux_samples=[]):
-
         q_params = dict()
-
         input_values = self.get_inputs(x_data, one_hot_categ, masking, drop_mask, in_aux_samples)
-
         fc1_out = self.fc1(input_values)
-
         h1_qz = self.activ(fc1_out)
-
         q_params['z'] = {'mu': self.fc21(h1_qz), 'logvar': self.fc22(h1_qz)}
 
         if self.args.AVI:

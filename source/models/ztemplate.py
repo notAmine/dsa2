@@ -110,10 +110,72 @@ compute_pars = {
 
 
 
+#### Example
+    m = {'model_pars': {
+            # Specify the model
+            'model_class':  "torch_tabular.py::RVAE",
+            # "load_model":False,
+            # "load_model_path":None,
+
+            'model_pars' : {
+                "activation":'relu',
+                "outlier_model":'RVAE',
+                "AVI":False,
+                "alpha_prior":0.95,
+                "embedding_size":50,
+                "is_one_hot":False,
+                "latent_dim":20,
+                "layer_size":400,
+            }
 
 
+        },
+
+        'compute_pars': {
+            'log' :{
+                "log_interval":50,
+                "save_on":True,
+                "verbose_metrics_epoch":True,
+                "verbose_metrics_feature_epoch":False
+            },
+
+            'compute_pars' :{
+                "cuda_on":False,
+                "number_epochs":1,
+                "l2_reg":0.0,
+                "lr":0.001,
+                "seqvae_bprop":False,
+                "seqvae_steps":4,
+                "seqvae_two_stage":False,
+                "std_gauss_nll":2.0,
+                "steps_2stage":4,
+                "inference_type":'vae',
+                "batch_size":150,
+            },
+
+            'metric_list': [
+                'accuracy_score',
+                'average_precision_score'
+            ],
 
 
+        },
+
+        'data_pars': {
+            "batch_size":150,   ### Mini Batch from data
+            # Needed by getdataset
+            "clean" : False,
+            "data_path":   path_pkg + '/data_simple/Wine/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
+
+        },
+
+        'global_pars' :{
+            "data_path":   path_pkg + '/data_simple/Wine/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
+            "output_path": path_pkg + '/outputs_experiments_i/Wine/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/RVAE_CVI',
+
+        }
+
+    }
 
 
 
