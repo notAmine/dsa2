@@ -6,26 +6,18 @@ python torch_rvae.py test --nrows 1000
 
 
 """
-
-import os, sys,  numpy as np,  pandas as pd, wget, copy
+import os, sys,  numpy as np,  pandas as pd, wget, copy, errno, json
 from pathlib import Path
+from collections import namedtuple
+
 # torch.manual_seed(0)
 # np.random.seed(0)
 # torch.set_deterministic(True)
 # from torch.utils import data
-from sklearn.model_selection import train_test_split
-import torch
-
 import torch
 from torch import nn
 from torch import optim
 from torch.nn import functional as F
-from collections import namedtuple
-import pandas as pd
-import numpy as np
-import sys
-import json
-import os, errno
 
 
 ######################################################################################################
@@ -69,8 +61,8 @@ class Model(object):
         if model_pars is None:
             self.model = None
             return 
-        
-        
+
+
         # Fuse all params for RVAE 
         model_pars2 = copy.deepcopy(self.model_pars['model_pars'])
         model_pars2.update(self.compute_pars['compute_pars'])
@@ -111,8 +103,8 @@ def get_dataset(data_pars, task_type="train"):
 
         return target_errors_train
 
+
     if not clean:
-    
         if task_type == 'train':
             train_loader, X_train, target_errors_train, dataset_obj,  attributes = utils.load_data(data_path, batch_size,
                                             is_train=True,
@@ -208,7 +200,6 @@ def decode(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dict
 
     Xnew_original =  model.model.decode(Xpred)
     return Xnew_original
-
 
 
 
@@ -337,7 +328,6 @@ def compute_metrics(model, X, dataset_obj, args, epoch, losses_save,
 
 def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     global model, session
-
     if Xpred is None:
         dataloader = get_dataset(data_pars, task_type='predict')
         
@@ -358,14 +348,11 @@ def eval(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dict={
     """
          Encode + Decode 
     """
-
     Xencoded = encode(Xpred=Xpred, data_pars=data_pars, compute_pars=compute_pars, out_pars=out_pars)
-
     log("\nEncoded : ", Xencoded)
 
     log('\nDecoding : ')
     Xnew_original = decode(Xpred=Xencoded, data_pars=data_pars, compute_pars=compute_pars, out_pars=out_pars)
-    
     log('\nDecoded : ', Xnew_original)
 
 
@@ -476,23 +463,14 @@ def get_dataset2(data_pars=None, task_type="train", **kw):
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
+
 ####################################################################################################
 ############ Test  #################################################################################
-def test_dataset_1(nrows=1000):
-    # Dense features
-    colnum = []
-
-    # Sparse features
-    colcat = [  ]
-
-
-
 def test(nrows=1000):
     """
         nrows : take first nrows from dataset
     """
     global model, session
-    
     m = {'model_pars': {
             # Specify the model
             'model_class':  "torch_tabular.py::RVAE",
@@ -522,16 +500,8 @@ def test(nrows=1000):
             },
 
             'compute_pars' :{
-                "cuda_on":False,
-                "number_epochs":1,
-                "l2_reg":0.0,
-                "lr":0.001,
-                "seqvae_bprop":False,
-                "seqvae_steps":4,
-                "seqvae_two_stage":False,
-                "std_gauss_nll":2.0,
-                "steps_2stage":4,
-                "inference_type":'vae',
+                "cuda_on":False, "number_epochs":1, "l2_reg":0.0, "lr":0.001, "seqvae_bprop":False, "seqvae_steps":4,
+                "seqvae_two_stage":False, "std_gauss_nll":2.0, "steps_2stage":4, "inference_type":'vae',
                 "batch_size":150,
             },
 
@@ -558,17 +528,30 @@ def test(nrows=1000):
         }
         
     }
+    test_helper(m)
 
 
 
+
+def test2(nrows=1000):
+   pass
+
+
+
+
+
+
+
+
+
+
+
+def test_helper(m):
     log('Setup model..')
-    model = Model(
-        model_pars=m['model_pars'], 
-        data_pars=m['data_pars'], 
-        compute_pars= m['compute_pars'], 
+    model = Model( model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'],
         global_pars=m['global_pars']
     )
-    
+
     log('\n\nTraining the model..\n\n')
     fit(data_pars=m['data_pars'], compute_pars= m['compute_pars'], out_pars=None)
     log('\n\nTraining completed!\n\n')
@@ -589,12 +572,8 @@ def test(nrows=1000):
 
     log('\n\n#################### Evaluating... #################### \n\n')
     eval(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
-    
+
     reset()
-
-
-
-
 
 
 
