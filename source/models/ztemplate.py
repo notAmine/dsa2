@@ -75,7 +75,7 @@ def init(*kw, **kwargs):
 
 class Model(object):
     """
-           Generic Wrapper Class for Modelcustom
+           Generic Wrapper Class for WideDeep_dense
            Actual model is in Model.model
 
     """

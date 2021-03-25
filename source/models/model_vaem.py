@@ -60,7 +60,7 @@ from repo.vaem import model_main as Modelcustom
 
 cols_ref_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input']
 
-def Modelcustom(n_wide_cross, n_wide,n_deep, n_feat=8, m_EMBEDDING=10, loss='mse', metric = 'mean_squared_error'):
+def WideDeep_dense(n_wide_cross, n_wide,n_deep, n_feat=8, m_EMBEDDING=10, loss='mse', metric = 'mean_squared_error'):
         #### Wide model with the functional API
         col_wide_cross          = layers.Input(shape=(n_wide_cross,))
         col_wide                = layers.Input(shape=(n_wide,))
