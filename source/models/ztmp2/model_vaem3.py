@@ -1,3 +1,10 @@
+"""
+
+python model_vaem3.py
+
+
+
+"""
 import numpy as np, sys,os, copy, random, pandas as pd, json
 from scipy.stats import bernoulli
 from random import sample
@@ -6,8 +13,6 @@ from sklearn.model_selection import train_test_split
 import sklearn.preprocessing as preprocessing
 from sklearn.metrics import mean_squared_error
 from sklearn.feature_selection import mutual_info_regression, mutual_info_classif
-
-# tfd = tf.contrib.distributions
 import seaborn as sns; sns.set(style="ticks", color_codes=True)
 
 
@@ -15,8 +20,8 @@ import seaborn as sns; sns.set(style="ticks", color_codes=True)
 import tensorflow as tf
 print(tf.__version__)
 
-thisfile_path = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")
-sys.path.append( thisfile_path + "/repo/VAEM/" )
+#### put VAEM
+sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/repo/VAEM/" )
 
 
 import utils.process as process
@@ -26,7 +31,6 @@ import models.decoders as decoders
 import models.encoders as encoders
 import models.model as vae_model
 import utils.reward as reward
-
 #######################################################################################
 verbosity =2
 
@@ -46,170 +50,21 @@ def init(*kw, **kwargs):
     model = Model(*kw, **kwargs)
     session = None
 
-# Making Args Global Variable 
-args = params.Params('hyperparameters/bank_plot.json')
 
-if not os.path.exists(args.output_dir):
-    os.makedirs(args.output_dir)  
-rs = 42 # random seed
-fast_plot = 0
+##### Making Args Global Variable 
+global args
+
 
 ####################################################################################################
 ##### Custom code  #################################################################################
 cols_ref_formodel = ['none']  ### No column group
 
 
-
-##################################################################################################################################
-def reset():
-    global model, session
-    model, session = None, None
-
-def save(path='', info=None):
-    import dill as pickle, copy
-    global model, session
-    os.makedirs(path, exist_ok=True)
-
-    model.model.save(f"{path}/model_keras.h5")
-    model.model.save_weights(f"{path}/model_keras_weights.h5")
-
-    modelx = Model()  # Empty model  Issue with pickle
-    modelx.model_pars   = model.model_pars
-    modelx.data_pars    = model.data_pars
-    modelx.compute_pars = model.compute_pars
-    # log('model', modelx.model)
-    pickle.dump(modelx, open(f"{path}/model.pkl", mode='wb'))  #
-
-    pickle.dump(info, open(f"{path}/info.pkl", mode='wb'))  #
-
-
-def load_model(path=""):
-    global model, session
-    import dill as pickle
-
-    model0      = pickle.load(open(f"{path}/model.pkl", mode='rb'))
-
-    model = Model()  # Empty model
-    model.model        = get_model( model0.model_pars)
-    model.model_pars   = model0.model_pars
-    model.compute_pars = model0.compute_pars
-
-    model.model.load_weights( f'{path}/model_keras_weights.h5')
-
-    log(model.model.summary())
-    #### Issue when loading model due to custom weights, losses, Keras erro
-    #model_keras = get_model()
-    #model_keras = keras.models.load_model(path + '/model_keras.h5' )
-    session = None
-    return model, session
-
-
-def load_info(path=""):
-    import cloudpickle as pickle, glob
-    dd = {}
-    for fp in glob.glob(f"{path}/*.pkl"):
-        if not "model.pkl" in fp:
-            obj = pickle.load(open(fp, mode='rb'))
-            key = fp.split("/")[-1]
-            dd[key] = obj
-    return dd
-
-################################################################################################################################
-import pyarrow as pa
-import pyarrow.parquet as pq
-
-class Model_custom(object):
-    def __init__(self):
-        
-        ### Dynamic Dimension : data_pars  ---> model_pars dimension  ###############
-        print('Model Instantiated')
-        print('Next Step: Fit')
-
-        #log2(self.model_pars, self.model)
-        #self.model.summary()
-
-    def fit(self,filePath, categories,cat_cols,num_cols,discrete_cols,targetCol,nsample = -1,delimiter=',',plot=False):
-        """
-        This Function will load the data and fit the preprocessing technique into it
-        params:
-            filePath: CSV File path relative to file
-            categories: Categorical feature list
-            cat_cols: category_columns
-            nums_cols: Numerical Columns list
-            discrete_cols: discrete cols list
-            target_cols: Column name of Target Variable
-            nsample: No of Sample for Encoding-Decoding
-            delimiter: Delimiter in CSV File,Default=','
-
-        """
-        global model, session
-        session = None  # Session type for compute
-        self.filePath = filePath
-        self.categories = categories
-        self.cat_cols = cat_cols
-        self.num_cols = num_cols
-        self.discrete_cols = discrete_cols
-        self.targetCol = targetCol
-        self.nsample = nsample
-        self.delimiter = delimiter 
-        data_decode,records_d = load_data(self.filePath,self.categories,self.cat_cols,self.num_cols,self.discrete_cols,self.targetCol,self.nsample,self.delimiter)
-        self.data_decode = data_decode
-        self.records_d = records_d
-        self.list_discrete = discrete_cols
-        #model.model['encode'].fit([Xtrain_tuple, Xtrain_dummy],  **cpars)
-        #model.model['decode'].fit([Xtrain_tuple, Xtrain_dummy],  **cpars)
-        model1,scaling_factor = encode2(self.data_decode,self.list_discrete,self.records_d,plot)        
-        self.encoder_model = model1
-        self.scaling_factor = scaling_factor
-        model2 = decode2(self.data_decode, self.scaling_factor,self.list_discrete,self.records_d,plot=plot)
-        self.decode_model = model2
-
-
-    def encode(self):
-        global Data_decompressed,Mask_decompressed
-        '''
-        This function will be using encode2 function defined above for encoding data.
-        This Model will create a parquet file of encoded columns
-
-        '''
-        encoded_array = self.encoder_model.im(Data_decompressed,Mask_decompressed)
-        parquetDic = {}
-        for i in range(Data_decompressed.shape[1]):
-            name = f'col_{i+1}'
-            parquetDic[name] = encoded_array[:,i]
-        print('Encoded Columns')
-        log2(encoded_array)
-        ndarray_table = pa.table(parquetDic)
-        pq.write_table(ndarray_table,'my_encoder.parquet')
-        print('File my_encoder.parquet created')
-        
-
-    def decode(self):
-        global Data_decompressed
-        '''
-        This function will be using decoder2 function defined above for decoding data.
-        This Model will create a parquet file for decoded columns
-        
-        '''
-        
-        parquetDic = {}
-        for i in range(Data_decompressed.shape[1]):
-            name = f'col_{i+1}'
-            parquetDic[name] = Data_decompressed[:,i]
-
-        ndarray_table = pa.table(parquetDic)
-        pq.write_table(ndarray_table,'my_decoder.parquet')
-        print('File my_decoder.parquet created')
-        
-
 ########## Loading Of Data #########################################################################
 def load_data(filePath,categories,cat_col,num_cols,discrete_cols,targetCol,nsample,delimiter):
-    global Data_decompressed, Mask_decompressed
     '''
         Data will be loaded from repo/VAEM/data/bank and then preprocessing starts
     '''
-
-    
     seed = 3000
     dataframe = pd.read_csv(filePath,delimiter=delimiter)
     if nsample != -1:
@@ -240,7 +95,7 @@ def load_data(filePath,categories,cat_col,num_cols,discrete_cols,targetCol,nsamp
 
     # sort the variables in the data matrix, so that categorical variables appears first. The resulting data matrix is Data_sub
     list_discrete_in_flt = (np.in1d(list_flt, list_discrete).nonzero()[0])
-    list_discrete_compressed = list_discrete_in_flt + len(list_cat)
+    list_discrete_comp = list_discrete_in_flt + len(list_cat)
 
     if len(list_flt)>0 and len(list_cat)>0:
         list_var = np.concatenate((list_cat,list_flt))
@@ -263,30 +118,30 @@ def load_data(filePath,categories,cat_col,num_cols,discrete_cols,targetCol,nsamp
     
     Data_cat = Data[:,list_cat].copy()
     Data_flt = Data[:,list_flt].copy()
-    Data_compressed = np.concatenate((Data_cat,Data_flt),axis = 1)
-    Data_decompressed, Mask_decompressed, cat_dims, DIM_FLT = process.data_preprocess(Data_sub,Mask,dic_var_type)
-    Data_train_decompressed, Data_test_decompressed, mask_train_decompressed, mask_test_decompressed,mask_train_compressed, mask_test_compressed,Data_train_compressed, Data_test_compressed = train_test_split(
-            Data_decompressed, Mask_decompressed,Mask,Data_compressed,test_size=0.1, random_state=rs)
+    Data_comp = np.concatenate((Data_cat,Data_flt),axis = 1)
+    Data_decomp, Mask_decomp, cat_dims, DIM_FLT = process.data_preprocess(Data_sub,Mask,dic_var_type)
+    Data_train_decomp, Data_test_decomp, mask_train_decomp, mask_test_decomp,mask_train_comp, mask_test_comp,Data_train_comp, Data_test_comp = train_test_split(
+            Data_decomp, Mask_decomp,Mask,Data_comp,test_size=0.1, random_state=rs)
 
     list_discrete = list_discrete_in_flt + (cat_dims.sum()).astype(int)
 
-    Data_decompressed = np.concatenate((Data_train_decompressed, Data_test_decompressed), axis=0)
-    Data_train_orig = Data_train_decompressed.copy()
-    Data_test_orig = Data_test_decompressed.copy()
+    Data_decomp = np.concatenate((Data_train_decomp, Data_test_decomp), axis=0)
+    Data_train_orig = Data_train_decomp.copy()
+    Data_test_orig = Data_test_decomp.copy()
 
     # Note that here we have added some noise to continuous-discrete variables to help training. Alternatively, you can also disable this by changing the noise ratio to 0.
-    Data_noisy_decompressed,records_d, intervals_d = process.noisy_transform(Data_decompressed, list_discrete, noise_ratio = 0.99)
-    noise_record = Data_noisy_decompressed - Data_decompressed
-    Data_train_noisy_decompressed = Data_noisy_decompressed[0:Data_train_decompressed.shape[0],:]
-    Data_test_noisy_decompressed = Data_noisy_decompressed[Data_train_decompressed.shape[0]:,:]
+    Data_noisy_decomp,records_d, intervals_d = process.noisy_transform(Data_decomp, list_discrete, noise_ratio = 0.99)
+    noise_record = Data_noisy_decomp - Data_decomp
+    Data_train_noisy_decomp = Data_noisy_decomp[0:Data_train_decomp.shape[0],:]
+    Data_test_noisy_decomp = Data_noisy_decomp[Data_train_decomp.shape[0]:,:]
 
-    data_decode = (Data_train_decompressed, Data_train_noisy_decompressed,mask_train_decompressed,Data_test_decompressed,mask_test_compressed,mask_test_decompressed,cat_dims,DIM_FLT,dic_var_type)
+    data_decode = (Data_train_decomp, Data_train_noisy_decomp,mask_train_decomp,Data_test_decomp,mask_test_comp,mask_test_decomp,cat_dims,DIM_FLT,dic_var_type)
 
     return data_decode, records_d
 
 
 def encode2(data_decode,list_discrete,records_d,fast_plot):
-    # Extracting Masked Decompressed Data from data_decode function obtained from load_data function
+    # Extracting Masked Decomp Data from data_decode function obtained from load_data function
     Data_train_decomp, Data_train_noisy_decomp,mask_train_decomp,Data_test_decomp,mask_test_comp,mask_test_decomp,cat_dims,DIM_FLT,dic_var_type = data_decode
     
     vae = p_vae_active_learning(Data_train_decomp, Data_train_noisy_decomp,mask_train_decomp,Data_test_decomp,mask_test_comp,mask_test_decomp,cat_dims,DIM_FLT,dic_var_type,args,list_discrete,records_d)
@@ -344,8 +199,8 @@ def encode2(data_decode,list_discrete,records_d,fast_plot):
     return vae,scaling_factor
 
 
-def decode2(data_decode,scaling_factor,list_discrete,records_d,plot=False):
-    args = params.Params('hyperparameters/bank_SAIA.json')
+def decode2(data_decode,scaling_factor,list_discrete,records_d,plot=False, args=None):
+    # args = params.Params('hyperparameters/bank_SAIA.json')
 
     Data_train_decomp, Data_train_noisy_decomp,mask_train_decomp,Data_test_decomp,mask_test_comp,mask_test_decomp,cat_dims,DIM_FLT,dic_var_type = data_decode
     print('Decode Training Start')
@@ -386,7 +241,7 @@ def decode2(data_decode,scaling_factor,list_discrete,records_d,plot=False):
 def save_model2(model,output_dir):
     model.save(output_dir)
 
-def p_vae_active_learning(Data_train_compressed, Data_train,mask_train,Data_test,mask_test_compressed,mask_test,cat_dims,dim_flt,dic_var_type,args,list_discrete,records_d, estimation_method=1):
+def p_vae_active_learning(Data_train_comp, Data_train,mask_train,Data_test,mask_test_comp,mask_test,cat_dims,dim_flt,dic_var_type,args,list_discrete,records_d, estimation_method=1):
     global mask
     list_stage = args.list_stage
     list_strategy = args.list_strategy
@@ -402,12 +257,12 @@ def p_vae_active_learning(Data_train_compressed, Data_train,mask_train,Data_test
     '''
     This function train or loads a VAEM model, and performs SAIA using SING or full EDDI strategy.
     Note that we assume that the last column of x is the target variable of interest
-    :param Data_train_compressed: preprocessed traning data matrix without one-hot encodings. Note that we assume that the columns of the data matrix is re-ordered, so that the categorical variables appears first, and then the continuous variables afterwards.
-    :param Data_train: preprocessed traning data matrix with one-hot encodings. Is is re-ordered as Data_train_compressed.
+    :param Data_train_comp: preprocessed traning data matrix without one-hot encodings. Note that we assume that the columns of the data matrix is re-ordered, so that the categorical variables appears first, and then the continuous variables afterwards.
+    :param Data_train: preprocessed traning data matrix with one-hot encodings. Is is re-ordered as Data_train_comp.
     :param mask_train: mask matrix that indicates the missingness of training data,with one-hot encodings. 1=observed, 0 = missing
     :param Data_test: test data matrix, with one-hot encodings.
     :param mask_test: mask matrix that indicates the missingness of test data, with one-hot encodings.. 1=observed, 0 = missing
-    :param mask_test_compressed: mask matrix that indicates the missingness of test data, without one-hot encodings. 1=observed, 0 = missing.
+    :param mask_test_comp: mask matrix that indicates the missingness of test data, without one-hot encodings. 1=observed, 0 = missing.
     :param cat_dims: a list that indicates the number of potential outcomes for non-continuous variables.
     :param dim_flt: number of continuous variables.
     :param dic_var_type: a list that contains the statistical types for each variables
@@ -518,9 +373,9 @@ def p_vae_active_learning(Data_train_compressed, Data_train,mask_train,Data_test
                         # This is used for active learning phase, since single ordering should not depend on observations.
                         # The second one (R_eval) is calculated in the same way as chain rule approximation. This is only used for visualization.
                         if t ==-1:
-                            im_0 = Data_train_compressed.reshape((1,Data_train_compressed.shape[0],-1))
-                            im = Data_train_compressed.reshape((1,Data_train_compressed.shape[0],-1))
-                            R = -1e40 * np.ones((Data_train_compressed.shape[0], OBS_DIM - 1))
+                            im_0 = Data_train_comp.reshape((1,Data_train_comp.shape[0],-1))
+                            im = Data_train_comp.reshape((1,Data_train_comp.shape[0],-1))
+                            R = -1e40 * np.ones((Data_train_comp.shape[0], OBS_DIM - 1))
                             for u in range(OBS_DIM - 1): # u is the indicator for features. calculate reward function for each feature candidates
                                 loc = np.where(mask2[:, u] == 0)[0]
                                 if estimation_method == 0:
@@ -544,7 +399,7 @@ def p_vae_active_learning(Data_train_compressed, Data_train,mask_train,Data_test
                         i_optimal = np.tile(i_optimal, [n_test])
                         io = np.eye(OBS_DIM)[i_optimal]
                         action_SING[r, :, t] = i_optimal
-                        mask = mask + io*mask_test_compressed # this mask takes into account both data missingness and missingness of unselected features
+                        mask = mask + io*mask_test_comp # this mask takes into account both data missingness and missingness of unselected features
                         negative_predictive_llh, predictive_rmse = vae.predictive_loss(
                             x, mask,cat_dims, dic_var_type, M)
                         mask2 = mask2 + io # this mask only stores missingess of unselected features, i.e., which features has been selected of each data
@@ -584,6 +439,7 @@ def train_p_vae(stage, x_train, Data_train,mask_train, epochs, latent_dim,cat_di
     # we have three stages of training.
     # stage 1 = training marginal VAEs, stage 2 = training dependency network, (see Section 2 in our paper)
     # stage 3 = add predictor and improve predictive performance (See Appendix C in our paper)
+
     if stage ==1:
         load_model = 0
         disc_mode = 'non_disc'
@@ -593,38 +449,40 @@ def train_p_vae(stage, x_train, Data_train,mask_train, epochs, latent_dim,cat_di
     elif stage == 3:
         load_model = 1
         disc_mode = 'joint'
-    obs_dim = Data_train.shape[1]
-    n_train = Data_train.shape[0]
+
+
+    obs_dim    = Data_train.shape[1]
+    n_train    = Data_train.shape[0]
     list_train = np.arange(n_train)
     batch_size = np.minimum(batch_size,n_train)
     ####### construct
     kwargs = {
-        'stage':stage,
-        'K': K,
-        'latent_dim': latent_dim,
-        'batch_size': batch_size,
-        'encoder': encoders.vaem_encoders(obs_dim,cat_dims,dim_flt,K, latent_dim ),
-        'decoder': decoders.vaem_decoders(obs_dim,cat_dims,list_discrete,records_d),
-        'obs_dim': obs_dim,
-        'cat_dims': cat_dims,
-        'dim_flt': dim_flt,
-        'load_model':load_model,
-        'decoder_path': os.path.join(args.output_dir, 'generator.tensorflow'),
-        'encoder_path': os.path.join(args.output_dir, 'encoder.tensorflow'),
-        'x_train':x_train,
-        'list_discrete':list_discrete,
-        'records_d':records_d,
+        'stage'         : stage,
+        'K'             : K,
+        'latent_dim'    : latent_dim,
+        'batch_size'    : batch_size,
+        'encoder'       : encoders.vaem_encoders(obs_dim,cat_dims,dim_flt,K, latent_dim ),
+        'decoder'       : decoders.vaem_decoders(obs_dim,cat_dims,list_discrete,records_d),
+        'obs_dim'       : obs_dim,
+        'cat_dims'      : cat_dims,
+        'dim_flt'       : dim_flt,
+        'load_model'    : load_model,
+        'decoder_path'  : os.path.join(args.output_dir, 'generator.tensorflow'),
+        'encoder_path'  : os.path.join(args.output_dir, 'encoder.tensorflow'),
+        'x_train'       : x_train,
+        'list_discrete' : list_discrete,
+        'records_d'     : records_d,
     }
     vae = vae_model.partial_vaem(**kwargs)
     if iteration == -1:
         n_it = int(np.ceil(n_train / kwargs['batch_size']))
     else:
         n_it = iteration
-    hist_loss_full = np.zeros(epochs)
-    hist_loss_cat = np.zeros(epochs)
-    hist_loss_flt = np.zeros(epochs)
+    hist_loss_full    = np.zeros(epochs)
+    hist_loss_cat     = np.zeros(epochs)
+    hist_loss_flt     = np.zeros(epochs)
     hist_loss_z_local = np.zeros(epochs)
-    hist_loss_kl = np.zeros(epochs)
+    hist_loss_kl      = np.zeros(epochs)
 
     if stage == 3:
         ## after stage 2, do discriminative training of y. Please refer to Section 3.4 and Appendix C in our paper.
@@ -714,31 +572,182 @@ def train_p_vae(stage, x_train, Data_train,mask_train, epochs, latent_dim,cat_di
 
     return vae
 
-
 ##############################################################################################################################################################################################################
-def test():
-    #Instantiating Model
-    model = Model_custom()
+
+##################################################################################################################################
+def reset():
+    global model, session
+    model, session = None, None
+
+def save(path='', info=None):
+    import dill as pickle, copy
+    global model, session
+    os.makedirs(path, exist_ok=True)
+
+    model.model.save(f"{path}/model_keras.h5")
+    model.model.save_weights(f"{path}/model_keras_weights.h5")
+
+    modelx = Model()  # Empty model  Issue with pickle
+    modelx.model_pars   = model.model_pars
+    modelx.data_pars    = model.data_pars
+    modelx.compute_pars = model.compute_pars
+    # log('model', modelx.model)
+    pickle.dump(modelx, open(f"{path}/model.pkl", mode='wb'))  #
+
+    pickle.dump(info, open(f"{path}/info.pkl", mode='wb'))  #
+
+
+def load_model(path=""):
+    global model, session
+    import dill as pickle
+
+    model0      = pickle.load(open(f"{path}/model.pkl", mode='rb'))
+
+    model = Model()  # Empty model
+    model.model        = get_model( model0.model_pars)
+    model.model_pars   = model0.model_pars
+    model.compute_pars = model0.compute_pars
+
+    model.model.load_weights( f'{path}/model_keras_weights.h5')
+
+    log(model.model.summary())
+    #### Issue when loading model due to custom weights, losses, Keras erro
+    #model_keras = get_model()
+    #model_keras = keras.models.load_model(path + '/model_keras.h5' )
+    session = None
+    return model, session
+
+
+def load_info(path=""):
+    import cloudpickle as pickle, glob
+    dd = {}
+    for fp in glob.glob(f"{path}/*.pkl"):
+        if not "model.pkl" in fp:
+            obj = pickle.load(open(fp, mode='rb'))
+            key = fp.split("/")[-1]
+            dd[key] = obj
+    return dd
+
+################################################################################################################################
+class Model(object):
+    def __init__(self):
+        
+        ### Dynamic Dimension : data_pars  ---> model_pars dimension  ###############
+        print('Model Instantiated')
+        print('Next Step: Fit')
+
+        #log2(self.model_pars, self.model)
+        #self.model.summary()
+
+    def fit(self, p) :
+        #filePath, categories,cat_cols,num_cols,discrete_cols,targetCol,nsample = -1,delimiter=','):
+        """
+        This Function will load the data and fit the preprocessing technique into it
+        params:
+            filePath: CSV File path relative to file
+            categories: Categorical feature list
+            cat_cols: category_columns
+            nums_cols: Numerical Columns list
+            discrete_cols: discrete cols list
+            target_cols: Column name of Target Variable
+            nsample: No of Sample for Encoding-Decoding
+            delimiter: Delimiter in CSV File,Default=','
+
+        """
+        global model, session
+        session               = None  # Session type for compute
+
+        self.filePath         = p['filePath']
+        self.categories       = p['categories']
+        self.cat_cols         = p['cat_cols']
+        self.num_cols         = p['num_cols']
+        self.discrete_cols    = p['discrete_cols']        
+        self.targetCol        = p['targetCol']
+        self.nsample          = p['nsample']
+        self.delimiter        = p['delimiter']
+        self.list_discrete    = p['discrete_cols']
+
+
+        data_decode,records_d = load_data(self.filePath,self.categories,self.cat_cols,self.num_cols,self.discrete_cols,self.targetCol,self.nsample,self.delimiter)
+        self.data_decode      = data_decode
+        self.records_d        = records_d
+        #model.model['encode'].fit([Xtrain_tuple, Xtrain_dummy],  **cpars)
+        #model.model['decode'].fit([Xtrain_tuple, Xtrain_dummy],  **cpars)
+
+
+    def encode(self,plot=False, args=None):
+        '''
+        This function will be using encode2 function defined above for encoding data.
+        This Model will automatically saved as Generator in saved_weights folder.
+
+        params:
+            plot: To Plot the Graph of Encoder Training
+        '''
+        global model, session,obs_dim
+        model1,scaling_factor = encode2(self.data_decode,self.list_discrete,self.records_d,plot)        
+        self.encoder_model    = model1
+        self.scaling_factor   = scaling_factor
+
+
+    def decode(self,plot=False, args=None):
+        '''
+        This function will be using decoder2 function defined above for decoding data.
+        This Model will automatically saved as Generator in saved_weights folder.
+        params:
+            plot: To Plot the Graph of Decoder Training
+        '''
+        global model, session
+        model2 = decode2(self.data_decode, self.scaling_factor,self.list_discrete,self.records_d,plot=plot, args=args)
+        
+        self.decode_model = model2
+
+
+
+#######################################################################################################
+if __name__ == '__main__':
+    root = os.path.dirname(os.path.abspath(__file__))
+    args = params.Params( root + '/repo/VAEM/hyperparameters/bank_plot.json')
+
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)  
+    rs = 42 # random seed
+    fast_plot = 0
+
+
+    #Instantiating Model  ##################################
+    model = Model()
 
     #Defining Data and Variables
     categories = ['job',"marital","education",'default','housing','loan','contact','month','day_of_week','poutcome','y']
-    cat_ind = [0,1,2,3,4,5,6,7]
-    nums_ind = [8,9,10,11,12,13,14,15,16,17,18,19,20]
-    disc_ind = [8,9]
+    cat_ind    = [0,1,2,3,4,5,6,7]
+    nums_ind   = [8,9,10,11,12,13,14,15,16,17,18,19,20]
+    disc_ind   = [8,9]
 
-    # Data Fitting in the Model by Encoding and Decoding
-    model.fit('data/bank/bank-additional.csv',categories,cat_ind,nums_ind,disc_ind,'y',1000,';',True)
+
+    ### filePath, categories,cat_cols,num_cols,discrete_cols,targetCol,nsample = -1,delimiter=','):
+    p = {}
+    p['filePath']      = root + '/repo/VAEM/data/bank/bank-additional.zip'
+    p['categories']    = categories
+    p['cat_cols']      = cat_ind
+    p['num_cols']     = nums_ind
+    p['discrete_cols'] = disc_ind
+    p['targetCol']     = 'y'
+    p['nsample']       = 100
+    p['delimiter']     = ";"
+
+
+    # Data Fitting in the Model
+    model.fit( p)  #root + '/repo/VAEM/data/bank/bank-additional.zip',categories,cat_ind,nums_ind, disc_ind,'y',1000,';')
     
-    # Show Encode and Save File in .parquet file
-    model.encode()
-
-    # Show Decode and Save File in .parquet file
-    model.decode()
+    # Encoding the data
+    model.encode(plot=True)
 
 
+    # Decoding the Data
+    args2 = params.Params( root + '/repo/VAEM/hyperparameters/bank_SAIA.json')
+    model.decode(plot=True, args=args2)
 
-#################################################################################################################################################################
-if __name__ == '__main__':
-    import fire
-    fire.Fire()
+
+
+
 
