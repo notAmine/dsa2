@@ -224,9 +224,6 @@ def ae_basic():
 
 
 
-
-
-
 ##################################################################################################
 ##################################################################################################
 class Model(object):
@@ -236,9 +233,8 @@ class Model(object):
         if model_pars is None:
             self.model = None
             return
-        # log2("data_pars", data_pars)
-        model_class = model_pars['model_class']  #
 
+        model_class = model_pars['model_class']  
         ### get model params  #######################################################
         mdict_default = {
              'original_dim' : 15,
@@ -259,10 +255,9 @@ class Model(object):
 
         #### Model setup #############################################################
         self.model_pars['model_pars'] = mdict
-        log(mdict)
         self.model, self.encoder, self.decoder = VAEMDN( self.model_pars['model_pars'])
         log2(self.model_pars, self.model)
-        self.model.summary()
+        # self.model.summary()
 
 
 def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
@@ -559,10 +554,10 @@ def test():
     ######### Custom dataset
     m_signal_dim = 15
     X,y = dataset_correl(n_rows=100)
-    
+
     ######### size of NN (nb of correl)
     n_width = np.uint32( m_signal_dim * (m_signal_dim-1)/2)
-    
+
     ######### Data
     d = {'task_type' : 'train', 'data_type': 'ram', }
     # d['signal_dimension'] = 15
@@ -574,7 +569,7 @@ def test():
       "ytest":   y[10:1000,:],    ## Nor Used
     }
     data_pars= d
-    
+
     ########## Data
     m                       = {}
     m['original_dim']       = n_width
@@ -600,19 +595,138 @@ def test():
 
 
 
+def test_dataset_classi_fake(nrows=500):
+    from sklearn import datasets as sklearn_datasets
+    ndim=11
+    coly   = 'y'
+    colnum = ["colnum_" +str(i) for i in range(0, ndim) ]
+    colcat = ['colcat_1']
+    X, y    = sklearn_datasets.make_classification(
+        n_samples=1000,
+        n_features=ndim,
+        n_targets=1,
+        n_informative=ndim
+    )
+    df         = pd.DataFrame(X,  columns= colnum)
+    df[coly]   = y.reshape(-1, 1)
+
+    for ci in colcat :
+      df[colcat] = np.random.randint(0,1, len(df))
+
+    return df, colnum, colcat, coly
+
+
+def test2():
+    n_sample          = 100
+    df, colnum, colcat, coly= test_dataset_classi_fake(nrows=500)
+
+    #### Matching Big dict  ##################################################
+    X = df
+    y = df[coly].astype('uint8')
+    log('y', np.sum(y[y==1]) )
+
+    ######### Split the df into train/test subsets
+    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, stratify=y)
+    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
+    num_classes                                = len(set(y_train_full[coly].values.ravel()))
+    log(X_train)
+
+    def post_process_fun(y):
+        return int(y)
+
+    def pre_process_fun(y):
+        return int(y)
+
+    m = {'model_pars': {
+        'model_class':  "model_vaem.py::VAMDN"
+        ,'model_pars' : {
+            'original_dim':       len( colcat + colnum),
+            'class_num':             1,
+            'intermediate_dim':     64,
+            'intermediate_dim_2':   16,
+            'latent_dim' :           3,
+            'Lambda1'    :           1,
+            'batch_size' :         256,
+            'Lambda2'    :         200,
+            'Alpha'      :         0.075
+        }
+        , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
+        , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
+
+        ### Pipeline for data processing ##############################
+        'pipe_list': [  #### coly target prorcessing
+            {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+            {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+            {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+        ],
+        }
+        },
+
+    'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
+                      'compute_pars' : {'epochs': 1 },
+                    },
+
+    'data_pars': { 'n_sample' : n_sample,
+        'download_pars' : None,
+        'cols_input_type' : {
+            'colcat' : colcat,
+            'colnum' : colnum,
+            'coly'  :  coly,
+        },
+        ### family of columns for MODEL  #########################################################
+        'cols_model_group': [ 'colnum_bin',   'colcat_bin',
+                            ]
+
+        ,'cols_model_group_custom' :  { 'colnum' : colnum,
+                                        'colcat' : colcat,
+                                        'coly' : coly
+                            },
+
+        ### Added continuous & sparse features groups ###
+        'cols_model_type2': {
+            'colcontinuous':   colnum ,
+            'colsparse' : colcat,
+        }
+
+        ###################################################
+        ,'train':   {'Xtrain': X_train,  'ytrain': y_train, 'Xtest':  X_valid,  'ytest':  y_valid}
+        ,'eval':    {'X': X_valid,  'y': y_valid}
+        ,'predict': {'X': X_valid}
+
+        ,'task_type' : 'train', 'data_type': 'ram'
+
+
+        ### Filter data rows   ##################################################################
+        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+
+        }
+    }
+
+    ###  Tester #########################################################
+    test_helper(m['model_pars'], m['data_pars'], m['compute_pars'])
+
+
+
+
+
+
+
+
 def test_helper(model_pars, data_pars, compute_pars, Xpred):
     global model, session
     init()
     root  = "ztmp/"
     model = Model(model_pars=model_pars, data_pars=data_pars, compute_pars=compute_pars)
 
-    log('\n\nTraining the model..')
+    log('Training the model..')
     fit(data_pars=data_pars, compute_pars=compute_pars, out_pars=None)
 
 
     log('Predict data..')
-    ypred, ypred_proba = predict(Xpred=Xpred, data_pars=data_pars, compute_pars=compute_pars)
-    log(f'Top 5 y_pred: {np.squeeze(ypred)[:3]}')
+    Xnew = predict(Xpred=Xpred, data_pars=data_pars,  compute_pars=compute_pars)
+    Xnew = encode(Xpred=Xpred,  data_pars=data_pars,  compute_pars=compute_pars)
+    Xnew = decode(Xpred=Xpred,  data_pars=data_pars,  compute_pars=compute_pars)
+
 
     log('Saving model..')
     log( model.model.summary() )
@@ -620,7 +734,6 @@ def test_helper(model_pars, data_pars, compute_pars, Xpred):
 
     log('Load model..')
     model, session = load_model(path= root + "/model_dir/")
-    log('Model successfully loaded!\n\n')
 
     log('Model architecture:')
     log(model.model.summary())
