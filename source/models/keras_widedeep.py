@@ -595,14 +595,13 @@ def test2(config=''):
 
 
     m = {'model_pars': {
-        ### LightGBM API model   #######################################
-        # Specify the ModelConfig for pytorch_tabular
+
         'model_class':  "keras_widedeep.py::WideDeep_sparse"
 
-        # Type of target prediction, evaluation metrics
-        ,'model_pars' : {
+        # Actual pars
+        ,'model_pars' : {  'loss' : 'binary_crossentropy','optimizer':'adam','metric': ['accuracy'],'hidden_units': '64,32,16'}
 
-                        }
+
 
         , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
         , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
