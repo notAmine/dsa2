@@ -100,27 +100,31 @@ def VAEMDN(model_pars):
     encoder = keras.models.Model([inputs, dummy], [z_mean, z_log_var, z,
                                       mu, c, c_outlier, pi], name='encoder')
 
-    # build decoder model
+
+
+    ####### build decoder model  ########################################################
     latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
     inter_y1 = Dense(intermediate_dim_2, activation='tanh')(latent_inputs)
     inter_y2 = Dense(intermediate_dim, activation='tanh')(inter_y1)
     outputs = Dense(original_dim, activation='tanh')(inter_y2)
 
-    # instantiate decoder model
+    ########### instantiate decoder model
     decoder = keras.models.Model(latent_inputs, outputs, name='decoder')
     # plot_model(decoder, to_file='vae_mlp_decoder.png', show_shapes=True)
 
-    # instantiate VAE model
+
+
+    ################## instantiate VAE model  ####################################################
     outputs = decoder(encoder([inputs, dummy])[2])
     vae = keras.models.Model([inputs, dummy], outputs, name='vae_mlp')
     reconstruction_loss = mse(inputs, outputs)
-    reconstruction_loss = tf.compat.v1.multiply(
-        reconstruction_loss, c_outlier[:, 0])
+    reconstruction_loss = tf.compat.v1.multiply( reconstruction_loss, c_outlier[:, 0])
     reconstruction_loss *= original_dim
     kl_loss_all = tf.compat.v1.get_variable("kl_loss_all", [batch_size, 1],
-                                    dtype=tf.compat.v1.float32, initializer=tf.compat.v1.zeros_initializer)
-    kl_cat_all = tf.compat.v1.get_variable("kl_cat_all", [batch_size, 1],
-                                   dtype=tf.compat.v1.float32, initializer=tf.compat.v1.zeros_initializer)
+                                            "kl_cat_all", [batch_size, 1],
+                                            dtype=tf.compat.v1.float32, initializer=tf.compat.v1.zeros_initializer)
+
+    kl_cat_all = tf.compat.v1.get_variable(                   dtype=tf.compat.v1.float32, initializer=tf.compat.v1.zeros_initializer)
     dir_prior_all = tf.compat.v1.get_variable("dir_prior_all", [batch_size, 1],
                                       dtype=tf.compat.v1.float32, initializer=tf.compat.v1.zeros_initializer)
     for i in range(0, class_num):
@@ -158,7 +162,7 @@ def VAEMDN(model_pars):
     vae.add_loss(vae_loss)
     vae.compile(optimizer='adam')
     print(vae.summary() )
-    return vae
+    return vae, encoder, decoder
 
 
 
@@ -253,10 +257,10 @@ class Model(object):
         # mdict['original_dim'] = np.uint32( data_pars['signal_dimension']*(data_pars['signal_dimension']-1)/2)
 
 
-        #### Model setup ################################
+        #### Model setup #############################################################
         self.model_pars['model_pars'] = mdict
-        print(mdict)
-        self.model                    = VAEMDN( self.model_pars['model_pars'])
+        log(mdict)
+        self.model, self.encoder, self.decoder = VAEMDN( self.model_pars['model_pars'])
         log2(self.model_pars, self.model)
         self.model.summary()
 
