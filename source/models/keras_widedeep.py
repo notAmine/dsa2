@@ -123,9 +123,33 @@ def WideDeep_sparse(model_pars2):
     metrics   = model_pars2.get('metrics', ['accuracy'])
     dnn_hidden_units = model_pars2.get('hidden_units', '64,32,16')
 
-    inputs                  = model_pars2['inputs']
-    linear_feature_columns  = model_pars2['linear_cols']
-    dnn_feature_columns     = model_pars2['dnn_cols']
+
+    if model_pars2.get('create_tensor', True) :
+        #### To plug into Model   ##################################################################################
+        prepare = tf_FeatureColumns()
+        #Numeric Columns creation
+        colnum = ['PhotoAmt', 'Fee', 'Age']
+        prepare.numeric_columns(colnum)
+
+        #Categorical Columns
+        colcat = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized', 'Health','Breed1']
+        colcat_nunique = model_pars2['colcat_nunique']
+        prepare.categorical_columns(colcat, colcat_nunique)
+
+        #Bucketized Columns
+        bucket_cols = {'Age': [1,2,3,4,5]}
+        prepare.bucketized_columns(bucket_cols)
+
+        #Embedding Columns
+        embeddingCol = {'Breed1':8}
+        linear_feature_columns, dnn_feature_columns, inputs = prepare.get_features()
+
+    else :
+        inputs                  = model_pars2['inputs']
+        linear_feature_columns  = model_pars2['linear_cols']
+        dnn_feature_columns     = model_pars2['dnn_cols']
+
+
 
 
     deep   = tf.keras.layers.DenseFeatures(dnn_feature_columns, name='deep_inputs')(inputs)
@@ -274,11 +298,10 @@ class tf_FeatureColumns:
 
     """
     def __init__(self,dataframe=None):
-        self.df = dataframe
+        # self.df = dataframe
         self.real_columns = {}
         self.sparse_columns = {}
         self.feature_layer_inputs = {}
-
 
     def __df_to_dataset(self,dataframe,target,shuffle=True, batch_size=32):
         dataframe = dataframe.copy()
@@ -288,14 +311,19 @@ class tf_FeatureColumns:
         ds = ds.batch(batch_size)
         return ds
 
-    def splitData(self,df=None, test_split=0.1,val_split=0.1):
-        train_df,test_df = train_test_split(self.df,test_size=test_split)
-        train_df,val_df = train_test_split(train_df,test_size=val_split)
-        log('Files Splitted')
-        self.train,self.val,self.test = train_df,val_df,test_df
+    # def splitData(self,df=None, test_split=0.1,val_split=0.1):
+    #    train_df,test_df = train_test_split(df,test_size=test_split)
+    #    train_df,val_df = train_test_split(train_df,test_size=val_split)
+    #    log('Files Splitted')
+    #    self.train,self.val,self.test = train_df,val_df,test_df
 
+    def data_to_tensorflow(self,df, target,shuffle_train=True,shuffle_test=False,shuffle_val=False,batch_size=32, test_split=None):
+        if test_split is not None :
+            train_df,test_df = train_test_split(df,test_size=test_split)
+            train_df,val_df = train_test_split(train_df,test_size=val_split)
+            log('Files Splitted')
+            self.train,self.val,self.test = train_df,val_df,test_df
 
-    def data_to_tensorflow(self,target,shuffle_train=True,shuffle_test=False,shuffle_val=False,batch_size=32):
         self.train_df_tf = self.__df_to_dataset(self.train,target=target,shuffle=shuffle_train,batch_size=batch_size)
         self.test_df_tf  = self.__df_to_dataset(self.test,target=target,shuffle=shuffle_test,batch_size=batch_size)
         self.val_df_tf   = self.__df_to_dataset(self.val,target=target,shuffle=shuffle_val,batch_size=batch_size)
@@ -304,6 +332,8 @@ class tf_FeatureColumns:
         log('Datasets Converted to Tensorflow')
         return self.train_df_tf,self.test_df_tf,self.val_df_tf
 
+
+    ################## To PLUG INTO  model
     def numeric_columns(self,columnsName):
         for header in columnsName:
             numeric = feature_column.numeric_column(header)
@@ -325,7 +355,7 @@ class tf_FeatureColumns:
 
             ###Dependance on actual Data
             #nuniques =  list(self.df[col_name].unique())
-            nuniques = colcat_unique[col_name]
+            nuniques = colcat_nunique[col_name]
 
             categorical_column = feature_column.categorical_column_with_vocabulary_list(col_name, nuniques )
             indicator_column   = feature_column.indicator_column(categorical_column)
@@ -440,29 +470,41 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
 ########################################################################################################################
 ########################################################################################################################
-def test(config=''):
-    """
-        Group of columns for the input model
-           cols_input_group = [ ]
-          for cols in cols_input_group,
+def test_dataset_petfinder(nrows=1000):
+    # Dense features
+    colnum = ['PhotoAmt', 'Fee', 'Age']
 
-    :param config:
-    :return:
-    """
+    # Sparse features
+    colcat = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized', 'Health','Breed1']
+
+    # Target column
+    coly        = "y"
+
     dataset_url = 'http://storage.googleapis.com/download.tensorflow.org/data/petfinder-mini.zip'
     csv_file    = 'datasets/petfinder-mini/petfinder-mini.csv'
-
     tf.keras.utils.get_file('petfinder_mini.zip', dataset_url,extract=True, cache_dir='.')
 
     print('Data Frame Loaded')
-    df = pd.read_csv(csv_file)
-    df['target'] = np.where(df['AdoptionSpeed']==4, 0, 1)
-    df = df.drop(columns=['AdoptionSpeed', 'Description'])
+    df      = pd.read_csv(csv_file)
+    df['y'] = np.where(df['AdoptionSpeed']==4, 0, 1)
+    df      = df.drop(columns=['AdoptionSpeed', 'Description'])
+    return df, colnum, colcat, coly
 
-    prepare = tf_FeatureColumns(df)
-    prepare.splitData()
-    train_df,test_df,val_df = prepare.data_to_tensorflow(target='target')
 
+
+def test(config=''):
+    """
+    """
+    df, colnum, colcat, coly = test_dataset_petfinder()
+
+    #### For pipeline data feed ###############################################################################
+    prepare = tf_FeatureColumns()
+    # prepare.splitData()
+    train_df,test_df,val_df = prepare.data_to_tensorflow(df, target='y')
+
+
+    #### To plug into Model   ##################################################################################
+    prepare = tf_FeatureColumns()
     #Numeric Columns creation
     colnum = ['PhotoAmt', 'Fee', 'Age']
     prepare.numeric_columns(colnum)
@@ -477,7 +519,7 @@ def test(config=''):
 
     #Embedding Columns
     embeddingCol = {'Breed1':8}
-    linear,dnn,inputs = prepare.get_features()
+    tf_linear,tf_dnn, tf_inputs = prepare.get_features()
 
 
     ########## Dict ######################################################
@@ -486,17 +528,142 @@ def test(config=''):
         'model_pars'  : {  'loss' : 'binary_crossentropy','optimizer':'adam','metric': ['accuracy'],'hidden_units': '64,32,16'}
     }
 
-    data_pars = { 'tf_sparse' : { 'inputs': inputs,'linear_cols': linear.values(),'dnn_cols': dnn.values(),
+    data_pars = { 'tf_sparse' : { 'inputs': tf_inputs,
+                                  'linear_cols': tf_linear.values(),
+                                  'dnn_cols': tf_dnn.values(),
                    },
-                 'train': train_df,
-                'test': test_df,'val': val_df }
+
+                ##### Data Feed  #################################
+                'train': train_df,
+                'test': test_df,
+                'val': val_df }
 
 
     compute_pars = {'epochs':2, 'verbose': 1,'path_checkpoint': 'checkpoint/model.pth','probability':True}
 
-
     ######## Run ##########################################################
     test_helper(model_pars, data_pars, compute_pars)
+
+
+
+
+
+def test2(config=''):
+    """ ACTUAL DICT
+    """
+    global model, session
+    df, colnum, colcat, coly = test_dataset_petfinder()
+
+
+    #### For pipeline data feed ###############################################################################
+    prepare = tf_FeatureColumns()
+    # prepare.splitData()
+    train_df, test_df, val_df = prepare.data_to_tensorflow(df, target='y')
+
+
+    #### To plug into Model   ##################################################################################
+    #prepare = tf_FeatureColumns()
+    #Numeric Columns creation
+    #colnum = ['PhotoAmt', 'Fee', 'Age']
+    #prepare.numeric_columns(colnum)
+
+    #Categorical Columns
+    #colcat = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized', 'Health','Breed1']
+    #prepare.categorical_columns(colcat)
+
+    #Bucketized Columns
+    #bucket_cols = {'Age': [1,2,3,4,5]}
+    #prepare.bucketized_columns(bucket_cols)
+
+    #Embedding Columns
+    #embeddingCol = {'Breed1':8}
+    #tf_linear,tf_dnn, tf_inputs = prepare.get_features()
+
+
+    #### Matching Big dict  ##################################################
+    cols_input_type_1 = []
+    n_sample = 100
+    def post_process_fun(y):
+        return int(y)
+
+    def pre_process_fun(y):
+        return int(y)
+
+
+    m = {'model_pars': {
+        ### LightGBM API model   #######################################
+        # Specify the ModelConfig for pytorch_tabular
+        'model_class':  "keras_widedeep.py::WideDeep_sparse"
+
+        # Type of target prediction, evaluation metrics
+        ,'model_pars' : {
+
+                        }
+
+        , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
+        , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
+
+        ### Pipeline for data processing ##############################
+        'pipe_list': [  #### coly target prorcessing
+        {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+        {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+        {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+
+        ],
+            }
+        },
+
+    'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
+                    },
+
+    'data_pars': { 'n_sample' : n_sample,
+
+        'tf_sparse' :{
+            'colcat_nunique' :  {  col: 5  for col in colcat },
+            'colcat' : colcat,
+            'colnum' : colnum
+
+        },
+
+        'download_pars' : None,
+        'cols_input_type' : cols_input_type_1,
+        ### family of columns for MODEL  #########################################################
+        'cols_model_group': [ 'colnum_bin',   'colcat_bin',
+                            ]
+
+        ,'cols_model_group_custom' :  { 'colnum' : colnum,
+                                        'colcat' : colcat,
+                                        'coly' : coly
+                            }
+
+
+        ####### ACTUAL data pipeline #############################################################
+        ,'train': {'X_train': train_df.drop(coly), 'y_train' : train_df[coly],
+                   'X_test':  val_df.drop(coly),  'y_test' : val_df[coly]
+                   },
+                'eval': {  'X':  val_df.drop(coly),  'y' : val_df[coly]                    },
+                'predict': {'X': test_df.drop(coly)}
+
+
+        ### Filter data rows   ##################################################################
+        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+
+
+        ### Added continuous & sparse features groups ###
+        'cols_model_type2': {
+            'colcontinuous':   colnum ,
+            'colsparse' :     colcat,
+        },
+        }
+    }
+
+    ######## Run ##########################################################
+    test_helper( m['model_pars'], m['data_pars'], m['compute_pars'])
+
+
+
+
+
 
 
 
