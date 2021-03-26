@@ -294,10 +294,10 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     model.history = hist
 
 
-def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
+
+def encode(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     global model, session
     if Xpred is None:
-        # data_pars['train'] = False
         Xpred_tuple = get_dataset(data_pars, task_type="predict")
 
     else :
@@ -305,13 +305,41 @@ def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
         Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
 
     log2(Xpred_tuple)
-    Xdummy = np.ones((Xpred_tuple.shape[0], 1))
-    ypred = model.model.predict([Xpred_tuple, Xdummy ] )
+    Xdummy      = np.ones((Xpred_tuple.shape[0], 1))
+    Xnew_encode = model.model.encode([Xpred_tuple, Xdummy ] )
+    return Xnew_encode
 
-    ypred_proba = None  ### No proba
-    if compute_pars.get("probability", False):
-         ypred_proba = model.model.predict_proba(Xpred)
-    return ypred, ypred_proba
+
+def decode(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
+    global model, session
+    if Xpred is None:
+        Xpred_tuple = get_dataset(data_pars, task_type="predict")
+
+    else :
+        cols_type   = data_pars.get('cols_model_type2', {})  ##
+        Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
+
+    log2(Xpred_tuple)
+    Xdummy      = np.ones((Xpred_tuple.shape[0], 1))
+    Xnew_decode = model.model.decode([Xpred_tuple, Xdummy ] )
+    return Xnew_decode
+
+
+def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
+    global model, session
+    if Xpred is None:
+        Xpred_tuple = get_dataset(data_pars, task_type="predict")
+
+    else :
+        cols_type   = data_pars.get('cols_model_type2', {})  ##
+        Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
+
+    log2(Xpred_tuple)
+    Xdummy      = np.ones((Xpred_tuple.shape[0], 1))
+    Xnew = model.model.predict([Xpred_tuple, Xdummy ] )
+    return Xnew
+
+
 
 
 
