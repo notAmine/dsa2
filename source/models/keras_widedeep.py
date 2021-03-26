@@ -116,33 +116,40 @@ def WideDeep_dense(model_pars2):
 
 def WideDeep_sparse(model_pars2):
     """
-    
     """
-    loss      = model_pars2.get('loss', 'binary_crossentropy')
-    optimizer = model_pars2.get('optimizer', 'adam')
-    metrics   = model_pars2.get('metrics', ['accuracy'])
+    loss             = model_pars2.get('loss', 'binary_crossentropy')
+    optimizer        = model_pars2.get('optimizer', 'adam')
+    metrics          = model_pars2.get('metrics', ['accuracy'])
     dnn_hidden_units = model_pars2.get('hidden_units', '64,32,16')
 
 
     if model_pars2.get('create_tensor', True) :
-        #### To plug into Model   ##################################################################################
+        #### To plug into Model   #####################################################################
         prepare = tf_FeatureColumns()
-        #Numeric Columns creation
-        colnum = ['PhotoAmt', 'Fee', 'Age']
+
+        # Numeric Columns creation
+        # colnum = ['PhotoAmt', 'Fee', 'Age']
+        colnum  = model_pars2['colnum']
         prepare.numeric_columns(colnum)
 
-        #Categorical Columns
-        colcat = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized', 'Health','Breed1']
-        colcat_nunique = model_pars2['colcat_nunique']
-        prepare.categorical_columns(colcat, colcat_nunique)
+        #### Categorical Columns
+        colcat = model_pars2['colcat']
+        # colcat = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized', 'Health','Breed1']
+        colcat_unique = model_pars2['colcat_unique']
+        prepare.categorical_columns(colcat, colcat_unique)
 
-        #Bucketized Columns
-        bucket_cols = {'Age': [1,2,3,4,5]}
-        prepare.bucketized_columns(bucket_cols)
+        ##### Bucketized Columns
+        #bucket_cols = {'Age': [1,2,3,4,5]}
+        #prepare.bucketized_columns(bucket_cols)
 
-        #Embedding Columns
-        embeddingCol = {'Breed1':8}
+        ##### Embedding Columns
+        colembed_dict = model_pars2['colembed_dict']
+        prepare.embeddings_columns(colembed_dict)
+        #embeddingCol = {'Breed1':8}
+
+        ##### Export
         linear_feature_columns, dnn_feature_columns, inputs = prepare.get_features()
+
 
     else :
         inputs                  = model_pars2['inputs']
@@ -150,21 +157,18 @@ def WideDeep_sparse(model_pars2):
         dnn_feature_columns     = model_pars2['dnn_cols']
 
 
-
-
-    deep   = tf.keras.layers.DenseFeatures(dnn_feature_columns, name='deep_inputs')(inputs)
+    deep   = tf.keras.layers.DenseFeatures(dnn_feature_columns.values(), name='deep_inputs')(inputs)
     layers = [int(x) for x in dnn_hidden_units.split(',')]
 
     for layerno, numnodes in enumerate(layers):
         deep = tf.keras.layers.Dense(numnodes, activation='relu', name='dnn_{}'.format(layerno+1))(deep)
 
-    wide   = tf.keras.layers.DenseFeatures(linear_feature_columns, name='wide_inputs')(inputs)
+    wide   = tf.keras.layers.DenseFeatures(linear_feature_columns.values(), name='wide_inputs')(inputs)
     both   = tf.keras.layers.concatenate([deep, wide], name='both')
     output = tf.keras.layers.Dense(1, activation='sigmoid', name='pred')(both)
     model  = tf.keras.Model(inputs, output)
-    model.compile(optimizer=optimizer,loss=loss,metrics=metrics)
-    
-    
+    model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+
     log2(model.summary())
     return model
 
@@ -182,7 +186,7 @@ class Model(object):
             model_class = model_pars.get('model_class', 'WideDeep_sparse')        
             if 'sparse' in model_class  :
                 cpars = model_pars['model_pars']
-                cpars = { **cpars, **data_pars['tf_sparse'] }
+                cpars = { **cpars, **data_pars['tf_feature'] }
                 self.model = WideDeep_sparse(cpars)
             else : 
                 cpars = model_pars['model_pars']
@@ -202,16 +206,16 @@ def fit(data_pars, compute_pars):
             val_df = None
             validation_split = 0.2
     
-        epochs          = compute_pars.get('epochs',10)
+        epochs          = compute_pars.get('epochs', 1)
         verbose         = compute_pars.get('verbose',1)
         path_checkpoint = compute_pars.get('path_checkpoint','ztmp_checkpoint/model_.pth')
         early_stopping  = EarlyStopping(monitor='loss', patience=3)
         model_ckpt      = ModelCheckpoint(filepath = path_checkpoint,save_best_only=True, monitor='loss')
                 
         if val_df:
-            hist = model.model.fit(train_df,epochs=epochs,verbose=verbose,validation_data=val_df)
+            hist = model.model.fit(train_df['X_train'],epochs=epochs,verbose=verbose,validation_data=train_df['X_test'])
         else:
-            hist = model.model.fit(train_df,epochs=epochs,verbose=verbose,validation_split=validation_split)
+            hist = model.model.fit(train_df['X_train'],epochs=epochs,verbose=verbose,validation_split=0.1)
     
         model.history = hist
 
@@ -232,7 +236,7 @@ def predict(Xpred=None,data_pars=None, compute_pars=None, out_pars=None):
     global model, session
     if 'sparse' in  model.model_pars['model_class'] :
         if Xpred is None :
-            Xpred = data_pars['test']
+            Xpred = data_pars['predict']['X']
         
         ypred_proba = model.model.predict(Xpred)        
         ypred       = [  1 if t > 0.5 else 0 for t in ypred_proba ]    
@@ -259,8 +263,8 @@ def save(path=None, info=None):
     modelx.data_pars    = model.data_pars
     modelx.compute_pars = model.compute_pars
     # log('model', modelx.model)
-    pickle.dump(modelx, open(f"{path}/model.pkl", mode='wb'))  #
-    pickle.dump(info, open(f"{path}/info.pkl", mode='wb'))  #
+    #pickle.dump(modelx, open(f"{path}/model.pkl", mode='wb'))  #
+    #pickle.dump(info, open(f"{path}/info.pkl", mode='wb'))  #
     log('Model Saved', path)
 
 
@@ -295,7 +299,6 @@ class tf_FeatureColumns:
     """
        Coupling between Abstract definition of data vs Actual Data values
 
-
     """
     def __init__(self,dataframe=None):
         # self.df = dataframe
@@ -311,22 +314,22 @@ class tf_FeatureColumns:
         ds = ds.batch(batch_size)
         return ds
 
-    # def splitData(self,df=None, test_split=0.1,val_split=0.1):
-    #    train_df,test_df = train_test_split(df,test_size=test_split)
-    #    train_df,val_df = train_test_split(train_df,test_size=val_split)
-    #    log('Files Splitted')
-    #    self.train,self.val,self.test = train_df,val_df,test_df
 
-    def data_to_tensorflow(self,df, target,shuffle_train=True,shuffle_test=False,shuffle_val=False,batch_size=32, test_split=None):
+    def data_to_tensorflow(self,df, target,shuffle_train=True,shuffle_test=False,shuffle_val=False,batch_size=32,
+                           test_split=0.2, colnum=[], colcat=[]):
+
+        for c in colcat:
+            df[c] =  df[c].astype(str)
+
         if test_split is not None :
             train_df,test_df = train_test_split(df,test_size=test_split)
-            train_df,val_df = train_test_split(train_df,test_size=val_split)
+            train_df,val_df  = train_test_split(train_df,test_size=0.1)
             log('Files Splitted')
             self.train,self.val,self.test = train_df,val_df,test_df
 
-        self.train_df_tf = self.__df_to_dataset(self.train,target=target,shuffle=shuffle_train,batch_size=batch_size)
-        self.test_df_tf  = self.__df_to_dataset(self.test,target=target,shuffle=shuffle_test,batch_size=batch_size)
-        self.val_df_tf   = self.__df_to_dataset(self.val,target=target,shuffle=shuffle_val,batch_size=batch_size)
+        self.train_df_tf = self.__df_to_dataset(self.train,target=target,shuffle=shuffle_train, batch_size=batch_size)
+        self.test_df_tf  = self.__df_to_dataset(self.test,target=target, shuffle=shuffle_test,  batch_size=batch_size)
+        self.val_df_tf   = self.__df_to_dataset(self.val,target=target,  shuffle=shuffle_val,   batch_size=batch_size)
 
         self.exampleData = self.test_df_tf #for visualization purposes
         log('Datasets Converted to Tensorflow')
@@ -360,6 +363,8 @@ class tf_FeatureColumns:
             categorical_column = feature_column.categorical_column_with_vocabulary_list(col_name, nuniques )
             indicator_column   = feature_column.indicator_column(categorical_column)
             self.sparse_columns[col_name] = indicator_column
+
+            #### Specific model keras input
             self.feature_layer_inputs[col_name] = tf.keras.Input(shape=(1,), name=col_name,dtype=tf.string)
         return indicator_column
 
@@ -380,10 +385,12 @@ class tf_FeatureColumns:
         return crossed_feature
 
 
-    def embeddings_columns(self,columnsname):
-        for col_name,dimension in columnsname.items():
-            embCol    = feature_column.categorical_column_with_vocabulary_list(col_name, self.df[col_name].unique())
-            embedding = feature_column.embedding_column(embCol, dimension=dimension)
+    def embeddings_columns(self,coldim_dict):
+        for col_name,dimension in coldim_dict.items():
+            #embCol    = feature_column.categorical_column_with_vocabulary_list(col_name, colunique )
+            bucket_size = dimension*dimension
+            embCol      = feature_column.categorical_column_with_hash_bucket(col_name, hash_bucket_size=bucket_size)
+            embedding   = feature_column.embedding_column(embCol, dimension=dimension)
             self.real_columns[col_name] = embedding
         return embedding
 
@@ -472,11 +479,13 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 ########################################################################################################################
 def test_dataset_petfinder(nrows=1000):
     # Dense features
-    colnum = ['PhotoAmt', 'Fee', 'Age']
+    colnum = ['PhotoAmt', 'Fee' ]
 
     # Sparse features
-    colcat = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized', 'Health','Breed1']
+    colcat = ['Age', 'Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized',
+              'Health', 'Breed1' ]
 
+    colembed = ['Breed1']
     # Target column
     coly        = "y"
 
@@ -486,9 +495,12 @@ def test_dataset_petfinder(nrows=1000):
 
     print('Data Frame Loaded')
     df      = pd.read_csv(csv_file)
+    df      = df.iloc[:nrows, :]
     df['y'] = np.where(df['AdoptionSpeed']==4, 0, 1)
     df      = df.drop(columns=['AdoptionSpeed', 'Description'])
-    return df, colnum, colcat, coly
+
+    print(df.dtypes)
+    return df, colnum, colcat, coly, colembed
 
 
 
@@ -511,7 +523,8 @@ def test(config=''):
 
     #Categorical Columns
     colcat = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized', 'Health','Breed1']
-    prepare.categorical_columns(colcat)
+    colcat_unique = {colname:list(df[colname].unique()) for colname in colcat}
+    prepare.categorical_columns(colcat,colcat_nunique=colcat_unique)
 
     #Bucketized Columns
     bucket_cols = {'Age': [1,2,3,4,5]}
@@ -528,7 +541,7 @@ def test(config=''):
         'model_pars'  : {  'loss' : 'binary_crossentropy','optimizer':'adam','metric': ['accuracy'],'hidden_units': '64,32,16'}
     }
 
-    data_pars = { 'tf_sparse' : { 'inputs': tf_inputs,
+    data_pars = { 'tf_feature' : { 'inputs': tf_inputs,
                                   'linear_cols': tf_linear.values(),
                                   'dnn_cols': tf_dnn.values(),
                    },
@@ -552,36 +565,22 @@ def test2(config=''):
     """ ACTUAL DICT
     """
     global model, session
-    df, colnum, colcat, coly = test_dataset_petfinder()
-
-    ##### WE suppose this part is KNOW by user
-    colcat_nunique = { coli : df[coli].nunique() for coli in colcat }
+    df, colnum, colcat, coly, colembed = test_dataset_petfinder()
 
 
-    #### For pipeline data feed ###############################################################################
+    #### For pipeline data feed #########################################################################
     prepare = tf_FeatureColumns()
     # prepare.splitData()
-    train_df, test_df, val_df = prepare.data_to_tensorflow(df, target='y')
+    train_df, test_df, val_df = prepare.data_to_tensorflow(df, target='y', colcat=colcat, colnum=colnum)
 
 
+    #### For Model Sizing #####################################################
+    #### Unique values
+    colcat_unique = {  col: list(df[col].unique())  for col in colcat }
 
-    #### To plug into Model   ##################################################################################
-    #prepare = tf_FeatureColumns()
-    #Numeric Columns creation
-    #colnum = ['PhotoAmt', 'Fee', 'Age']
-    #prepare.numeric_columns(colnum)
+    ### Embedding size Breed=8
+    colembed_dict = {col: 2 + int(np.log(df[col].nunique()))  for col in colembed }
 
-    #Categorical Columns
-    #colcat = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized', 'Health','Breed1']
-    #prepare.categorical_columns(colcat)
-
-    #Bucketized Columns
-    #bucket_cols = {'Age': [1,2,3,4,5]}
-    #prepare.bucketized_columns(bucket_cols)
-
-    #Embedding Columns
-    #embeddingCol = {'Breed1':8}
-    #tf_linear,tf_dnn, tf_inputs = prepare.get_features()
 
 
     #### Matching Big dict  ##################################################
@@ -595,12 +594,12 @@ def test2(config=''):
 
 
     m = {'model_pars': {
-
+        ### LightGBM API model   #######################################
+        # Specify the ModelConfig for pytorch_tabular
         'model_class':  "keras_widedeep.py::WideDeep_sparse"
 
-        # Actual pars
+        # Type of target prediction, evaluation metrics
         ,'model_pars' : {  'loss' : 'binary_crossentropy','optimizer':'adam','metric': ['accuracy'],'hidden_units': '64,32,16'}
-
 
 
         , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
@@ -617,14 +616,16 @@ def test2(config=''):
         },
 
     'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
+                      'compute_pars': { 'epochs' :1}
                     },
 
     'data_pars': { 'n_sample' : n_sample,
 
-        'tf_sparse' :{
-            'colcat_nunique' :   colcat_nunique,
+        'tf_feature' :{
+            'colcat_unique' :  colcat_unique,
             'colcat' : colcat,
-            'colnum' : colnum
+            'colnum' : colnum,
+            'colembed_dict' : colembed_dict
 
         },
 
@@ -641,11 +642,11 @@ def test2(config=''):
 
 
         ####### ACTUAL data pipeline #############################################################
-        ,'train': {'X_train': train_df.drop(coly), 'y_train' : train_df[coly],
-                   'X_test':  val_df.drop(coly),  'y_test' : val_df[coly]
+        ,'train': {'X_train': train_df,
+                   'X_test':  val_df
                    },
-                'eval': {  'X':  val_df.drop(coly),  'y' : val_df[coly]                    },
-                'predict': {'X': test_df.drop(coly)}
+                'val': {  'X':  val_df               },
+                'predict': {'X': test_df}
 
 
         ### Filter data rows   ##################################################################
@@ -696,7 +697,7 @@ def test_helper(model_pars, data_pars, compute_pars):
 ####################################################################################################################
 if __name__ == '__main__':
     import fire
-    fire.Fire(test)
+    fire.Fire(test2)
 
 
 
@@ -796,7 +797,7 @@ def get_dataset2(data_pars=None, task_type="train", **kw):
             d = data_pars[task_type]
             Xtrain, ytrain  = d["X"], d["y"]
             Xtuple_train    = get_dataset_tuple_keras(Xtrain, cols_type_received, cols_ref)
-            return Xytuple_train
+            return Xtuple_train
 
         if task_type == "train":
             d = data_pars[task_type]
