@@ -554,11 +554,15 @@ def test2(config=''):
     global model, session
     df, colnum, colcat, coly = test_dataset_petfinder()
 
+    ##### WE suppose this part is KNOW by user
+    colcat_nunique = { coli : df[coli].nunique() for coli in colcat }
+
 
     #### For pipeline data feed ###############################################################################
     prepare = tf_FeatureColumns()
     # prepare.splitData()
     train_df, test_df, val_df = prepare.data_to_tensorflow(df, target='y')
+
 
 
     #### To plug into Model   ##################################################################################
@@ -619,7 +623,7 @@ def test2(config=''):
     'data_pars': { 'n_sample' : n_sample,
 
         'tf_sparse' :{
-            'colcat_nunique' :  {  col: 5  for col in colcat },
+            'colcat_nunique' :   colcat_nunique,
             'colcat' : colcat,
             'colnum' : colnum
 
