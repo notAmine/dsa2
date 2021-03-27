@@ -2,13 +2,17 @@
 # -*- coding: utf-8 -*-
 """
 Multi Density Variationnal Autoencoder
-
+Only with TF1
 
 """
 import os, pandas as pd, numpy as np, sklearn, copy
 from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
+
+if  "2." in tf.version.VERSION :
+    os.system( ' pip install tensorflow==1.15.5 keras')
+
 from tensorflow import keras
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras import layers
