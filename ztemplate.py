@@ -15,14 +15,14 @@ source/models/mymodel.py
   model_pars :   Aribitrary dict for model params
   compute_pars:  Arbitrary dict for  compute (ie epochs=1)
   data_pars:     Arbitrary dict for data definition
+  out_pars    :  Arbitrary dict for ouput path
 
 """
 global model, session
-
+# model = Model()
 class Model(object):
     def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
         model.model =  MY_MODEL_CLASS(model_pars['model_pars'])
-# model = Model()
 
 
 def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
@@ -73,8 +73,11 @@ class MY_MODEL_CLASS(object):
 ####################################################################################################
 ####################################################################################################
 #### Global Dictionary definition
+Dict can NOT contain Object ( Dict ==  JSON file)
+Dict can contain onyl string, float, .. list of string, dict of float...
+
 model_pars : {
-    'model_pars'       : Dict to pass to YOUR MODEL
+    'model_pars'       : Dict to pass to YOUR MODEL   MY_MODEL_CLASS(**model_pars['model_pars'])
     'model_class'      : Name of your Class
     'post_process_fun' : post_process_function to run  After prediction
     'pre_process_pars' :
@@ -94,20 +97,22 @@ data_pars : {
     
     ### Model feed 
     'cols_model_group':  List of column groups to feed the model.
-    'cols_model_type2':  dict of colunm groups to feed the model : colmodel_sparse, colmodel_dense
-    "data_pars":         dict of specific data pars for the model.
+    'cols_model_type2':  dict of colunm groups to feed the model  by TYPE : colmodel_sparse, colmodel_dense
+    "data_pars":         dict of specific data pars for the model. : tf_feature_column
 
+    #### This part is GENERATED Dynamically from other data_pars   ###############################
     'data_flow' :
         "train" : dict of dataframe or path names for training.
-        "val"   : dict of dataframe or path names for validation
-        "test"  : dict of dataframe or path names for training.
+        "val"   : Optional dict of dataframe or path names for validation
+        "test"  : Optional dict of dataframe or path names for test.
+    ###############################################################    
 }
 
 
 
 compute_pars = {
-    'compute_pars' :  Dict to pass to YOUR MODEL 
-    "metrics_list" :  list of sklearn metrics
+    'compute_pars' :  Dict to pass to YOUR MODEL .fit( , ** compute_pars['compute_pars'])
+    "metrics_list" :  list of sklearn metrics in string
 }
 
 
@@ -120,9 +125,8 @@ global_pars = {
     "path_data_preprocess" = dir_data + f"/input/{data_name}/train/"
 
     #### train input path
-    #dir_data_url              = "https://github.com/arita37/dsa2_data/tree/master/"  #### Remote Data directory
     "path_data_train"      = dir_data + f"/input/{data_name}/train/"
-    "path_data_test"]      = dir_data + f"/input/{data_name}/test/"
+    "path_data_test"       = dir_data + f"/input/{data_name}/test/"
 
 
     #### train output path
