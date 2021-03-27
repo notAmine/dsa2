@@ -83,17 +83,19 @@ class my_Model(object):
 
 
 ####################################################################################################
-#### Dictionary definition
+#### Global Dictionary definition
 model_pars = {
     'model_pars' :   Dict to pass to YOUR MODEL
     'model_class' :  Name of your Class
+    "prepro": 
+    "postpro":
 
 }
 
 data_pars = {
-    'tf_feature':  dict of tf_feature columns
+    "data_pars":  dict of tf_feature columns
 
-    'ram' {
+    'data_flow' {
         'train'
         'test'
         'val'
@@ -104,10 +106,15 @@ data_pars = {
 
 compute_pars = {
     'compute_pars' :   Dict to pass to YOUR MODEL compute pars
-
+     "metrics_list": list
 }
 
+global_pars = {
+    "global_pars":
+    "input_path":
+    "output_path":
 
+}
 
 
 #### Example
