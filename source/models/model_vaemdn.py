@@ -10,8 +10,8 @@ from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
 
-if  "2." in tf.version.VERSION :
-    os.system( ' pip install tensorflow==1.15.5 keras')
+if  "1." in tf.version.VERSION :
+    print('Compatible only with TF 2.')
 
 from tensorflow import keras
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -124,11 +124,12 @@ def VAEMDN(model_pars):
     reconstruction_loss = mse(inputs, outputs)
     reconstruction_loss = tf.compat.v1.multiply( reconstruction_loss, c_outlier[:, 0])
     reconstruction_loss *= original_dim
-    kl_loss_all = tf.compat.v1.get_variable("kl_loss_all", [batch_size, 1],
-                                            "kl_cat_all", [batch_size, 1],
-                                            dtype=tf.compat.v1.float32, initializer=tf.compat.v1.zeros_initializer)
 
-    kl_cat_all = tf.compat.v1.get_variable(                   dtype=tf.compat.v1.float32, initializer=tf.compat.v1.zeros_initializer)
+    kl_loss_all = tf.compat.v1.get_variable("kl_loss_all", [batch_size, 1],
+                                    dtype=tf.compat.v1.float32, initializer=tf.compat.v1.zeros_initializer)
+    kl_cat_all = tf.compat.v1.get_variable("kl_cat_all", [batch_size, 1],
+                                   dtype=tf.compat.v1.float32, initializer=tf.compat.v1.zeros_initializer)
+
     dir_prior_all = tf.compat.v1.get_variable("dir_prior_all", [batch_size, 1],
                                       dtype=tf.compat.v1.float32, initializer=tf.compat.v1.zeros_initializer)
     for i in range(0, class_num):
@@ -236,6 +237,7 @@ class Model(object):
         self.history = None
         if model_pars is None:
             self.model = None
+            self.encoder, self.decoder = None, None
             return
 
         model_class = model_pars['model_class']  
@@ -456,7 +458,7 @@ def load_model(path=""):
     model0      = pickle.load(open(f"{path}/model.pkl", mode='rb'))
 
     model = Model()  # Empty model
-    model.model        = VAEMDN( model0.model_pars['model_pars'])
+    model.model, model.encoder, model.decoder        = VAEMDN( model0.model_pars['model_pars'])
     model.model_pars   = model0.model_pars
     model.compute_pars = model0.compute_pars
 
@@ -728,8 +730,8 @@ def test_helper(model_pars, data_pars, compute_pars, Xpred):
 
     log('Predict data..')
     Xnew = predict(Xpred=Xpred, data_pars=data_pars,  compute_pars=compute_pars)
-    Xnew = encode(Xpred=Xpred,  data_pars=data_pars,  compute_pars=compute_pars)
-    Xnew = decode(Xpred=Xpred,  data_pars=data_pars,  compute_pars=compute_pars)
+    # Xnew = encode(Xpred=Xpred,  data_pars=data_pars,  compute_pars=compute_pars)
+    # Xnew = decode(Xpred=Xpred,  data_pars=data_pars,  compute_pars=compute_pars)
 
 
     log('Saving model..')
@@ -743,7 +745,7 @@ def test_helper(model_pars, data_pars, compute_pars, Xpred):
     log(model.model.summary())
 
     log('Predict data..')
-    ypred, ypred_proba = predict(Xpred=Xpred, data_pars=data_pars, compute_pars=compute_pars)
+    Xnew2 = predict(Xpred=Xpred[:10,:], data_pars=data_pars, compute_pars=compute_pars)
 
 
 
