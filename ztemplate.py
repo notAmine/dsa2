@@ -77,7 +77,7 @@ Dict can NOT contain Object ( Dict ==  JSON file)
 Dict can contain onyl string, float, .. list of string, dict of float...
 
 model_pars : {
-    'model_pars'       : Dict to pass to YOUR MODEL   MY_MODEL_CLASS(**model_pars['model_pars'])
+    'model_pars'       : Dict to pass DIRECTLY to YOUR MODEL   MY_MODEL_CLASS(**model_pars['model_pars'])
     'model_class'      : Name of your Class
     'post_process_fun' : post_process_function to run  After prediction
     'pre_process_pars' :
@@ -111,8 +111,9 @@ data_pars : {
 
 
 compute_pars = {
-    'compute_pars' :  Dict to pass to YOUR MODEL .fit( , ** compute_pars['compute_pars'])
-    "metrics_list" :  list of sklearn metrics in string
+    'compute_pars'  :  Dict to pass DIRECTLY to YOUR MODEL .fit( , ** compute_pars['compute_pars'])
+    'compute_extra' :  Dict used for training, But the params are NOT used directly (ie mapping code) 
+    "metrics_list"  :  list of sklearn metrics in string
 }
 
 
@@ -160,8 +161,6 @@ global_pars = {
     m = {'model_pars': {
             # Specify the model
             'model_class':  "torch_tabular.py::RVAE",
-            # "load_model":False,
-            # "load_model_path":None,
 
             'model_pars' : {
                 "activation":'relu',
@@ -178,7 +177,7 @@ global_pars = {
         },
 
         'compute_pars': {
-            'log' :{
+            'compute_extra' :{ 
                 "log_interval":50,
                 "save_on":True,
                 "verbose_metrics_epoch":True,
