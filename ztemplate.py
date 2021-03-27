@@ -5,24 +5,24 @@ Template explanation
 
 """
 
-
-
-
 ####################################################################################################
 #### Generic Wrappers   ############################################################################
 """
-Meta Class Model wraps sub-models
-Global variable : model, session  stores Model
+source/models/mymodel.py
+  Meta Class Model wraps sub-models
+      Global variable : model, session  stores Model
 
-model_pars :   Aribitrary dict for model params
-compute_pars:  Arbitray dict for model compute (ie epochs=1)
-data_pars:     Arbitrary dict for data definition
+  model_pars :   Aribitrary dict for model params
+  compute_pars:  Arbitrary dict for  compute (ie epochs=1)
+  data_pars:     Arbitrary dict for data definition
 
 """
+global model, session
 
 class Model(object):
     def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
-        model.model =  YOUR_MODEL_CLASS
+        model.model =  MY_MODEL_CLASS(model_pars['model_pars'])
+# model = Model()
 
 
 def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
@@ -56,68 +56,103 @@ def load_model(path=""):
     return model
 
 
-####################################################################################################
-####################################################################################################
-
-
-
-
-
-####################################################################################################
-#### Your custom model input
-class my_Model(object):
-
+#### Your custom model ##################################################################
+class MY_MODEL_CLASS(object):
     def __init__(cpars):
         """
         YOUR   custom MODEL definition
 
         """
         n_wide = cpars['n_wide']
-
-
         ###### Your model Definition
 
 
 
 
 
-
+####################################################################################################
 ####################################################################################################
 #### Global Dictionary definition
-model_pars = {
-    'model_pars' :   Dict to pass to YOUR MODEL
-    'model_class' :  Name of your Class
-    "prepro": 
-    "postpro":
+model_pars : {
+    'model_pars'       : Dict to pass to YOUR MODEL
+    'model_class'      : Name of your Class
+    'post_process_fun' : post_process_function to run  After prediction
+    'pre_process_pars' :
+         'y_norm_fun' :  pre_process_fun ### Before training 
+         'pipe_list'   : [  List of preprocessors{'uri': 'source/prepro.py::pd_coly',      },  ]
+}        
+    
 
+
+
+data_pars : {
+    'n_sample' :  nb of sub-samples
+    'download_pars' : None,
+    'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+ 
+    'cols_input_type' :  dict of raw data columns by data type : colcategory, colnumerics
+    
+    ### Model feed 
+    'cols_model_group':  List of column groups to feed the model.
+    'cols_model_type2':  dict of colunm groups to feed the model : colmodel_sparse, colmodel_dense
+    "data_pars":         dict of specific data pars for the model.
+
+    'data_flow' :
+        "train" : dict of dataframe or path names for training.
+        "val"   : dict of dataframe or path names for validation
+        "test"  : dict of dataframe or path names for training.
 }
 
-data_pars = {
-    "data_pars":  dict of tf_feature columns
-
-    'data_flow' {
-        'train'
-        'test'
-        'val'
-    }
-
-}
 
 
 compute_pars = {
-    'compute_pars' :   Dict to pass to YOUR MODEL compute pars
-     "metrics_list": list
+    'compute_pars' :  Dict to pass to YOUR MODEL 
+    "metrics_list" :  list of sklearn metrics
 }
+
 
 global_pars = {
-    "global_pars":
-    "input_path":
-    "output_path":
+    "global_pars":    Dict of specific global pars for model
+
+    "config_path"       = config_path  
+    "config_name"       = config_name
+    #### peoprocess input path
+    "path_data_preprocess" = dir_data + f"/input/{data_name}/train/"
+
+    #### train input path
+    #dir_data_url              = "https://github.com/arita37/dsa2_data/tree/master/"  #### Remote Data directory
+    "path_data_train"      = dir_data + f"/input/{data_name}/train/"
+    "path_data_test"]      = dir_data + f"/input/{data_name}/test/"
+
+
+    #### train output path
+    "path_train_output"    = dir_data + f"/output/{data_name}/{config_name}/"
+    "path_train_model"     = dir_data + f"/output/{data_name}/{config_name}/model/"
+    "path_features_store"  = dir_data + f"/output/{data_name}/{config_name}/features_store/"
+    "path_pipeline"        = dir_data + f"/output/{data_name}/{config_name}/pipeline/"
+
+    #### predict  input path
+    "path_pred_data"       = dir_data + f"/input/{data_name}/test/"
+    "path_pred_pipeline"   = dir_data + f"/output/{data_name}/{config_name}/pipeline/"
+    "path_pred_model"      = dir_data + f"/output/{data_name}/{config_name}/model/"
+
+    #### predict  output path
+    "path_pred_output"     = dir_data + f"/output/{data_name}/pred_{config_name}/"
+
+    #####  Generic
+    "n_sample"             = Nb samples
 
 }
 
 
-#### Example
+
+
+
+
+
+
+###########################################################################
+#### Example  #############################################################
     m = {'model_pars': {
             # Specify the model
             'model_class':  "torch_tabular.py::RVAE",
@@ -169,11 +204,12 @@ global_pars = {
         },
 
         'data_pars': {
-            "batch_size":150,   ### Mini Batch from data
-            # Needed by getdataset
-            "clean" : False,
-            "data_path":   path_pkg + '/data_simple/Wine/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
-
+            'data_pars' :
+               {"batch_size":150,   ### Mini Batch from data
+                # Needed by getdataset
+                "clean" : False,
+                # "data_path":   path_pkg + '/data_simple/Wine/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
+               }
         },
 
         'global_pars' :{
