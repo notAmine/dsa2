@@ -29,11 +29,11 @@ imblearn
 umap
 pyspark==2.4.0
 pyarrow>=0.10
-koalas==1.7.0
+# koalas==1.7.0
 
 ##########################################
 tensorflow_text>=2.0.0rc0
-keras=2.3.1
+keras==2.3.1
 # simpleneighbors[annoy]
 # cython
 #cycler==0.10.0
