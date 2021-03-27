@@ -23,7 +23,7 @@ from torch.nn import functional as F
 ######################################################################################################
 curr_path_path = os.path.dirname(os.path.abspath(__file__))
 curr_path_path = curr_path_path.replace("\\", "/")
-repo_path      =os.path.join(curr_path_path, "repo/RVAE_MixedTypes/src/")
+repo_path      =os.path.join(curr_path_path, "repo/RVAE_MixedTypes/src/core_models/")
 sys.path.append( repo_path)
 print( repo_path )
 
@@ -32,12 +32,16 @@ root     = os.path.dirname(os.path.abspath(__file__))
 path_pkg =  root + "/repo/RVAE_MixedTypes/"
 
 
-from core_models import main, train_eval_models
-from core_models.model_utils import nll_categ_global, nll_gauss_global
-from core_models.EmbeddingMul import EmbeddingMul
-import core_models.parser_arguments
-from core_models.train_eval_models import training_phase, evaluation_phase, repair_phase
+
+##### from src/core_models
+import main, train_eval_models
+from model_utils import nll_categ_global, nll_gauss_global
+from EmbeddingMul import EmbeddingMul
+import parser_arguments
+from train_eval_models import training_phase, evaluation_phase, repair_phase
 import utils
+
+
 
 from pmlb import fetch_data
 
