@@ -1,8 +1,8 @@
 # pylint: disable=C0321,C0103,C0301,E1305,E1121,C0302,C0330,C0111,W0613,W0611,R1705
 # -*- coding: utf-8 -*-
 """
-
 python torch_rvae.py test --nrows 1000
+python torch_rvae.py test2 --nrows 1000
 
 
 """
@@ -25,6 +25,8 @@ curr_path_path = os.path.dirname(os.path.abspath(__file__))
 curr_path_path = curr_path_path.replace("\\", "/")
 sys.path.append(os.path.join(curr_path_path, "repo/RVAE_MixedTypes/src/core_models/"))
 
+
+print(os.path.join(curr_path_path, "repo/RVAE_MixedTypes/src/core_models/").replace("\\", "/"))
 root     = os.path.dirname(os.path.abspath(__file__)) 
 path_pkg =  root + "/repo/RVAE_MixedTypes/"
 
@@ -36,6 +38,7 @@ import parser_arguments
 from train_eval_models import training_phase, evaluation_phase, repair_phase
 import utils
 
+from pmlb import fetch_data
 
 ####################################################################################################
 VERBOSE = False
@@ -151,7 +154,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
     global model, session
     session = None  # Session type for compute
-    # print("CLEAN ? : ", data_pars["clean"])
+
     train_loader, X_train, target_errors_train, dataset_obj, attributes = get_dataset(
         data_pars, task_type='train'
     )
@@ -534,7 +537,75 @@ def test(nrows=1000):
 
 
 def test2(nrows=1000):
-   pass
+   
+    """
+        nrows : take first nrows from dataset
+    """
+    global model, session
+    # print("\n\nPKG : ",path_pkg.replace("\\","/"),"\n\n")
+
+    m = {'model_pars': {
+            # Specify the model
+            'model_class':  "torch_tabular.py::RVAE",
+            # "load_model":False, 
+            # "load_model_path":None,
+
+            'model_pars' : {
+                "activation":'relu',
+                "outlier_model":'RVAE',
+                "AVI":False,
+                "alpha_prior":0.95,
+                "embedding_size":50,
+                "is_one_hot":False,
+                "latent_dim":20,
+                "layer_size":400,
+            }
+
+          
+        },
+
+        'compute_pars': {
+            'log' :{
+                "log_interval":50,
+                "save_on":True,
+                "verbose_metrics_epoch":True,
+                "verbose_metrics_feature_epoch":False
+            },
+
+            'compute_pars' :{
+                "cuda_on":False, "number_epochs":1, "l2_reg":0.0, "lr":0.001, "seqvae_bprop":False, "seqvae_steps":4,
+                "seqvae_two_stage":False, "std_gauss_nll":2.0, "steps_2stage":4, "inference_type":'vae',
+                "batch_size":150,
+            },
+
+            'metric_list': [
+                'accuracy_score',
+                'average_precision_score'
+            ],
+
+            
+        },
+        'data_pars': { 
+            # Raw dataset, pre preprocessing
+            "dataset_path" : os.path.join(path_pkg.replace("\\","/"), "data_simple/adult/"),
+            "batch_size":150,   ### Mini Batch from data
+            # Needed by getdataset
+            "clean" : False,
+            "data_path":   path_pkg + '/data_simple/Adult/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
+
+        },
+        
+        'global_pars' :{
+            "data_path":   path_pkg + '/data_simple/Adult/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
+            "output_path": path_pkg + '/outputs_experiments_i/Adult/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/RVAE_CVI',
+
+        }
+        
+    }
+
+    # Preprocess the dataset
+    os.system(f"python ./repo/RVAE_MixedTypes/src/dataset_prep_simple/noising_process.py --input-path {m['data_pars']['dataset_path']}")
+    test_helper(m)
 
 
 
@@ -547,6 +618,7 @@ def test2(nrows=1000):
 
 
 def test_helper(m):
+    global model
     log('Setup model..')
     model = Model( model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'],
         global_pars=m['global_pars']
@@ -1038,6 +1110,7 @@ class RVAE(nn.Module):
 
 
 def test_rvae():
+    global model
     args={
         "AVI":False,
         "activation":'relu',
