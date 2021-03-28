@@ -5,6 +5,8 @@
 """
 import logging, os, pandas as pd, numpy as np
 from sklearn.model_selection import train_test_split
+from pathlib import Path
+import wget
 
 ####################################################################################################
 VERBOSE = False
@@ -95,7 +97,6 @@ def test_dataset_classi_fake(nrows=500):
 
 
 def test_dataset_covtype(nrows=1000):
-
     # Dense features
     colnum = ["Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology",
         "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways", "Hillshade_9am" , "Hillshade_Noon",  "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"]
@@ -126,6 +127,36 @@ def test_dataset_covtype(nrows=1000):
     feature_columns = colnum + colcat + coly
     df = pd.read_csv(datafile, header=None, names=feature_columns, nrows=nrows)
     return df, colnum, colcat, coly
+
+
+
+def test_dataset_petfinder(nrows=1000):
+    # Dense features
+    colnum = ['PhotoAmt', 'Fee','Age' ]
+
+    # Sparse features
+    colcat = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized',
+              'Health', 'Breed1' ]
+
+    colembed = ['Breed1']
+    # Target column
+    coly        = "y"
+
+    dataset_url = 'http://storage.googleapis.com/download.tensorflow.org/data/petfinder-mini.zip'
+    csv_file    = 'datasets/petfinder-mini/petfinder-mini.csv'
+    tf.keras.utils.get_file('petfinder_mini.zip', dataset_url,extract=True, cache_dir='.')
+
+    print('Data Frame Loaded')
+    df      = pd.read_csv(csv_file)
+    df      = df.iloc[:nrows, :]
+    df['y'] = np.where(df['AdoptionSpeed']==4, 0, 1)
+    df      = df.drop(columns=['AdoptionSpeed', 'Description'])
+
+    print(df.dtypes)
+    return df, colnum, colcat, coly, colembed
+
+
+
 
 
 
