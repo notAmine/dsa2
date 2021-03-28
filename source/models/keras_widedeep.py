@@ -588,10 +588,11 @@ def test(config=''):
     test_helper( m['model_pars'], m['data_pars'], m['compute_pars'])
     """
 
+
 def test2(config=''):
     """
     """
-    df, colnum, colcat, coly = test_dataset_petfinder()
+    df, colnum, colcat, coly, colembed = test_dataset_petfinder()
 
     #### For pipeline data feed ###############################################################################
     prepare = tf_FeatureColumns()
@@ -633,11 +634,11 @@ def test2(config=''):
                 'test': test_df,
                 'val': val_df }
 
-
     compute_pars = {'epochs':2, 'verbose': 1,'path_checkpoint': 'checkpoint/model.pth','probability':True}
 
     ######## Run ##########################################################
     test_helper(model_pars, data_pars, compute_pars)
+
 
 
 def test_helper(model_pars, data_pars, compute_pars):
