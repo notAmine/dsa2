@@ -215,3 +215,4 @@ mlflow_local.db
 /source/models/saved_weights/bank
 /source/models/datasets/petfinder-mini
 /source/models/datasets
+/source/models/repo/RVAE_MixedTypes/data_simple/Adult/gaussian_m0s5_categorical_alpha0.0/10pc_rows_20pc_cols_run_1

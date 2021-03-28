@@ -23,20 +23,22 @@ from torch.nn import functional as F
 ######################################################################################################
 curr_path_path = os.path.dirname(os.path.abspath(__file__))
 curr_path_path = curr_path_path.replace("\\", "/")
-repo_path      = os.path.join(curr_path_path, "repo/RVAE_MixedTypes/src/")
-sys.path.append( repo_path)
-print( repo_path )
+repo_path      =os.path.join(curr_path_path, "repo/RVAE_MixedTypes/src/")
+sys.path.append( os.path.normpath(repo_path))
+
+
+# Add the package path
+# repo_path      =os.path.join(curr_path_path, "repo/RVAE_MixedTypes/src/core_models")
+# sys.path.append( os.path.normpath(repo_path))
+# print( os.path.normpath(repo_path) )
 #repo_path      =os.path.join(curr_path_path, "repo/RVAE_MixedTypes/src/core_models/")
 #sys.path.append( repo_path)
-
-
 
 root     = os.path.dirname(os.path.abspath(__file__))
 path_pkg =  root + "/repo/RVAE_MixedTypes/"
 
 
-
-##### from src/core_models
+##### from src/core_models  #############################################################
 from core_models import main, train_eval_models
 from core_models.model_utils import nll_categ_global, nll_gauss_global
 from core_models.EmbeddingMul import EmbeddingMul
@@ -46,17 +48,15 @@ from core_models import utils
 print(utils)
 
 
-
-
 ####################################################################################################
-VERBOSE = False
+VERBOSITY = 3
 
 def log(*s):
     print(*s, flush=True)
 
 def log2(*s):
-    if VERBOSE :
-      print(*s, flush=True)
+    if VERBOSITY >= 2 : print(*s, flush=True)
+
 
 ####################################################################################################
 global model, session
@@ -597,7 +597,7 @@ def test2(nrows=1000):
         },
         'data_pars': { 
             # Raw dataset, pre preprocessing
-            "dataset_path" : os.path.join(path_pkg.replace("\\","/"), "data_simple/adult/"),
+            "dataset_path" : os.path.join(path_pkg.replace("\\","/"), "data_simple/Adult/"),
             "batch_size":150,   ### Mini Batch from data
             # Needed by getdataset
             "clean" : False,
@@ -612,7 +612,7 @@ def test2(nrows=1000):
         }
         
     }
-
+    print("\n\nDATASET : ", m['data_pars']['dataset_path'])
     # Preprocess the dataset
     os.system(f"python ./repo/RVAE_MixedTypes/src/dataset_prep_simple/noising_process.py --input-path {m['data_pars']['dataset_path']}")
     test_helper(m)
