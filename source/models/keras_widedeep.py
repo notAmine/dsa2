@@ -228,7 +228,7 @@ def fit(data_pars, compute_pars):
         verbose         = compute_pars.get('verbose',1)
         path_checkpoint = compute_pars.get('path_checkpoint','ztmp_checkpoint/model_.pth')
         early_stopping  = EarlyStopping(monitor='loss', patience=3)
-        model_ckpt      = ModelCheckpoint(filepath = path_checkpoint,save_best_only=True, monitor='loss')    
+        model_ckpt      = ModelCheckpoint(filepath = path_checkpoint,save_best_only=True, monitor='loss')
         log('Fitting the Model on XTrain...')
         input_with_labels = tf.data.Dataset.zip(((Xtrain,Xtrain,Xtrain), Ytrain)).batch(32)
         test_with_labels = tf.data.Dataset.zip(((Xtest,Xtest,Xtest), Ytest)).batch(32)
@@ -251,7 +251,7 @@ def predict(Xpred=None,data_pars=None, compute_pars=None, out_pars=None):
     else :
         if Xpred is None :
             Xpred = data_pars['predict']['X']
-            Ypred = data_pars['predict']['X']
+            Ypred = data_pars['predict']['y']
         testdata = tf.data.Dataset.zip(((Xpred,Xpred,Xpred),Ypred)).batch(32)
         ypred_proba = model.model.predict(testdata)        
         ypred       = [  1 if t > 0.5 else 0 for t in ypred_proba ]    
@@ -694,6 +694,7 @@ def test2(config=''):
                                                                                                          colcat=colcat,
                                                                                                          colnum=colnum)
     print(train_df)
+    """
     m['model_pars']['model_pars'] = {  'loss' : 'binary_crossentropy','optimizer':'adam',
                            'metric': ['accuracy'],'hidden_units': '64,32,16',
                             'n_wide_cross': train_df.output_shapes[0],
@@ -704,7 +705,7 @@ def test2(config=''):
     m['data_pars']['val']   = {  'X':  val_df ,'Y':val_label }
 
     test_helper( m['model_pars'], m['data_pars'], m['compute_pars'])
-
+    """
 
 
     log("##### Sparse Tests  ############################################### ")
