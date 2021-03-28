@@ -10,24 +10,27 @@ import os, sys, pandas as pd, numpy as np, sklearn
 from sklearn.model_selection import train_test_split
 # from gefs import prep
 # from prep import train_test_split
+
+thisfile_dirpath = os.path.dirname(os.path.abspath(__file__) ).replace("\\", "/")
 try :
-  ### in repo/model_gefs/  
-  sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/repo/model_gefs/" )
+  sys.path.append( thisfile_dirpath + "/repo/model_gefs/" )
   from gefs import RandomForest
 except :
-#   os.system( " python -m pip install git+https://github.com/arita37/GeFs/GeFs.git@aa32d657013b7cacf62aaad912a9b88110cee5d1  -y ")
-  
+  #   os.system( " python -m pip install git+https://github.com/arita37/GeFs/GeFs.git@aa32d657013b7cacf62aaad912a9b88110cee5d1  -y ")
   # Updated GeFs
   os.system( "pip install git+git://github.com/arita37/GeFs.git@f5725d7787149eea3886f52437cec77513e30666")
-  sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/repo/model_gefs/" )
+  sys.path.append( thisfile_dirpath + "/repo/model_gefs/" )
   from gefs import RandomForest
 
 
 ####################################################################################################
-VERBOSE = True
+VERBOSITY = 3
 
 def log(*s):
     print(*s, flush=True)
+
+def log2(*s):
+    if VERBOSITY >=2 : print(*s, flush=True)
 
 
 ####################################################################################################
@@ -39,6 +42,12 @@ def init(*kw, **kwargs):
     session = None
 
 
+def reset():
+    global model, session
+    model, session = None, None
+
+
+####################################################################################################
 class Model(object):
     def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
         self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
@@ -52,8 +61,13 @@ class Model(object):
                 self.model = None  # In order to create an instance of the model we need to calculate the ncat mentioned above on our dataset
                 log('ncat is not define')
             else:
+                """
+                    def __init__(self, n_estimators=100, imp_measure='gini', min_samples_split=2,
+                 min_samples_leaf=1, max_features=None, bootstrap=True,
+                 ncat=None, max_depth=1e6, surrogate=False):
+                """
                 self.model = RandomForest(n_estimators=self.n_estimators, ncat=self.ncat)
-            if VERBOSE: log(None, self.model)
+            log(None, self.model)
 
                 
 def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
@@ -62,7 +76,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     global model, session
     session = None  # Session type for compute
     Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
-    if VERBOSE: log(Xtrain.shape, model.model)
+    log(Xtrain.shape, model.model)
 
     if model.ncat is None:
         log("#!IMPORTANT This indicates that the preprocessing pipeline was not adapted to GEFS! and we need to calculate ncat")
@@ -83,7 +97,12 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
 
         # In case of warnings make sure ncat is consistent
         # check this issue : https://github.com/AlCorreia/GeFs/issues/6
-        model.model = RandomForest(ncat, n_estimators=model.n_estimators)
+        """
+                    def __init__(self, n_estimators=100, imp_measure='gini', min_samples_split=2,
+                 min_samples_leaf=1, max_features=None, bootstrap=True,
+                 ncat=None, max_depth=1e6, surrogate=False):
+        """
+        model.model = RandomForest(n_estimators=model.n_estimators, ncat=ncat, )
 
     # Remove the target col
     X = Xtrain.iloc[:,:-1]
@@ -106,14 +125,10 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
     ypred, ypred_prob = predict(Xval, data_pars, compute_pars, out_pars)
     mpars = compute_pars.get("metrics_pars", {'metric_name': 'auc'})
 
-    scorer = {
-        "auc": sklearn.metrics.roc_auc_score,
-    }[mpars['metric_name']]
+    scorer = { "auc": sklearn.metrics.roc_auc_score, }[mpars['metric_name']]
 
     mpars2 = mpars.get("metrics_pars", {})  ##Specific to score
-
     score_val = scorer(yval, ypred_prob, **mpars2)
-
     ddict = [{"metric_val": score_val, 'metric_name': mpars['metric_name']}]
 
     return ddict
@@ -138,15 +153,9 @@ def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     
     ypred         = post_process_fun(ypred)
     y_prob        = np.max(y_prob, axis=1)
-    
     ypred_proba = y_prob  if compute_pars.get("probability", False) else None
-
     return ypred, ypred_proba
 
-
-def reset():
-    global model, session
-    model, session = None, None
 
 
 def save(path=None, info=None):
@@ -185,7 +194,6 @@ def load_info(path=""):
     return dd
 
 ####################################################################################################
-############ Do not change #########################################################################
 def get_dataset(data_pars=None, task_type="train", **kw):
     """
       "ram"  : 
@@ -212,7 +220,8 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
-        
+
+
 ####################################################################################################        
 ############ Test ##################################################################################
 def pd_colcat_get_catcount(df, colcat, classcol, continuous_ids):
