@@ -6,7 +6,7 @@ python torch_rvae.py test2 --nrows 1000
 
 
 """
-import os, sys,  numpy as np,  pandas as pd, wget, copy, errno, json
+import os, sys,  numpy as np,  pandas as pd, copy, errno, json
 from pathlib import Path
 from collections import namedtuple
 
@@ -23,9 +23,12 @@ from torch.nn import functional as F
 ######################################################################################################
 curr_path_path = os.path.dirname(os.path.abspath(__file__))
 curr_path_path = curr_path_path.replace("\\", "/")
-repo_path      =os.path.join(curr_path_path, "repo/RVAE_MixedTypes/src/core_models/")
+repo_path      =os.path.join(curr_path_path, "repo/RVAE_MixedTypes/src/")
 sys.path.append( repo_path)
 print( repo_path )
+#repo_path      =os.path.join(curr_path_path, "repo/RVAE_MixedTypes/src/core_models/")
+#sys.path.append( repo_path)
+
 
 
 root     = os.path.dirname(os.path.abspath(__file__))
@@ -34,16 +37,16 @@ path_pkg =  root + "/repo/RVAE_MixedTypes/"
 
 
 ##### from src/core_models
-import main, train_eval_models
-from model_utils import nll_categ_global, nll_gauss_global
-from EmbeddingMul import EmbeddingMul
-import parser_arguments
-from train_eval_models import training_phase, evaluation_phase, repair_phase
-import utils
+from core_models import main, train_eval_models
+from core_models.model_utils import nll_categ_global, nll_gauss_global
+from core_models.EmbeddingMul import EmbeddingMul
+from core_models import parser_arguments
+from core_models.train_eval_models import training_phase, evaluation_phase, repair_phase
+from core_models import utils
+print(utils)
 
 
 
-from pmlb import fetch_data
 
 ####################################################################################################
 VERBOSE = False
@@ -548,6 +551,8 @@ def test2(nrows=1000):
     """
     global model, session
     # print("\n\nPKG : ",path_pkg.replace("\\","/"),"\n\n")
+
+    # from pmlb import fetch_data
 
     m = {'model_pars': {
             # Specify the model
@@ -1213,4 +1218,4 @@ def test_rvae():
 if __name__ == "__main__":
     # args = parser_arguments.getArgs(sys.argv[1:])
     import fire
-    fire.Fire()
+    fire.Fire(test2)
