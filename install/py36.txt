@@ -33,7 +33,7 @@ pyarrow>=0.10
 
 ##########################################
 tensorflow_text>=2.0.0rc0
-keras==2.3.1
+keras==2.4.3
 # simpleneighbors[annoy]
 # cython
 #cycler==0.10.0
