@@ -2,12 +2,15 @@
 # -*- coding: utf-8 -*-
 """
 Multi Density Variationnal Autoencoder
-Only with TF1
+
+python model_vaemdn.py test2
+
 
 """
 import os, pandas as pd, numpy as np, sklearn, copy
 from sklearn.model_selection import train_test_split
-
+import pyarrow as pa
+import pyarrow.parquet as pq
 import tensorflow as tf
 
 if  "1." in tf.version.VERSION :
@@ -282,7 +285,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     #os.makedirs(os.path.abspath(path_check) , exist_ok= True)
     #model_ckpt     = ModelCheckpoint(filepath =  path_check,
     #                                 save_best_only = True, monitor='loss')
-    cpars['callbacks'] =  [early_stopping] # , model_ckpt]
+    # cpars['callbacks'] =  [early_stopping] # , model_ckpt]
     # cpars['callbacks'] = {}
 
     ### Fake label
@@ -295,8 +298,6 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
                             **cpars)
     model.history = hist
 
-import pyarrow as pa
-import pyarrow.parquet as pq
 
 def encode(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     global model, session
@@ -707,16 +708,10 @@ def test2(config=''):
             'coly'  :  coly,
         },
         ### family of columns for MODEL  #########################################################
-        'cols_model_group': [ 'colnum_bin',   'colcat_bin',
-                            ]
-
-        ,'cols_model_group_custom' :  { 'colnum' : colnum,
-                                        'colcat' : colcat,
-                                        'coly' : coly
-                            },
+        'cols_model_group': [ 'colnum_bin',   'colcat_bin', ]
 
         ### Added continuous & sparse features groups ###
-        'cols_model_type2': {
+       ,'cols_model_type2': {
             'colcontinuous':   colnum ,
             'colsparse' : colcat,
         }
@@ -726,7 +721,7 @@ def test2(config=''):
         ,'eval':    {'X': X_valid,  'y': y_valid}
         ,'predict': {'X': X_valid}
 
-        ,'task_type' : 'train', 'data_type': 'ram'
+        ,'data_type': 'ram'
 
 
         ### Filter data rows   ##################################################################
@@ -737,12 +732,6 @@ def test2(config=''):
 
     ###  Tester #########################################################
     test_helper(m['model_pars'], m['data_pars'], m['compute_pars'])
-
-
-
-
-
-
 
 
 def test_helper(model_pars, data_pars, compute_pars):
@@ -756,11 +745,12 @@ def test_helper(model_pars, data_pars, compute_pars):
 
 
     log('Predict data..')
-    Xnew = predict(data_pars=data_pars,  compute_pars=compute_pars)
+    Xnew    = predict(data_pars=data_pars,  compute_pars=compute_pars)
     encoded = encode(data_pars=data_pars,  compute_pars=compute_pars)
     encoded = encoded[:3]
     print('Encoded X (Batch 1): \n')
     log(encoded)
+
     #There are different batches of Dataframe we have to perform on each batches
     decoded_array = []
     for num,Xpred in enumerate(encoded):
@@ -790,6 +780,9 @@ if __name__ == "__main__":
 
 
 
+
+############################################################################################################
+############################################################################################################
 def a():
     """
 
