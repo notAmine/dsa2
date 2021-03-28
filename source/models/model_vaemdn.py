@@ -104,8 +104,8 @@ def VAEMDN(model_pars):
     encoder = keras.models.Model([inputs, dummy], [z_mean, z_log_var, z,
                                       mu, c, c_outlier, pi], name='encoder')
 
-
-
+    encoder.compile(optimizer='adam',loss='binary_crossentropy',metrics=['accuracy'])
+    #log(encoder.summary())
     ####### build decoder model  ########################################################
     latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
     inter_y1 = Dense(intermediate_dim_2, activation='tanh')(latent_inputs)
@@ -115,8 +115,8 @@ def VAEMDN(model_pars):
     ########### instantiate decoder model
     decoder = keras.models.Model(latent_inputs, outputs, name='decoder')
     # plot_model(decoder, to_file='vae_mlp_decoder.png', show_shapes=True)
-
-
+    decoder.compile(optimizer='adam',loss='binary_crossentropy',metrics=['accuracy'])
+    log(decoder.summary())
 
     ################## instantiate VAE model  ####################################################
     outputs = decoder(encoder([inputs, dummy])[2])
@@ -273,6 +273,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     session = None  # Session type for compute
 
     Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train",)
+    
     cpars          = copy.deepcopy( compute_pars.get("compute_pars", {}))   ## issue with pickle
 
 
@@ -289,12 +290,13 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     Xtrain_dummy = np.ones((Xtrain_tuple.shape[0], 1))
 
     assert 'epochs' in cpars, 'epoch missing'
-    hist = model.model.fit([Xtrain_tuple, Xtrain_dummy],
-                           validation_data=[ [Xtest_tuple, Xtest_dummy], None],
+    hist = model.model.fit([Xtrain_tuple, ytrain],
+                           validation_data=[Xtest_tuple, ytest],
                             **cpars)
     model.history = hist
 
-
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 def encode(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     global model, session
@@ -305,13 +307,25 @@ def encode(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
         cols_type   = data_pars.get('cols_model_type2', {})  ##
         Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
 
-    log2(Xpred_tuple)
+    #log2(Xpred_tuple)
     Xdummy      = np.ones((Xpred_tuple.shape[0], 1))
-    Xnew_encode = model.model.encode([Xpred_tuple, Xdummy ] )
+    Xnew_encode = model.encoder.predict([Xpred_tuple, Xdummy ] )
+    filename = {0:'encoded_mean.parquet',1:'encoded_logvar.parquet',2:'encoded_mu.parquet'}
+    for j,encodings in enumerate(Xnew_encode[:3]):
+        parquetDic = {}
+        for i in range(encodings.shape[1]):
+            name = f'col_{i+1}'
+            parquetDic[name] = encodings[:,i]
+        print(f'Encoder Columns shape: {encodings.shape}')
+        
+        ndarray_table = pa.table(parquetDic)
+        pq.write_table(ndarray_table,filename[j])
+        print(f'{filename[j]} created')
+        
     return Xnew_encode
 
 
-def decode(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
+def decode(Xpred=None, data_pars=None, compute_pars={}, out_pars={},index = 0, **kw):
     global model, session
     if Xpred is None:
         Xpred_tuple = get_dataset(data_pars, task_type="predict")
@@ -320,10 +334,20 @@ def decode(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
         cols_type   = data_pars.get('cols_model_type2', {})  ##
         Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
 
-    log2(Xpred_tuple)
-    Xdummy      = np.ones((Xpred_tuple.shape[0], 1))
-    Xnew_decode = model.model.decode([Xpred_tuple, Xdummy ] )
-    return Xnew_decode
+    #log2(Xpred_tuple)
+    #Xdummy      = np.ones((Xpred_tuple.shape[0], 1))
+    decoded_array = model.decoder.predict(Xpred )
+    filename = {0:'decoded_mean.parquet',1:'decoded_logvar.parquet',2:'decoded_mu.parquet'}
+    parquetDic = {}
+    for i in range(decoded_array.shape[1]):
+        name = f'col_{i+1}'
+        parquetDic[name] = decoded_array[:,i]
+    print(f'Decoder Columns Shape {decoded_array.shape}')
+    #log2(decoded_array)
+    ndarray_table = pa.table(parquetDic)
+    pq.write_table(ndarray_table,filename[index])
+    print(f'{filename[index]} created')
+    return decoded_array
 
 
 def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
@@ -335,7 +359,8 @@ def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
         cols_type   = data_pars.get('cols_model_type2', {})  ##
         Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
 
-    log2(Xpred_tuple)
+    #log2(Xpred_tuple)
+
     Xdummy      = np.ones((Xpred_tuple.shape[0], 1))
     Xnew = model.model.predict([Xpred_tuple, Xdummy ] )
     return Xnew
@@ -385,9 +410,9 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
         if task_type == "predict":
             d = data_pars[task_type]
-            Xtrain       = d["X"]
-            Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
-            return Xtuple_train
+            Xtest     = d["X"]
+            #Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
+            return Xtest
 
         if task_type == "eval":
             d = data_pars[task_type]
@@ -400,11 +425,11 @@ def get_dataset(data_pars=None, task_type="train", **kw):
             Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
 
             ### dict  colgroup ---> list of df
-            Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
-            Xtuple_test  = get_dataset_tuple(Xtest, cols_type_received, cols_ref)
+            #Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
+            #Xtuple_test  = get_dataset_tuple(Xtest, cols_type_received, cols_ref)
             #flog2("Xtuple_train", Xtuple_train)
-
-            return Xtuple_train, ytrain, Xtuple_test, ytest
+            
+            return Xtrain, ytrain, Xtest, ytest
 
 
     elif data_type == "file":
@@ -608,34 +633,36 @@ def test_dataset_classi_fake(nrows=500):
     colnum = ["colnum_" +str(i) for i in range(0, ndim) ]
     colcat = ['colcat_1']
     X, y    = sklearn_datasets.make_classification(
-        n_samples=1000,
+        n_samples=10000,
         n_features=ndim,
-        n_targets=1,
+        n_classes=1,
+        n_redundant = 0,
         n_informative=ndim
     )
-    df         = pd.DataFrame(X,  columns= colnum)
-    df[coly]   = y.reshape(-1, 1)
-
+    df = pd.DataFrame(X,  columns= colnum)
     for ci in colcat :
-      df[colcat] = np.random.randint(0,1, len(df))
-
+      df[ci] = np.random.randint(0,1, len(df))
+    df[coly]   = y.reshape(-1, 1)
+    # log(df)
     return df, colnum, colcat, coly
 
 
-def test2():
+def test2(config=''):
     n_sample          = 100
     df, colnum, colcat, coly= test_dataset_classi_fake(nrows=500)
 
     #### Matching Big dict  ##################################################
-    X = df
+    
     y = df[coly].astype('uint8')
+    X = df.iloc[:,:-1]
     log('y', np.sum(y[y==1]) )
-
+    log(X)
     ######### Split the df into train/test subsets
-    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, stratify=y)
-    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
-    num_classes                                = len(set(y_train_full[coly].values.ravel()))
-    log(X_train)
+    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021)
+    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021)
+    
+    num_classes                                = len(set(y_train_full.values.ravel()))
+    
 
     def post_process_fun(y):
         return int(y)
@@ -718,7 +745,7 @@ def test2():
 
 
 
-def test_helper(model_pars, data_pars, compute_pars, Xpred):
+def test_helper(model_pars, data_pars, compute_pars):
     global model, session
     init()
     root  = "ztmp/"
@@ -729,10 +756,19 @@ def test_helper(model_pars, data_pars, compute_pars, Xpred):
 
 
     log('Predict data..')
-    Xnew = predict(Xpred=Xpred, data_pars=data_pars,  compute_pars=compute_pars)
-    # Xnew = encode(Xpred=Xpred,  data_pars=data_pars,  compute_pars=compute_pars)
-    # Xnew = decode(Xpred=Xpred,  data_pars=data_pars,  compute_pars=compute_pars)
-
+    Xnew = predict(data_pars=data_pars,  compute_pars=compute_pars)
+    encoded = encode(data_pars=data_pars,  compute_pars=compute_pars)
+    encoded = encoded[:3]
+    print('Encoded X (Batch 1): \n')
+    log(encoded)
+    #There are different batches of Dataframe we have to perform on each batches
+    decoded_array = []
+    for num,Xpred in enumerate(encoded):
+        log(f'Shape of Decoded array: {Xpred.shape}')
+        decoded = decode(Xpred = Xpred,data_pars=data_pars,index=num , compute_pars=compute_pars)
+        decoded_array.append(decoded)
+    print('Decoded X: \n')
+    #log(decoded_array[0])
 
     log('Saving model..')
     log( model.model.summary() )
@@ -744,19 +780,14 @@ def test_helper(model_pars, data_pars, compute_pars, Xpred):
     log('Model architecture:')
     log(model.model.summary())
 
-    log('Predict data..')
-    Xnew2 = predict(Xpred=Xpred[:10,:], data_pars=data_pars, compute_pars=compute_pars)
-
 
 
 if __name__ == "__main__":
     # test()
     import fire
-    fire.Fire()
+    fire.Fire(test2)
 
 
-    
-    
 
 
 def a():
@@ -785,3 +816,4 @@ def a():
     model.fit(dataset, epochs=5)
 
     """
+    pass
