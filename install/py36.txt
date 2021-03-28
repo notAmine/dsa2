@@ -16,12 +16,7 @@ cloudpickle
 gplearn
 sympy
 dill
-#pyod==0.3.0
-#featuretools==0.13.3
-#featuretools-sklearn-transformer==0.1.0
-#featuretools-tsfresh-primitives==0.2.1
-#featuretools-update-checker==1.0.2
-#numba==0.48.0
+#pyod==0.8.0
 # fastparquet
 nltk
 category_encoders
@@ -31,9 +26,20 @@ pyspark==2.4.0
 pyarrow>=0.10
 # koalas==1.7.0
 
-##########################################
+#####Tensorflow #####################################
 tensorflow_text>=2.0.0rc0
 keras==2.4.3
+
+##### Features
+#pyod==0.3.0
+#featuretools==0.13.3
+#featuretools-sklearn-transformer==0.1.0
+#featuretools-tsfresh-primitives==0.2.1
+#featuretools-update-checker==1.0.2
+#numba==0.48.0
+
+
+#### Others
 # simpleneighbors[annoy]
 # cython
 #cycler==0.10.0
