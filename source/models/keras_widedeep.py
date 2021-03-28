@@ -686,6 +686,8 @@ def test2(config=''):
     }
 
 
+
+    """
     log("##### Dense Tests  ##################################################")
     model_type = 'dense'
     prepare = tf_FeatureColumns()
@@ -694,7 +696,7 @@ def test2(config=''):
                                                                                                          colcat=colcat,
                                                                                                          colnum=colnum)
     print(train_df)
-    """
+
     m['model_pars']['model_pars'] = {  'loss' : 'binary_crossentropy','optimizer':'adam',
                            'metric': ['accuracy'],'hidden_units': '64,32,16',
                             'n_wide_cross': train_df.output_shapes[0],
