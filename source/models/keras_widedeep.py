@@ -240,7 +240,7 @@ def load_model(path=""):
 
 def model_summary(path="ztmp/"):
     global model
-    os.makedirs(path, exist_ok=True)
+    # os.makedirs(path, exist_ok=True)
     # try :
     #  tf.keras.utils.plot_model(model.model, f'{path}/model.png', show_shapes=False, rankdir='LR')
     # tf.keras.utils.plot_model(model.model, f'{path}/model_shapes.png', show_shapes=True, rankdir='LR')
