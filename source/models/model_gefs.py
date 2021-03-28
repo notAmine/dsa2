@@ -98,9 +98,9 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
         # In case of warnings make sure ncat is consistent
         # check this issue : https://github.com/AlCorreia/GeFs/issues/6
         """
-                    def __init__(self, n_estimators=100, imp_measure='gini', min_samples_split=2,
-                 min_samples_leaf=1, max_features=None, bootstrap=True,
-                 ncat=None, max_depth=1e6, surrogate=False):
+         def __init__(self, n_estimators=100, imp_measure='gini', min_samples_split=2,
+         min_samples_leaf=1, max_features=None, bootstrap=True,
+         ncat=None, max_depth=1e6, surrogate=False):
         """
         model.model = RandomForest(n_estimators=model.n_estimators, ncat=ncat, )
 
@@ -295,15 +295,12 @@ def test():
 
     def pre_process_fun(y):    ### Before the prediction is done
         return  int(y)
-        
 
-    m = {"model_pars": {
-      
-        "model_pars" : {'cat': 10, 'n_estimators': 5
-                        }
-
-        , "post_process_fun" : post_process_fun   ### After prediction  ##########################################
-        , "pre_process_pars" : {
+    m = {
+    "model_pars": {
+        "model_pars" : {'cat': 10, 'n_estimators': 5 }
+       ,"post_process_fun" : post_process_fun   ### After prediction  ########################
+       ,"pre_process_pars" : {
             "y_norm_fun" :  pre_process_fun ,  ### Before training  ##########################
         }
         },
@@ -313,24 +310,21 @@ def test():
                         "probability" : True
                       },
 
-      "data_pars": { "n_sample" : n_sample,
+      "data_pars": {
+          "n_sample" : n_sample,
           "download_pars" : None,
-
-        ###################################################  
-        'train': {'Xtrain': X_train,
-                    'ytrain': y_train,
-                        'Xtest': X_valid,
-                        'ytest': y_valid},
-        'eval': {'X': X_valid,
-                'y': y_valid},
-        'predict': {'X': X_valid},
-          ### Raw data:  column input ##############################################################
+          ### Raw data:  column input #####################
           "cols_input_type" : {
               "colnum" : colnum,
               "colcat" : colcat,
               "coly" : coly
-          },  
+          },
 
+        ###################################################  
+        'train':   {'Xtrain': X_train, 'ytrain': y_train,
+                    'Xtest':  X_valid, 'ytest': y_valid},
+        'eval':    {'X': X_valid, 'y': y_valid},
+        'predict': {'X': X_valid},
          }
       }
 
