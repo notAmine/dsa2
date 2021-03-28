@@ -107,7 +107,7 @@ jobs:
       continue-on-error: true
       run:  |
             cd source/models && ipython keras_widedeep.py  test
-            ipython keras_widedeep.py  test2
+      ## ipython keras_widedeep.py  test2
 
     - name: python keras_widedeep_dense.py  test
       # continue-on-error: true
