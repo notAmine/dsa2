@@ -150,11 +150,11 @@ jobs:
       run:  cd source/models && ipython model_vaemdn.py test
 
 
-    - name: python torch_rvae.py test --nrows 1000
+    - name: python torch_rvae.py test 
       continue-on-error: true
       run:  |
-            cd source/models && ipython torch_rvae.py test --nrows 1000
-            ipython torch_rvae.py test2 --nrows 1000
+            cd source/models && ipython torch_rvae.py test 
+            ipython torch_rvae.py test2 
 
 
     - name: python torch_tabular.py test
