@@ -164,8 +164,18 @@ jobs:
       run:  cd source/models && ipython torch_tabular.py test
 
 
+    - name: python optuna_lightgbm.py test
+      continue-on-error: true
+      run:  cd source/models && ipython optuna_lightgbm.py test
 
 
+    - name: python model_sampler.py test
+      continue-on-error: true
+      run:  cd source/models && ipython model_sampler.py test
+
+    - name: python model_encoder.py test
+      continue-on-error: true
+      run:  cd source/models && ipython model_encoder.py.py test
 
 
 
