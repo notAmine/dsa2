@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 ipython source/models/keras_widedeep.py  test  --pdb
-python keras_widedeep.py  test
+python keras_widedeep_dense.py  test
 pip install Keras==2.4.3
+
 """
 import os, pandas as pd, numpy as np, sklearn, copy
 from sklearn.model_selection import train_test_split
@@ -373,6 +374,9 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     model.history = hist
 
 
+def evaluate(Xy_pred=None,  data_pars=None, compute_pars={}, out_pars={}, **kw):
+    pass
+
 
 def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     global model, session
@@ -526,8 +530,8 @@ def test_helper(model_pars, data_pars, compute_pars):
     ypred, ypred_proba = predict(Xpred=None, data_pars=data_pars, compute_pars=compute_pars)
     log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
 
-    log('Evaluating the model..')
-    log(eval(data_pars=data_pars, compute_pars=compute_pars))
+    #log('Evaluating the model..')
+    #log(evaluate(data_pars=data_pars, compute_pars=compute_pars))
     #
     log('Saving model..')
     save(path= root + '/model_dir/')
@@ -537,7 +541,7 @@ def test_helper(model_pars, data_pars, compute_pars):
     log('Model successfully loaded!\n\n')
 
     log('Model architecture:')
-    log(model.summary())
+    log(model.model.summary())
 
 
 #######################################################################################
