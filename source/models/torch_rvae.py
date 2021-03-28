@@ -23,7 +23,7 @@ from torch.nn import functional as F
 ######################################################################################################
 curr_path_path = os.path.dirname(os.path.abspath(__file__))
 curr_path_path = curr_path_path.replace("\\", "/")
-repo_path      =os.path.join(curr_path_path, "repo/RVAE_MixedTypes/src/")
+repo_path      = os.path.join(curr_path_path, "repo/RVAE_MixedTypes/src/")
 sys.path.append( repo_path)
 print( repo_path )
 #repo_path      =os.path.join(curr_path_path, "repo/RVAE_MixedTypes/src/core_models/")
