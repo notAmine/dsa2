@@ -153,8 +153,8 @@ jobs:
     - name: python torch_rvae.py test 
       continue-on-error: true
       run:  |
-            cd source/models && ipython torch_rvae.py test 
-            ipython torch_rvae.py test2 
+            cd source/models && ipython torch_rvae.py test2 
+      ## ipython torch_rvae.py test
 
 
     - name: python torch_tabular.py test
