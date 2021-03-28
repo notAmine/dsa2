@@ -126,13 +126,13 @@ def WideDeep_sparse(model_pars2):
 
         # Numeric Columns creation
         # colnum = ['PhotoAmt', 'Fee', 'Age']
-        colnum  = model_pars2['colnum']
+        colnum  = model_pars2['tf_feature']['colnum']
         prepare.numeric_columns(colnum)
 
         #### Categorical Columns
-        colcat = model_pars2['colcat']
+        colcat = model_pars2['tf_feature']['colcat']
         # colcat = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized', 'Health','Breed1']
-        colcat_unique = model_pars2['colcat_unique']
+        colcat_unique = model_pars2['tf_feature']['colcat_unique']
         prepare.categorical_columns(colcat, colcat_unique)
 
         ##### Bucketized Columns
@@ -140,7 +140,7 @@ def WideDeep_sparse(model_pars2):
         #prepare.bucketized_columns(bucket_cols)
 
         ##### Embedding Columns
-        colembed_dict = model_pars2['colembed_dict']
+        colembed_dict = model_pars2['tf_feature']['colembed_dict']
         prepare.embeddings_columns(colembed_dict)
         #embeddingCol = {'Breed1':8}
 
@@ -169,7 +169,7 @@ def WideDeep_sparse(model_pars2):
     log2(model.summary())
     return model
 
-
+import pprint
 
 class Model(object):
     global model,session
@@ -183,7 +183,9 @@ class Model(object):
             model_class = model_pars.get('model_class', 'WideDeep_sparse')        
             if 'sparse' in model_class  :
                 cpars = model_pars['model_pars']
-                cpars = { **cpars, **data_pars['tf_feature'] }
+                cpars.update(data_pars)
+                #cpars = { **cpars, **data_pars['tf_feature'] }
+                #pprint.pprint(cpars)
                 self.model = WideDeep_sparse(cpars)
             else : 
                 cpars = model_pars['model_pars']
@@ -199,7 +201,7 @@ def fit(data_pars, compute_pars):
         
         train_df = data_pars['train']
         if 'val' in data_pars:
-            val_df = data_pars['val']
+            val_df = train_df['X_test']
         else:
             val_df = None
             validation_split = 0.2
@@ -633,7 +635,7 @@ def test2(config=''):
 
     m = {
     'model_pars': {
-         'model_class' :  "keras_widedeep.py::WideDeep"
+         'model_class' :  "keras_widedeep.py::WideDeep_sparse"
          ,'model_pars' : {  }
         , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
         , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
@@ -721,10 +723,10 @@ def test2(config=''):
 
     m['model_pars']['model_pars'] = {  'loss' : 'binary_crossentropy','optimizer':'adam','metric': ['accuracy'],'hidden_units': '64,32,16'}
 
-    m['data_pars']['train'] = {'X_train': train_df,'Y_train':train_label, 'X_test':  val_df,'Y_test':val_label }
-    m['data_pars']['val']   = {  'X':  val_df ,'Y':val_label }
+    m['data_pars']['train'] = {'X_train': train_df, 'X_test':  val_df}
+    m['data_pars']['predict']   = {  'X':  test_df }
 
-    m['data_pars']['tf_feature']: {
+    m['data_pars']['tf_feature']= {
         'colcat_unique': colcat_unique,
         'colcat': colcat,
         'colnum': colnum,

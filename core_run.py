@@ -171,9 +171,8 @@ def predict(config='', nsample=None):
     m     = mdict['global_pars']
     log(mdict)
 
-
-    from source import run_sampler
-    run_sampler.run_transform(config_name = config_name,
+    from source import run_inference
+    run_inference.run_predict(config_name = config_name,
                               config_path = m['config_path'],
                               n_sample    = nsample if nsample is not None else m['n_sample'],
 
@@ -184,7 +183,7 @@ def predict(config='', nsample=None):
                               )
 
 ####################################################################################
-########## Train ###################################################################
+########## Train Sampler ###########################################################
 def train_sampler(config='', nsample=None):
     """  train a model with  confi_name  and nsample
     :param config:
@@ -206,6 +205,32 @@ def train_sampler(config='', nsample=None):
 
 
 
+########################################################################################
+####### tranform ########################################################################
+def transform(config='', nsample=None):
+    """
+    :param config:
+    :param nsample:
+    :return:
+    """
+
+    config_uri, config_name = get_config_path(config)
+
+    mdict = get_global_pars( config_uri)
+    m     = mdict['global_pars']
+    log(mdict)
+
+
+    from source import run_sampler
+    run_sampler.run_transform(config_name = config_name,
+                              config_path = m['config_path'],
+                              n_sample    = nsample if nsample is not None else m['n_sample'],
+
+                              #### Optional
+                              path_data   = m['path_pred_data'],
+                              path_output = m['path_pred_output'],
+                              model_dict  = None
+                              )
 
 ########################################################################################
 ####### Inference ######################################################################
