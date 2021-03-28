@@ -86,9 +86,6 @@ jobs:
     #- name: Install repo
     #  run: pip install -e . -r install/py36.txt  --no-deps
 
-
-
-
     # - name: log_start
     #  run: ml_test --do log_remote_start
 

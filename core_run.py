@@ -164,7 +164,6 @@ def predict(config='', nsample=None):
     :param nsample:
     :return:
     """
-
     config_uri, config_name = get_config_path(config)
 
     mdict = get_global_pars( config_uri)
@@ -190,7 +189,6 @@ def train_sampler(config='', nsample=None):
     :param nsample:
     :return:
     """
-
     config_uri, config_name = get_config_path(config)
 
     mdict = get_global_pars(  config_uri)
@@ -213,7 +211,6 @@ def transform(config='', nsample=None):
     :param nsample:
     :return:
     """
-
     config_uri, config_name = get_config_path(config)
 
     mdict = get_global_pars( config_uri)
