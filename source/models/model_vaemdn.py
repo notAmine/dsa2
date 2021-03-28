@@ -648,6 +648,33 @@ def test_dataset_classi_fake(nrows=500):
     return df, colnum, colcat, coly
 
 
+def test_dataset_petfinder(nrows=1000):
+    # Dense features
+    colnum = ['PhotoAmt', 'Fee','Age' ]
+
+    # Sparse features
+    colcat = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized',
+              'Health', 'Breed1' ]
+
+    colembed = ['Breed1']
+    # Target column
+    coly        = "y"
+
+    dataset_url = 'http://storage.googleapis.com/download.tensorflow.org/data/petfinder-mini.zip'
+    csv_file    = 'datasets/petfinder-mini/petfinder-mini.csv'
+    tf.keras.utils.get_file('petfinder_mini.zip', dataset_url,extract=True, cache_dir='.')
+
+    print('Data Frame Loaded')
+    df      = pd.read_csv(csv_file)
+    df      = df.iloc[:nrows, :]
+    df['y'] = np.where(df['AdoptionSpeed']==4, 0, 1)
+    df      = df.drop(columns=['AdoptionSpeed', 'Description'])
+
+    print(df.dtypes)
+    return df, colnum, colcat, coly, colembed
+
+
+
 def test2(config=''):
     n_sample          = 100
     df, colnum, colcat, coly= test_dataset_classi_fake(nrows=500)
