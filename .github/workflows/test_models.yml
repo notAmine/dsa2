@@ -149,7 +149,7 @@ jobs:
 
     - name: python model_vaemdn.py test
       continue-on-error: true
-      run:  cd source/models && ipython model_vaemdn.py test
+      run:  cd source/models && ipython model_vaemdn.py test2
 
 
     - name: python torch_rvae.py test 
