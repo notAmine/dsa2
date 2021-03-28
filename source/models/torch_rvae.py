@@ -561,7 +561,7 @@ def test2(nrows=1000):
     #### Preprocess the dataset
     dataset_path = m['data_pars']['data_pars']['dataset_path']
     print("\n\nDATASET : ", dataset_path)
-    cmd= f"python {path_pkg}/dataset_prep_simple/noising_process.py --input-path { dataset_path }"
+    cmd= f"python {path_pkg}/src/dataset_prep_simple/noising_process.py --input-path { dataset_path }"
     os.system(cmd)
 
     ### Train

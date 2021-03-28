@@ -107,27 +107,29 @@ jobs:
       continue-on-error: true
       run:  |
             cd source/models && ipython keras_widedeep.py  test
+            echo "keras_widedeep.py" >> file_check.txt
       ## ipython keras_widedeep.py  test2
 
     - name: python keras_widedeep_dense.py  test
       # continue-on-error: true
       run:  |
             cd source/models && ipython keras_widedeep_dense.py  test
+            echo "keras_widedeep_dense.py" >> file_check.txt
 
 
     - name: python model_bayesian_numpyro.py test
       continue-on-error: true
-      run:  cd source/models && ipython model_bayesian_pyro.py test
+      run:  cd source/models && ipython model_bayesian_pyro.py test  && echo "model_bayesian_pyro.py" >> file_check.txt
 
 
     - name: python model_bayesian_pyro.py test
       continue-on-error: true
-      run:  cd source/models && ipython model_bayesian_pyro.py test
+      run:  cd source/models && ipython model_bayesian_pyro.py test && echo "model_bayesian_pyro.py" >> file_check.txt
 
 
     - name: python model_gefs.py test
       continue-on-error: true
-      run:  cd source/models && ipython model_gefs.py test
+      run:  cd source/models && ipython model_gefs.py test   && echo "model_gefs.py" >> file_check.txt
 
 
     - name: python model_sklearn.py test
