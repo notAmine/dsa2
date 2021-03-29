@@ -1,29 +1,6 @@
 # pylint: disable=C0321,C0103,C0301,E1305,E1121,C0302,C0330,C0111,W0613,W0611,R1705
 # -*- coding: utf-8 -*-
 """
-Template for sklearn type of model:
-
-    #### 1. Global variables    : global variables **model** and **session**.
-
-    #### 2.  init method        : init method to initialize global variables `model and session`
-
-    #### 3. class Model         :   storing model details and parameters.
-
-    #### 4. preprocess method   :   preprocessing dataset.
-
-    #### 5. fit method          :   fitting the defined model and inputted data.
-
-    #### 6. predict method      :   predicting using the fitted model.
-
-    #### 7. save method         :   saving the model in the pickle file.
-
-    #### 8. load_model method   :   loading, the model saved in a pickle file.
-
-    #### 9. load_info method    :   loading the in mation stored in the pickle file.
-
-    #### 10. get_dataset method :   retrieving the dataset.
-
-    #### 11. get_params method  :   retrieving parameters.
 
 
 
