@@ -34,7 +34,7 @@ import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as 
 
 ####################################################################################################
 try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
-except Exception as e : verbosity = 2
+except Exception as e : verbosity = 4
 #raise Exception(f"{e}")
 
 def log(*s):
@@ -88,10 +88,10 @@ from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig, E
 
 MODEL_DICT = { 
     "CategoryEmbeddingModelConfig":  CategoryEmbeddingModelConfig ,
-    "TabNetModelConfig" : TabNetModelConfig ,
-    "NodeConfig" : NodeConfig,
-    "CategoryEmbeddingMDNConfig": CategoryEmbeddingMDNConfig,
-    "AutoIntConfig" :  AutoIntConfig
+    "TabNetModelConfig" :            TabNetModelConfig ,
+    "NodeConfig" :                   NodeConfig,
+    "CategoryEmbeddingMDNConfig":    CategoryEmbeddingMDNConfig,
+    "AutoIntConfig" :                AutoIntConfig
 }
 
 
@@ -178,7 +178,7 @@ def predict(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dic
         Xpred_tuple = get_dataset(data_pars, task_type="predict")
     else :
         cols_type   = data_pars.get('cols_model_type2', {})  ##
-        Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)   
+        Xpred_tuple = get_dataset_tuple(Xpred, cols_type)
 
     Xpred_tuple_concat = pd.concat((Xpred_tuple[0], Xpred_tuple[1]), axis=1)
     ypred = model.model.predict(Xpred_tuple_concat)
@@ -237,30 +237,28 @@ def load_info(path=""):
 
 # cols_ref_formodel = ['cols_single_group']
 cols_ref_formodel = ['colcontinuous', 'colsparse']
-def get_dataset_tuple(Xtrain, cols_type_received, cols_ref):
-    """  Split into Tuples to feed  Xyuple = (df1, df2, df3) OR single dataframe
+def get_dataset_tuple(Xtrain, cols_type_received, cols_ref=None):
+    """  Split into Tuples:  Xtuple = (df1, df2, df3) OR single dataframe  to Feed model
     :param Xtrain:
     :param cols_type_received:
     :param cols_ref:
     :return:
     """
+    global cols_ref_formodel  ## Split INTO tuples for model feed
     if len(cols_ref) <= 1 :
         return Xtrain
 
     Xtuple_train = []
     # cols_ref is the reference for types of cols groups (sparse/continuous)
-    # This will result in deviding the dataset into many groups of features
-    for cols_groupname in cols_ref :
+    # This will result in dividing the dataset into many groups of features
+    for cols_groupname in cols_ref_formodel :
         # Assert the group name is in the cols reference
         assert cols_groupname in cols_type_received, "Error missing colgroup in config data_pars[cols_model_type] "
         cols_i = cols_type_received[cols_groupname]
         # Add the columns of this group to the list
         Xtuple_train.append( Xtrain[cols_i] )
 
-    if len(cols_ref) == 1 :
-        return Xtuple_train[0]  ### No tuple
-    else :
-        return Xtuple_train
+    return Xtuple_train
 
 
 def get_dataset(data_pars=None, task_type="train", **kw):
@@ -280,13 +278,13 @@ def get_dataset(data_pars=None, task_type="train", **kw):
         if task_type == "predict":
             d = data_pars[task_type]
             Xtrain       = d["X"]
-            Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
+            Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received)
             return Xtuple_train
 
         if task_type == "eval":
             d = data_pars[task_type]
             Xtrain, ytrain  = d["X"], d["y"]
-            Xtuple_train    = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
+            Xtuple_train    = get_dataset_tuple(Xtrain, cols_type_received)
             return Xtuple_train, ytrain
 
         if task_type == "train":
@@ -294,8 +292,8 @@ def get_dataset(data_pars=None, task_type="train", **kw):
             Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
 
             ### dict  colgroup ---> list of df
-            Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
-            Xtuple_test  = get_dataset_tuple(Xtest, cols_type_received, cols_ref)
+            Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received)
+            Xtuple_test  = get_dataset_tuple(Xtest, cols_type_received)
             log2("Xtuple_train", Xtuple_train)
 
             return Xtuple_train, ytrain, Xtuple_test, ytest
@@ -311,30 +309,15 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 ############ Test  #################################################################################
 def test_dataset_covtype(nrows=1000):
     # Dense features
-    colnum = ["Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology",
-        "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways",
-        "Hillshade_9am" , "Hillshade_Noon",  "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"]
+    colnum = ["Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology", "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways", "Hillshade_9am" , "Hillshade_Noon",  "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"]
 
     # Sparse features
-    colcat = ["Wilderness_Area1",  "Wilderness_Area2", "Wilderness_Area3",  
-        "Wilderness_Area4",  "Soil_Type1",  "Soil_Type2",  "Soil_Type3",
-        "Soil_Type4",  "Soil_Type5",  "Soil_Type6",  "Soil_Type7",  "Soil_Type8",  "Soil_Type9",
-        "Soil_Type10",  "Soil_Type11",  "Soil_Type12",  "Soil_Type13",  "Soil_Type14",
-        "Soil_Type15",  "Soil_Type16",  "Soil_Type17",  "Soil_Type18",  "Soil_Type19",
-        "Soil_Type20",  "Soil_Type21",  "Soil_Type22",  "Soil_Type23",  "Soil_Type24",
-        "Soil_Type25",  "Soil_Type26",  "Soil_Type27",  "Soil_Type28",  "Soil_Type29",
-        "Soil_Type30",  "Soil_Type31",  "Soil_Type32",  "Soil_Type33",  "Soil_Type34",
-        "Soil_Type35",  "Soil_Type36",  "Soil_Type37",  "Soil_Type38",  "Soil_Type39",
-        "Soil_Type40",  ]
+    colcat = ["Wilderness_Area1",  "Wilderness_Area2", "Wilderness_Area3", "Wilderness_Area4",  "Soil_Type1",  "Soil_Type2",  "Soil_Type3", "Soil_Type4",  "Soil_Type5",  "Soil_Type6",  "Soil_Type7",  "Soil_Type8",  "Soil_Type9", "Soil_Type10",  "Soil_Type11",  "Soil_Type12",  "Soil_Type13",  "Soil_Type14", "Soil_Type15",  "Soil_Type16",  "Soil_Type17",  "Soil_Type18",  "Soil_Type19", "Soil_Type20",  "Soil_Type21",  "Soil_Type22",  "Soil_Type23",  "Soil_Type24", "Soil_Type25",  "Soil_Type26",  "Soil_Type27",  "Soil_Type28",  "Soil_Type29", "Soil_Type30",  "Soil_Type31",  "Soil_Type32",  "Soil_Type33",  "Soil_Type34", "Soil_Type35",  "Soil_Type36",  "Soil_Type37",  "Soil_Type38",  "Soil_Type39", "Soil_Type40",  ]
     
     # Target column
     coly        = ["Covertype"]
 
-    log("start")
-    global model, session
-
     root = os.path.join(os.getcwd() ,"ztmp")
-
     BASE_DIR = Path.home().joinpath( root, 'data/input/covtype/')
     datafile = BASE_DIR.joinpath('covtype.data.gz')
     datafile.parent.mkdir(parents=True, exist_ok=True)
@@ -347,22 +330,17 @@ def test_dataset_covtype(nrows=1000):
     # Read nrows of only the given columns 
     feature_columns = colnum + colcat + coly
     df = pd.read_csv(datafile, header=None, names=feature_columns, nrows=nrows)
+    df[coly] = df[coly].astype('uint8')
     return df, colnum, colcat, coly
 
 
 def train_test_split2(df, coly):
     log3(df.dtypes)
-    y = df[coly] ### If clonassificati
-    X = df.drop(coly,  axis=1)
+    X,y = df.drop(coly,  axis=1), df[coly]
     log3('y', np.sum(y[y==1]) , X.head(3))
-    ######### Split the df into train/test subsets
     X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021)
     X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021)
-
-    #####
-    # y = y.astype('uint8')
     num_classes                                = len(set(y_train_full.values.ravel()))
-
     return X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes
 
 
@@ -447,7 +425,7 @@ def test(n_sample = 100):
         ### family of columns for MODEL  #########################################################
         'cols_model_group'  : [ 'colnum_bin',   'colcat_bin' ],
 
-        ### Added continuous & sparse features groups ###
+        ### Added continuous & sparse features groups  == cols_ref_formodel = ['colcontinuous', 'colsparse']
         'cols_model_type2': {
             'colcontinuous':  colnum ,
             'colsparse'    : colcat,
@@ -641,10 +619,10 @@ def test3(n_sample = 100):
         # Set the ModelConfig
         m['model_pars']['model_class'] = cfg[0]
         m['model_pars']['model_pars']  = {**m['model_pars']['model_pars'] , **cfg[1] }
-        test_helper(m)
+        test_helper(m, X_valid)
 
 
-def test_helper(m):
+def test_helper(m, X_valid):
     global model, session
     reset()
     log('Setup model..')
@@ -655,7 +633,7 @@ def test_helper(m):
     log('Training completed!\n\n')
 
     log('Predict data..')
-    ypred, ypred_proba = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
+    ypred, ypred_proba = predict(Xpred=X_valid, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
     log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
 
     if m['model_pars']['model_class'] != "torch_tabular.py::NodeConfig":
