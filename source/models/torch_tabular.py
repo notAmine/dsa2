@@ -407,11 +407,45 @@ def test(nrows=1000):
 
         ],
             }
-        },
+    },
 
     'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
-                      'compute_pars' : {    }
-                    },
+                      
+                # batch_size (int): Number of samples in each batch of training
+                # fast_dev_run (bool): Quick Debug Run of Val
+                # max_epochs (int): Maximum number of epochs to be run
+                # min_epochs (int): Minimum number of epochs to be run
+                # gpus (int): The index of the GPU to be used. If `None`, will use CPU
+                # accumulate_grad_batches (int): Accumulates grads every k batches or as set up in the dict.
+                #     Trainer also calls optimizer.step() for the last indivisible step number.
+                # auto_lr_find (bool): Runs a learning rate finder algorithm (see this paper) when calling trainer.tune(),
+                #     to find optimal initial learning rate.
+                # check_val_every_n_epoch (int): Check val every n train epochs.
+                # gradient_clip_val (float): Gradient clipping value
+                # overfit_batches (float): Uses this much data of the training set. If nonzero, will use the same training set
+                #     for validation and testing. If the training dataloaders have shuffle=True, Lightning will automatically disable it.
+                #     Useful for quickly debugging or trying to overfit on purpose.
+                # profiler (Union[str, NoneType]): To profile individual steps during training and assist in identifying bottlenecks.
+                #     Choices are: 'None' 'simple' 'advanced'
+                # early_stopping (str): The loss/metric that needed to be monitored for early stopping. If None, there will be no early stopping
+                # early_stopping_min_delta (float): The minimum delta in the loss/metric which qualifies as an improvement in early stopping
+                # early_stopping_mode (str): The direction in which the loss/metric should be optimized. Choices are `max` and `min`
+                # early_stopping_patience (int): The number of epochs to wait until there is no further improvements in loss/metric
+                # checkpoints (str): The loss/metric that needed to be monitored for checkpoints. If None, there will be no checkpoints
+                # checkpoints_path (str): The path where the saved models will be
+                # checkpoints_name(Optional[str]): The name under which the models will be saved.
+                #     If left blank, first it will look for `run_name` in experiment_config and if that is also None
+                #     then it will use a generic name like task_version.
+                # checkpoints_mode (str): The direction in which the loss/metric should be optimized
+                # checkpoints_save_top_k (int): The number of best models to save
+                # load_best (bool): Flag to load the best model saved during training
+                # track_grad_norm (int): Track and Log Gradient Norms in the logger.
+                #     -1 by default means no tracking. 1 for the L1 norm, 2 for L2 norm, etc.
+                #
+                'compute_pars' : {   'max_epochs' : 1, 'min_epochs': 1
+
+                }
+    },
 
     'data_pars': { 'n_sample' : n_sample,
         'download_pars'   : None,
@@ -434,7 +468,7 @@ def test(nrows=1000):
         'eval':    {'X': X_valid,  'y': y_valid},
         'predict': {}
 
-        }
+    }
     }
 
     ##### Running loop
