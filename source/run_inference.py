@@ -118,12 +118,11 @@ def predict(model_name, path_model, dfX, cols_family, model_dict):
     log2("#### modelx\n", modelx.model)
 
     log("### Prediction  ###################################################")
-    dfX1  = dfX.reindex(columns=colsX)   #reindex included
-    ypred = modelx.predict(dfX1, data_pars    = model_dict['data_pars'],
-                           compute_pars = model_dict['compute_pars']
-                           )
-    log2('ypred shape', ypred.shape)
-    return ypred
+    dfX  = dfX.reindex(columns=colsX)   #reindex included
+    ypred_tuple = modelx.predict(dfX, data_pars    = model_dict['data_pars'],
+                                      compute_pars = model_dict['compute_pars']                           )
+    log2('ypred shape', str(ypred_tuple)[:100] )
+    return ypred_tuple
 
 
 ####################################################################################################
