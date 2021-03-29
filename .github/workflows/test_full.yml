@@ -125,11 +125,11 @@ jobs:
             python example/test_mkeras.py  predict    --config config1 
 
 
-    - name: python   test_automl.py  train   
+    - name: python   example/test_automl.py  train   
       # continue-on-error: true
       run:  |
-            python   test_automl.py  train       --nsample 200
-            python   test_automl.py  predict     --nsample 200 
+            python   example/test_automl.py  train       --nsample 200
+            python   example/test_automl.py  predict     --nsample 200 
 
 
     - name: python example/regress/regress_salary.py
