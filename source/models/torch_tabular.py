@@ -106,11 +106,11 @@ class Model(object):
 
         else:
             ###############################################################
-            dm          = data_pars['cols_model_group_custom']
+            dm          = data_pars['cols_model_type2']
             data_config = DataConfig(
               target           = dm['coly'], #target should always be a list. Multi-targets are only supported for regression. Multi-Task Classification is not implemented
-              continuous_cols  = dm['colnum'],
-              categorical_cols = dm['colcat'],
+              continuous_cols  = dm['colcontinuous'],
+              categorical_cols = dm['colsparse'],
             )
 
             class_name   = model_pars.get('model_class',  "CategoryEmbeddingModelConfig" ).split("::")[-1]
@@ -457,8 +457,9 @@ def test(nrows=1000):
 
         ### Added continuous & sparse features groups ###
         'cols_model_type2': {
-            'colcontinuous':   colnum ,
-            'colsparse' : colcat,
+            'colcontinuous':  colnum ,
+            'colsparse'    : colcat,
+            'coly'         : coly
         },
         ### Filter data rows   ##################################################################
         'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
