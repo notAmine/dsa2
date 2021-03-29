@@ -104,9 +104,7 @@ cols_input_type_1 = {
 
 ####################################################################################
 def config1() :
-    """
-       ONE SINGLE DICT Contains all needed informations for
-       used for titanic classification task
+    """      ONE SINGLE DICT Contains all needed informations for
     """
     data_name    = "titanic"         ### in data/input/
     model_class  = 'AutoML'  ### ACTUAL Class name for model_sklearn.py
@@ -119,52 +117,51 @@ def config1() :
         return  int(y)
 
 
-    model_dict = {'model_pars': {
-        ### LightGBM API model   #######################################
-         'model_class': model_class
-        ,'model_pars' : {
-            'total_time_limit' : 20,
-            'algorithms' : 'auto',
-            'results_path' :   root_repo  + f'/data/output/{data_name}/{os_get_function_name()}/automl_1',
-            'eval_metric' : 'auto'
+    model_dict = {
+    'model_pars': {
+           'model_class': model_class
+          ,'model_pars' : {
+              'total_time_limit' : 20,
+              'algorithms' : 'auto',
+              'results_path' :   root_repo  + f'/data/output/{data_name}/{os_get_function_name()}/automl_1',
+              'eval_metric' : 'auto'
+              # mode='Explain',
+              # ml_task='auto', model_time_limit=None, algorithms='auto', train_ensemble=True,
+              # stack_models='auto', eval_metric='auto', validation_strategy='auto', explain_level='auto',
+              # golden_features='auto', features_selection='auto', start_random_models='auto',
+              # hill_climbing_steps='auto', top_models_to_improve='auto', verbose=1, random_state=1234)
+            }
 
-            # mode='Explain',
-            # ml_task='auto', model_time_limit=None, algorithms='auto', train_ensemble=True,
-            # stack_models='auto', eval_metric='auto', validation_strategy='auto', explain_level='auto',
-            # golden_features='auto', features_selection='auto', start_random_models='auto',
-            # hill_climbing_steps='auto', top_models_to_improve='auto', verbose=1, random_state=1234)
-          }
-
-        , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
-        , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
-
-
-        ### Pipeline for data processing ##############################
-        'pipe_list': [
-        #### coly target prorcessing
-        {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+          , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
+          , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
 
 
-        {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
-        {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
-
-        #### catcol INTO integer,   colcat into OneHot
-        {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
-        # {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
+          ### Pipeline for data processing ##############################
+          'pipe_list': [
+          #### coly target prorcessing
+          {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
 
 
-        ### Cross_feat = feat1 X feat2
-        # {'uri': 'source/prepro.py::pd_colcross',             'pars': {}, 'cols_family': 'colcross',   'cols_out': 'colcross_pair',  'type': 'cross'},
+          {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+          {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
+
+          #### catcol INTO integer,   colcat into OneHot
+          {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+          # {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
 
 
-        ],
-               }
-        },
+          ### Cross_feat = feat1 X feat2
+          # {'uri': 'source/prepro.py::pd_colcross',             'pars': {}, 'cols_family': 'colcross',   'cols_out': 'colcross_pair',  'type': 'cross'},
+
+
+          ],
+                 }
+      },
 
       'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
 
                         ,'mlflow_pars' : None # {}   ### Not empty --> use mlflow
-                      },
+      },
 
       'data_pars': { 'n_sample' : n_sample,
 
@@ -181,15 +178,17 @@ def config1() :
                                 # 'coltext',
                                 # 'coldate',
                                 #'colcross_pair',
-                               
-                               ### example of custom
-                               # 'col_myfun'
-                              ]
+                              ],
 
+          'cols_model_type' : {
+              'cols_cross_input':  [ "colcat", ],
+              'cols_deep_input':   ['colnum',  ],
+          }
+           
           ### Filter data rows   ##################################################################
          ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 }
 
-         }
+        }
       }
 
     ##### Filling Global parameters    ############################################################

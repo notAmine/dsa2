@@ -102,10 +102,11 @@ except :
 
 def model_automl():
     try :
-       from supervised.automl import AutomL 
+       from supervised.automl import AutoML
     except:
        os.system('pip install mljar-supervised==0.10.2') 
-    model_class = AutomL 
+       from supervised.automl import AutoML
+    model_class = AutoML
     return model_class
 
 
