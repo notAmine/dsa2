@@ -104,7 +104,7 @@ def model_automl():
     try :
        from supervised.automl import AutoML
     except:
-       os.system('pip install mljar-supervised==0.10.2') 
+       os.system('pip install mljar-supervised==0.10.2 tabulate==0.8.7 category_encoders==2.2.2  --no-deps') 
        from supervised.automl import AutoML
     model_class = AutoML
     return model_class
