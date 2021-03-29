@@ -6,7 +6,39 @@ python torch_rvae.py test2 --nrows 1000
 
 
 """
-import os, sys,  numpy as np,  pandas as pd, copy, errno, json
+import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
+
+####################################################################################################
+try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
+except Exception as e : verbosity = 2
+#raise Exception(f"{e}")
+
+def log(*s):
+    print(*s, flush=True)
+
+def log2(*s):
+    if verbosity >= 2 : print(*s, flush=True)
+
+def log3(*s):
+    if verbosity >= 3 : print(*s, flush=True)
+
+def os_makedirs(dir_or_file):
+    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
+    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
+
+####################################################################################################
+global model, session
+def init(*kw, **kwargs):
+    global model, session
+    model = Model(*kw, **kwargs)
+    session = None
+
+def reset():
+    global model, session
+    model, session = None, None
+
+
+########Custom Model ################################################################################
 from pathlib import Path
 from collections import namedtuple
 
@@ -18,7 +50,6 @@ import torch
 from torch import nn
 from torch import optim
 from torch.nn import functional as F
-
 
 ##### Add custom repo to Python Path ################################################################
 thisfile_dirpath = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")
@@ -35,30 +66,6 @@ from core_models import utils
 print(utils)
 
 path_pkg =  thisfile_dirpath + "/repo/RVAE_MixedTypes/"
-
-
-
-####################################################################################################
-VERBOSITY = 3
-
-def log(*s):
-    print(*s, flush=True)
-
-def log2(*s):
-    if VERBOSITY >= 2 : print(*s, flush=True)
-
-
-####################################################################################################
-global model, session
-
-def init(*kw, **kwargs):
-    global model, session
-    model, session = Model(*kw, **kwargs), None
-
-
-def reset():
-    global model, session
-    model, session = None, None
 
 
 ####################################################################################################

@@ -10,15 +10,7 @@ pip install Keras==2.4.3
 
 
 """
-import os, pandas as pd, numpy as np, sklearn, copy, pathlib, pprint, json
-from sklearn.model_selection import train_test_split
-
-import tensorflow as tf
-tf.compat.v1.enable_eager_execution()
-from tensorflow import feature_column
-from tensorflow import keras
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-from tensorflow.keras import layers
+import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
 
 ####################################################################################################
 try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
@@ -34,9 +26,12 @@ def log2(*s):
 def log3(*s):
     if verbosity >= 3 : print(*s, flush=True)
 
+def os_makedirs(dir_or_file):
+    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
+    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
+
 ####################################################################################################
 global model, session
-
 def init(*kw, **kwargs):
     global model, session
     model = Model(*kw, **kwargs)
@@ -45,6 +40,17 @@ def init(*kw, **kwargs):
 def reset():
     global model, session
     model, session = None, None
+
+
+########Custom Model ################################################################################
+from sklearn.model_selection import train_test_split
+
+import tensorflow as tf
+tf.compat.v1.enable_eager_execution()
+from tensorflow import feature_column
+from tensorflow import keras
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from tensorflow.keras import layers
 
 
 ####################################################################################################

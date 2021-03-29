@@ -30,7 +30,40 @@ Args:
         Typically used when providing Custom Models
 
 """
-import os, sys,  numpy as np,  pandas as pd, wget, copy
+import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
+
+####################################################################################################
+try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
+except Exception as e : verbosity = 2
+#raise Exception(f"{e}")
+
+def log(*s):
+    print(*s, flush=True)
+
+def log2(*s):
+    if verbosity >= 2 : print(*s, flush=True)
+
+def log3(*s):
+    if verbosity >= 3 : print(*s, flush=True)
+
+def os_makedirs(dir_or_file):
+    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
+    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
+
+####################################################################################################
+global model, session
+def init(*kw, **kwargs):
+    global model, session
+    model = Model(*kw, **kwargs)
+    session = None
+
+def reset():
+    global model, session
+    model, session = None, None
+
+
+########Custom Model ################################################################################
+import wget
 from pathlib import Path
 # torch.manual_seed(0)
 # np.random.seed(0)
@@ -39,8 +72,6 @@ from pathlib import Path
 from sklearn.model_selection import train_test_split
 import torch
 
-
-######################################################################################################
 try :
     from pytorch_tabular import TabularModel
 except :
@@ -63,24 +94,9 @@ MODEL_DICT = {
     "AutoIntConfig" :  AutoIntConfig
 }
 
-####################################################################################################
-VERBOSE = False
 
-def log(*s):
-    print(*s, flush=True)
-
-def log2(*s):
-    if VERBOSE :
-      print(*s, flush=True)
 
 ####################################################################################################
-global model, session
-
-def init(*kw, **kwargs):
-    global model, session
-    model, session = Model(*kw, **kwargs), None
-
-
 class Model(object):
     def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
         self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
@@ -131,7 +147,7 @@ class Model(object):
             self.guide = None
             self.pred_summary = None  ### All MC summary
 
-            if VERBOSE: log(self.guide, self.model)
+            log(self.guide, self.model)
 
 
 def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):

@@ -5,22 +5,7 @@ Multi Density Variationnal Autoencoder
 Only with TF1
 
 """
-import os, pandas as pd, numpy as np, sklearn, copy, json
-from sklearn.model_selection import train_test_split
-import pyarrow as pa
-import pyarrow.parquet as pq
-
-import tensorflow as tf
-assert "2.4"  in str(tf.version.VERSION), 'Compatible only with TF 2.4.1, keras 2.4.3, ' + str(tf.version.VERSION)
-
-from tensorflow import keras
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-from tensorflow.keras import layers
-from tensorflow.keras.layers import Lambda, Input, Dense, Reshape
-from tensorflow.keras.datasets import mnist
-from tensorflow.keras.losses import mse, binary_crossentropy
-from tensorflow.keras.utils import plot_model
-from tensorflow.keras import backend as K
+import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
 
 ####################################################################################################
 try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
@@ -37,14 +22,11 @@ def log3(*s):
     if verbosity >= 3 : print(*s, flush=True)
 
 def os_makedirs(dir_or_file):
-    if os.path.isfile(dir_or_file) :
-        os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
-    else :
-        os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
+    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
+    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
 
 ####################################################################################################
 global model, session
-
 def init(*kw, **kwargs):
     global model, session
     model = Model(*kw, **kwargs)
@@ -53,6 +35,24 @@ def init(*kw, **kwargs):
 def reset():
     global model, session
     model, session = None, None
+
+
+########Custom Model ################################################################################
+from sklearn.model_selection import train_test_split
+import pyarrow as pa
+import pyarrow.parquet as pq
+
+import tensorflow as tf
+assert "2.4"  in str(tf.version.VERSION), 'Compatible only with TF 2.4.1, keras 2.4.3, ' + str(tf.version.VERSION)
+
+from tensorflow import keras
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from tensorflow.keras import layers
+from tensorflow.keras.layers import Lambda, Input, Dense, Reshape
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.losses import mse, binary_crossentropy
+from tensorflow.keras.utils import plot_model
+from tensorflow.keras import backend as K
 
 ####################################################################################################
 ##### Custom code  #################################################################################
@@ -644,12 +644,7 @@ def test_dataset_classi_fake(nrows=500):
     colnum = ["colnum_" +str(i) for i in range(0, ndim) ]
     colcat = ['colcat_1']
     X, y    = sklearn_datasets.make_classification(
-        n_samples=10000,
-        n_features=ndim,
-        n_classes=1,
-        n_redundant = 0,
-        n_informative=ndim
-    )
+              n_samples=10000, n_features=ndim, n_classes=1, n_redundant = 0, n_informative=ndim )
     df = pd.DataFrame(X,  columns= colnum)
     for ci in colcat :
       df[ci] = np.random.randint(0,1, len(df))

@@ -14,9 +14,39 @@ Main isssue is the number of rows change  !!!!
 2 usage :
     Afte preprocessing, over sample, under-sample.
 """
-import os, sys, copy
-import pandas as pd, numpy as np,  sklearn
+import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
 
+####################################################################################################
+try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
+except Exception as e : verbosity = 2
+#raise Exception(f"{e}")
+
+def log(*s):
+    print(*s, flush=True)
+
+def log2(*s):
+    if verbosity >= 2 : print(*s, flush=True)
+
+def log3(*s):
+    if verbosity >= 3 : print(*s, flush=True)
+
+def os_makedirs(dir_or_file):
+    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
+    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
+
+####################################################################################################
+global model, session
+def init(*kw, **kwargs):
+    global model, session
+    model = Model(*kw, **kwargs)
+    session = None
+
+def reset():
+    global model, session
+    model, session = None, None
+
+
+########Custom Model ################################################################################
 sys.path.append( os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/")
 ### import util_feature
 
@@ -49,30 +79,7 @@ from imblearn.under_sampling import NearMiss
 # CONSTANTS
 SDV_MODELS = ['TVAE', 'CTGAN', 'PAR'] # The Synthetic Data Vault Models
 IMBLEARN_MODELS = ['SMOTE', 'SMOTEENN', 'SMOTETomek', 'NearMiss']
-verbosity = 3
 
-def log(*s):
-    print(*s, flush=True)
-
-
-def log2(*s):
-    if verbosity >= 2 :
-       print(*s, flush=True)
-
-
-def log3(*s):
-    if verbosity >= 3 :
-       print(*s, flush=True)
-
-
-
-####################################################################################################
-global model, session
-
-def init(*kw, **kwargs):
-    global model, session
-    model   = Model(*kw, **kwargs)
-    session = None
 
 
 ####################################################################################################
