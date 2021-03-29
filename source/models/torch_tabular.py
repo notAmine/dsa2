@@ -245,7 +245,7 @@ def get_dataset_tuple(Xtrain, cols_type_received, cols_ref=None):
     :return:
     """
     global cols_ref_formodel  ## Split INTO tuples for model feed
-    if len(cols_ref) <= 1 :
+    if len(cols_ref_formodel) <= 1 :
         return Xtrain
 
     Xtuple_train = []
@@ -501,7 +501,7 @@ def test(n_sample = 100):
         # Set the ModelConfig
         m['model_pars']['model_class'] = cfg[0]
         m['model_pars']['model_pars']  = {**m['model_pars']['model_pars'] , **cfg[1] }
-        test_helper(m)
+        test_helper(m, X_valid)
 
 
 
