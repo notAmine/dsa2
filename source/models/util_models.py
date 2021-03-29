@@ -133,6 +133,7 @@ def tf_data_create_sparse(cols_type_received:dict= {'cols_sparse' : ['col1', 'co
 
     :return:
     """
+    import tensorflow
     from tensorflow.feature_column import (categorical_column_with_hash_bucket,
         numeric_column, embedding_column, bucketized_column, crossed_column, indicator_column)
 

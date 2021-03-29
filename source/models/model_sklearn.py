@@ -68,10 +68,6 @@ from sklearn.cluster import *
 from sklearn.tree import *
 from lightgbm import LGBMModel, LGBMRegressor, LGBMClassifier
 
-try :
-   from supervised.automl import *
-except:
-    print('cannot import automl')    
 
 try :
     #### All are Un-supervised Model
@@ -112,7 +108,15 @@ class Model(object):
         if model_pars is None:
             self.model = None
         else:
-            model_class = globals()[model_pars['model_class']]
+            if  model_pars['model_class'] == 'AutoML':
+                try :
+                   from supervised import automl
+                except:
+                   os.system('pip install mljar-supervised==0.10.2') 
+                model_class = automl.AutomL    
+            else :
+                model_class = globals()[model_pars['model_class']]
+
             self.model = model_class(**model_pars['model_pars'])
             log(model_class, self.model)
 
