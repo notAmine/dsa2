@@ -100,20 +100,26 @@ except :
     print("cannot import pyod")
 
 
+def model_automl():
+    try :
+       from supervised.automl import AutomL 
+    except:
+       os.system('pip install mljar-supervised==0.10.2') 
+    model_class = AutomL 
+    return model_class
+
+
 ####################################################################################################
 class Model(object):
-    def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
+    def __init__(self, model_pars=None, data_pars=None
+        , compute_pars=None):
         self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
 
         if model_pars is None:
             self.model = None
         else:
             if  model_pars['model_class'] == 'AutoML':
-                try :
-                   from supervised import automl
-                except:
-                   os.system('pip install mljar-supervised==0.10.2') 
-                model_class = automl.AutomL    
+                model_class = model_automl()
             else :
                 model_class = globals()[model_pars['model_class']]
 
