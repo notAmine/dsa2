@@ -311,22 +311,21 @@ def encode(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     #log2(Xpred_tuple)
     Xdummy      = np.ones((Xpred_tuple.shape[0], 1))
     Xnew_encode = model.encoder.predict([Xpred_tuple, Xdummy ] )
-    filename    = {0:'encoded_mean.parquet',1:'encoded_logvar.parquet',2:'encoded_mu.parquet'}
+    filename    = {0:'encoded_mean.parquet', 1:'encoded_logvar.parquet',2:'encoded_mu.parquet'}
     for j,encodings in enumerate(Xnew_encode[:3]):
         parquetDic = {}
         for i in range(encodings.shape[1]):
-            name = f'col_{i+1}'
+            name             = f'col_{i+1}'
             parquetDic[name] = encodings[:,i]
         log2(f'Encoder Columns shape: {encodings.shape}')
-        
-        ndarray_table = pa.table(parquetDic)
-        pq.write_table(ndarray_table,filename[j])
-        log(f'{filename[j]} created')
+        # ndarray_table = pa.table(parquetDic)
+        # pq.write_table(ndarray_table,filename[j])
+        # log(f'{filename[j]} created')
         
     return Xnew_encode
 
 
-def decode(Xpred=None, data_pars=None, compute_pars={}, out_pars={},index = 0, **kw):
+def decode(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, index = 0, **kw):
     global model, session
     if Xpred is None:
         Xpred_tuple = get_dataset(data_pars, task_type="predict")
@@ -338,16 +337,19 @@ def decode(Xpred=None, data_pars=None, compute_pars={}, out_pars={},index = 0, *
     #log2(Xpred_tuple)
     #Xdummy      = np.ones((Xpred_tuple.shape[0], 1))
     decoded_array = model.decoder.predict(Xpred )
-    filename = {0:'decoded_mean.parquet',1:'decoded_logvar.parquet',2:'decoded_mu.parquet'}
+
     parquetDic = {}
     for i in range(decoded_array.shape[1]):
         name = f'col_{i+1}'
+        #### TODO : Actual Column names, looks tricky ????
         parquetDic[name] = decoded_array[:,i]
     log2(f'Decoder Columns Shape {decoded_array.shape}')
+
+    # filename = {0:'decoded_mean.parquet', 1:'decoded_logvar.parquet', 2:'decoded_mu.parquet'}
     #log2(decoded_array)
-    ndarray_table = pa.table(parquetDic)
-    pq.write_table(ndarray_table,filename[index])
-    log(f'{filename[index]} created')
+    #ndarray_table = pa.table(parquetDic)
+    #pq.write_table(ndarray_table,filename[index])
+    #log(f'{filename[index]} created')
     return decoded_array
 
 
@@ -361,7 +363,6 @@ def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
         Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
 
     #log2(Xpred_tuple)
-
     Xdummy = np.ones((Xpred_tuple.shape[0], 1))
     Xnew   = model.model.predict([Xpred_tuple, Xdummy ] )
     return Xnew
@@ -395,7 +396,7 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     """
     # log(data_pars)
     if data_pars.get('dataset_name', '') == 'correlation' :
-       x_train, ytrain = dataset_correl(data_pars)
+       x_train, ytrain = test_dataset_correlation(data_pars)
        return x_train, ytrain
 
 
@@ -504,8 +505,8 @@ def load_info(path=""):
 
 
 
-##################################################################################
-def dataset_correl(n_rows=100):
+#########################################################################################################
+def test_dataset_correlation(n_rows=100):
     data_pars = {'dataset_name':  'correlation'}
     data_pars['state_num']           = 10
     data_pars['time_len']            = 500
@@ -579,7 +580,7 @@ def dataset_correl(n_rows=100):
 def test():
     ######### Custom dataset
     m_signal_dim = 15
-    X,y = dataset_correl(n_rows=100)
+    X,y = test_dataset_correlation(n_rows=100)
 
     ######### size of NN (nb of correl)
     n_width = np.uint32( m_signal_dim * (m_signal_dim-1)/2)
@@ -616,7 +617,7 @@ def test():
 
 
     ###  Tester #########################################################
-    Xpred,_ = dataset_correl()
+    Xpred,_ = test_dataset_correlation()
     test_helper(model_pars, data_pars, compute_pars, Xpred)
 
 
@@ -696,7 +697,7 @@ def test2(n_sample          = 1000):
     def pre_process_fun(y):  return int(y)
 
     m = {'model_pars': {
-        'model_class':  "model_vaem.py::VAMDN"
+        'model_class':  "model_vaem.py::VAEMDN"
         ,'model_pars' : {
             'original_dim':       len( colcat + colnum),
             'class_num':             2,
@@ -769,7 +770,7 @@ def test3(n_sample          = 1000):
     def pre_process_fun(y):  return int(y)
 
     m = {'model_pars': {
-        'model_class':  "model_vaem.py::VAMDN"
+        'model_class':  "model_vaem.py::VAEMDN"
         ,'model_pars' : {
             'original_dim':       len( colcat + colnum),
             'class_num':             2,
@@ -842,11 +843,17 @@ def test_helper(model_pars, data_pars, compute_pars):
 
     log('Predict data..')
     Xnew = predict(data_pars=data_pars,  compute_pars=compute_pars)
+
+
+    log('Encode data..')
     encoded = encode(data_pars=data_pars,  compute_pars=compute_pars)
     encoded = encoded[:3]
-    print('Encoded X (Batch 1): \n')
+    print('Encoded X (Batch 1): \n', encoded)
+
     #log(encoded)
     #There are different batches of Dataframe we have to perform on each batches
+
+    log('Deccode data..')
     decoded_array = []
     for num,Xpred in enumerate(encoded):
         log(f'Shape of Decoded array: {Xpred.shape}')
@@ -854,6 +861,7 @@ def test_helper(model_pars, data_pars, compute_pars):
         decoded_array.append(decoded)
     print('Decoded X: \n')
     #log(decoded_array[0])
+
 
     log('Saving model..')
     log( model.model.summary() )
