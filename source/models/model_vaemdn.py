@@ -183,7 +183,8 @@ def VAEMDN(model_pars):
 
 
 
-def AUTOENCODER_BASIC(X_input_dim,loss_type="CosineSimilarity"):
+def AUTOENCODER_BASIC(X_input_dim,loss_type="CosineSimilarity", lr=0.01, epsilon=1e-3, decay=1e-4,
+                      optimizer='adam', encodingdim = 50, dim_list="50,25,10" ):
     import tensorflow as tf
     import keras.backend as K
     print(tf.__version__)
@@ -192,29 +193,32 @@ def AUTOENCODER_BASIC(X_input_dim,loss_type="CosineSimilarity"):
       intersection = K.sum(K.abs(y_true * y_pred), axis=-1)
       return (2. * intersection + smooth) / (K.sum(K.square(y_true),-1) + K.sum(K.square(y_pred),-1) + smooth)
 
+    dim_list = dim_list.split(",")
 
-    encodingdim = 50 
+
+    # encodingdim = 50
     # input =  tf.keras.layers.Input(X.shape[1],sparse=True) # use this if tensor is sparse
-    inputs   = tf.keras.layers.Input(X_input_dim)
-    encoded = tf.keras.layers.Dense(500, activation='relu')(inputs)
-    encoded = tf.keras.layers.Dense(250, activation='relu')(encoded)
-    encoded = tf.keras.layers.Dense(encodingdim, activation='relu')(encoded)
-    
-    decoded_input = tf.keras.layers.Input(encodingdim)
-    decoded = tf.keras.layers.Dense(250, activation='relu')(decoded_input)
-    decoded = tf.keras.layers.Dense(500, activation='relu')(decoded)
+    inputs  = tf.keras.layers.Input(X_input_dim)
+    encoded = tf.keras.layers.Dense( dim_list[0], activation='relu')(inputs)
+    encoded = tf.keras.layers.Dense( dim_list[1], activation='relu')(encoded)
+    encoded = tf.keras.layers.Dense( dim_list[2], activation='relu')(encoded)
+
+
+    decoded_input = tf.keras.layers.Input( dim_list[2] )
+    decoded = tf.keras.layers.Dense(dim_list[1], activation='relu')(decoded_input)
+    decoded = tf.keras.layers.Dense(dim_list[0], activation='relu')(decoded)
     decoded = tf.keras.layers.Dense(X_input_dim, activation='relu')(decoded)
     
     encoder = tf.keras.models.Model(inputs=inputs,outputs=encoded,name='encoder')
-    encoder.compile(optimizer='adam')
+    encoder.compile(optimizer=optimizer)
 
     decoder = tf.keras.models.Model(inputs=decoded_input,outputs=decoded,name='decoder')
-    decoder.compile(optimizer='adam')
+    decoder.compile(optimizer=optimizer)
 
-    outputs = decoder(encoder(inputs))
+    outputs     = decoder(encoder(inputs))
     autoencoder = tf.keras.models.Model(inputs,outputs)
+    opt         = tf.keras.optimizers.Adagrad(lr=lr, epsilon=epsilon, decay=decay)
 
-    opt = tf.keras.optimizers.Adagrad(lr=0.01, epsilon=1e-3, decay=1e-4)
 
     if loss_type == "cosinesimilarity" :
        autoencoder.compile(optimizer=opt, loss=tf.keras.losses.CosineSimilarity(reduction="auto")) # cosine loss
