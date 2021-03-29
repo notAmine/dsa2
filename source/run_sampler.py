@@ -4,13 +4,30 @@
 
 python source/run_train.py  run_train --config_name elasticnet  --path_data_train data/input/train/    --path_output data/output/a01_elasticnet/
 
-activate py36 && python source/run_train.py  run_train   --n_sample 100  --config_name lightgbm  --path_model_config source/config_model.py  --path_output /data/output/a01_test/     --path_data_train /data/input/train/
+python source/run_train.py  run_train   --n_sample 100  --config_name lightgbm  --path_model_config source/config_model.py  --path_output /data/output/a01_test/     --path_data_train /data/input/train/
 
 """
-import warnings
+import warnings, sys, os, json, importlib, pandas as pd
 warnings.filterwarnings('ignore')
-import sys, os, json, importlib
-import pandas as pd
+
+####################################################################################################
+try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
+except Exception as e : verbosity = 2
+#raise Exception(f"{e}")
+
+def log(*s):
+    print(*s, flush=True)
+
+def log2(*s):
+    if verbosity >= 2 : print(*s, flush=True)
+
+def log3(*s):
+    if verbosity >= 3 : print(*s, flush=True)
+
+def os_makedirs(dir_or_file):
+    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
+    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
+
 ####################################################################################################
 #### Add path for python import
 sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
@@ -19,46 +36,13 @@ sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
 root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
 print(root)
 
-DEBUG = True
 
-####################################################################################################
 ####################################################################################################
 from util_feature import   load, save_list, load_function_uri, save
 from run_preprocess import  preprocess, preprocess_load
 
 
 SUPERVISED_MODELS = ['SMOTE', 'SMOTEENN', 'SMOTETomek', 'NearMiss']
-
-"""
-### bug with logger
-from util import logger_class
-logger = logger_class()
-
-def log(*s):
-    logger.log(*s, level=1)
-
-def log2(*s):
-    logger.log(*s, level=2)
-
-def log_pd(df, *s, n=0, m=1):
-    sjump = "\n" * m
-    log(sjump,  df.head(n))
-"""
-
-
-def log(*s, n=0, m=0):
-    sspace = "#" * n
-    sjump = "\n" * m
-    ### Implement pseudo Logging
-    print(sjump, sspace, s, sspace, flush=True)
-
-
-def log2(*s, n=0, m=0):
-    if DEBUG :
-        sspace = "#" * n
-        sjump = "\n" * m
-        ### Implement pseudo Logging
-        print(sjump, sspace, s, sspace, flush=True)
 
 
 def save_features(df, name, path):
@@ -93,7 +77,6 @@ def map_model(model_name):
     :return: model module
 
     """
-
     ##### Custom folder
     if ".py" in model_name :
        path = os.path.parent(model_name)
@@ -179,11 +162,11 @@ def train(model_dict, dfX, cols_family, post_process_fun):
                           'yval'   : dfX[coly].iloc[ival:],
                           }
     
-    data_pars['eval'] = {'X'   : dfX[colsX].iloc[ival:, :],
+    data_pars['eval'] = {'X'    : dfX[colsX].iloc[ival:, :],
                           'y'   : dfX[coly].iloc[ival:],
                           }
 
-    log("#### Init, Train ############################################################")
+    log("#### Init, Train ###################################################################")
     # from config_model import map_model    
     if len(model_file) == 0:
         modelx = map_model(model_name)
@@ -204,9 +187,9 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     log("#### Transform ################################################################")
     if model_name in SUPERVISED_MODELS:
         dfX2, y = modelx.transform((dfX[colsX], dfX[coly]),data_pars=data_pars, compute_pars=compute_pars)
-        dfX2 = pd.DataFrame(dfX2, columns = colsX)
+        dfX2    = pd.DataFrame(dfX2, columns = colsX)
     else:
-        dfX2 = modelx.transform(dfX[colsX], data_pars=data_pars, compute_pars=compute_pars)
+        dfX2    = modelx.transform(dfX[colsX], data_pars=data_pars, compute_pars=compute_pars)
     # dfX2.index = dfX.index
 
     for coli in dfX2.columns :
@@ -327,10 +310,8 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
         log("######### Finish #############################################################", )
 
 
-
-
 ####################################################################################################
-############CLI Command ############################################################################
+############ Prediction time #######################################################################
 def transform(model_name, path_model, dfX, cols_family, model_dict):
     """
     Arguments:
@@ -392,8 +373,6 @@ def run_transform(config_name, config_path, n_sample=1,
     pars = {'cols_group': model_dict['data_pars']['cols_input_type'],
             'pipe_list' : model_dict['model_pars']['pre_process_pars']['pipe_list']}
     
-
-
 
     ##########################################################################################
     from run_preprocess import preprocess_inference   as preprocess
