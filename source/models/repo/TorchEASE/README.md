@@ -6,7 +6,7 @@ in PyTorch
 
 ```
 
-This code is currently SOTA on the Million Song challenge on Papers With Code.
+This code is on the Million Song challenge on Papers With Code.
 It utilizes a simple closed-form solution for a recommendation problem. 
 This PyTorch implementation is much faster than the original Numpy version.
 
