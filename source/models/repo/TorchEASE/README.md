@@ -1,12 +1,12 @@
 # TorchEASE
-Implementation of Embarrassingly Shallow Autoencoders (Harald Steck) in PyTorch
+Implementation of Embarrassingly Shallow Autoencoders 
+in PyTorch
 ```
 * Adapted from: https://github.com/Darel13712/ease_rec 
-* Paper: https://arxiv.org/abs/1905.03375
-* Papers with Code: https://paperswithcode.com/sota/collaborative-filtering-on-million-song
+
 ```
 
-This code is currently SOTA on the Million Song challenge on Papers With Code.
+This code is on the Million Song challenge on Papers With Code.
 It utilizes a simple closed-form solution for a recommendation problem. 
 This PyTorch implementation is much faster than the original Numpy version.
 
