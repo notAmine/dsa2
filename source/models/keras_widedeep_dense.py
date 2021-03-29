@@ -252,7 +252,7 @@ def load_model(path=""):
     model.model_pars = model0.model_pars
     model.compute_pars = model0.compute_pars
     session = None
-    return model, session
+    # return model, session
 
 
 def load_info(path=""):

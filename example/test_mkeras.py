@@ -2,10 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 
-  python example/mkeras.py  train    --config config1
-  python mkeras.py  predict  > zlog/log_titanic_predict.txt 2>&1
+  python example/test_mkeras.py  train    --config config1
 
-  Bug on dimenson
 
 """
 import warnings, copy, os, sys
