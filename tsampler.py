@@ -91,14 +91,10 @@ def config_sampler() :
     def pre_process_fun(y):    ### Before the prediction is done
         return  int(y)
 
-
     model_dict = {
       "model_pars": {
-        ### LightGBM API model   #######################################
          "model_class": model_class
-        ,"model_pars" : {
-                        }
-
+        ,"model_pars" : { }
         , "post_process_fun" : post_process_fun   ### After prediction  ##########################################
         , "pre_process_pars" : {
               "y_norm_fun" :  pre_process_fun ,  ### Before training  ##########################
@@ -114,9 +110,9 @@ def config_sampler() :
                   {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
                   {"uri": "source/prepro.py::pd_colcat_to_onehot",     "pars": {}, "cols_family": "colcat_bin", "cols_out": "colcat_onehot",  "type": ""             },
 
-                              ],
+             ],
                                   }
-                      },
+      },
 
       "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
                         # ,"mlflow_pars" : {}   ### Not empty --> use mlflow
@@ -133,16 +129,14 @@ def config_sampler() :
 
 
           ### Model Input :  Merge family of columns   #############################################
-          "cols_model_group": [ "colnum_bin",
-                                "colcat_bin",
-                              ]
+          "cols_model_group": [ "colnum_bin", "colcat_bin",]
 
           #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
         ,'cols_model_type': {
             'continuous'   : [ 'colnum',   ],
             'sparse'       : [ 'colcat_bin', 'colnum_bin',  ],
             'my_split_23'  : [ 'colnum_bin',   ],
-                              } 
+          }
 
          }
       }
@@ -184,8 +178,8 @@ def test_batch():
    ]
 
    for m in ll :
-     mdict['model_pars']['model_class'] = m[0]
-     mdict['model_pars']['model_pars']  = m[1]
+    mdict['model_pars']['model_class'] = m[0]
+    mdict['model_pars']['model_pars']  = m[1]
 
     config_uri, config_name = get_config_path(config)
 
