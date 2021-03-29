@@ -9,11 +9,6 @@ warnings.filterwarnings('ignore')
 #### Add path for python import
 sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
 
-#### Root folder analysis
-root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
-print(root)
-
-
 ####################################################################################################
 try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
 except Exception as e : verbosity = 2
@@ -34,6 +29,11 @@ def os_makedirs(dir_or_file):
 
 
 ####################################################################################################
+#### Root folder analysis
+root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
+log2(root)
+
+
 from util_feature import load, load_function_uri, load_dataset
 
 def model_dict_load(model_dict, config_path, config_name, verbose=True):
@@ -104,11 +104,10 @@ def predict(model_name, path_model, dfX, cols_family, model_dict):
     assert modelx is not None, "cannot load modelx, " + path_model
     modelx.reset()
     log2(modelx, path_model)
-    #log(os.getcwd())
     sys.path.append( root)    #### Needed due to import source error
 
     log("#### Load existing model weights  #################################")
-    print(path_model + "/model/")
+    log2(path_model + "/model/")
     # modelx.model = load(path_model + "/model//model.pkl")
     # modelx.model = load(path_model + "/model.pkl")
     modelx.load_model( path_model)
@@ -118,7 +117,7 @@ def predict(model_name, path_model, dfX, cols_family, model_dict):
     assert modelx.model is not None, "cannot load modelx, " + path_model
     log2("#### modelx\n", modelx.model)
 
-    log("### Prediction  ############################################")
+    log("### Prediction  ###################################################")
     dfX1  = dfX.reindex(columns=colsX)   #reindex included
     ypred = modelx.predict(dfX1, data_pars    = model_dict['data_pars'],
                            compute_pars = model_dict['compute_pars']
@@ -140,7 +139,6 @@ def run_predict(config_name, config_path, n_sample=-1,
     path_data        = m['path_pred_data']   if path_data   is None else path_data
     path_pipeline    = m['path_pred_pipeline']    #   path_output + "/pipeline/" )
     path_model       = m['path_pred_model']
-
     path_output      = m['path_pred_output'] if path_output is None else path_output
     log(path_data, path_model, path_output)
 
@@ -156,13 +154,14 @@ def run_predict(config_name, config_path, n_sample=-1,
     coly = cols["coly"]  
 
 
-    log("#### Extract column names  #####################################################")
+    log("#### Extract column names  #########################################################")
     ### Actual column names for Model Input :  label y and Input X (colnum , colcat), remove duplicate names
+    ###  [  'colcat', 'colnum'
     model_dict['data_pars']['coly']       = cols['coly']
     model_dict['data_pars']['cols_model'] = list(set(sum([  cols[colgroup] for colgroup in model_dict['data_pars']['cols_model_group'] ]   , []) ))
 
 
-    #### Col Group by column type : Sparse, continuous, .... (ie Neural Network feed Input, remove duplicate names
+    #### Flatten Col Group by column type : Sparse, continuous, .... (ie Neural Network feed Input, remove duplicate names
     ## 'coldense' = [ 'colnum' ]     'colsparse' = ['colcat' ]
     model_dict['data_pars']['cols_model_type2'] = {}
     for colg, colg_list in model_dict['data_pars'].get('cols_model_type', {}).items() :
