@@ -95,7 +95,7 @@ jobs:
            # python -c "import tensorflow, torch ; print(tensorflow); print(torch)"
 
     ########  Test running 
-    - name: run_cat_num  python example/test_features.py train --config config1
+    - name: run_cat_num  python example - test_features.py train --config config1
       run: |
         chmod -R 777 . 
         python example/test_features.py train --config config1  # 2>&1 | tee   /home/runner/work/mlmodels/mlmodels_store/log_dsa2/log_encoder.py
@@ -110,7 +110,7 @@ jobs:
 
 
     ########  Test running 
-    - name: run_sampler : python example - test_features.py train  --config config3
+    - name:  tseries, python example - test_features.py train  --config config3
       run: |
         chmod -R 777 . 
         python example/test_features.py train  --config config3  # 2>&1 | tee   /home/runner/work/mlmodels/mlmodels_store/log_dsa2/log_encoder.py
@@ -118,7 +118,7 @@ jobs:
 
 
     ########  Test running 
-    - name: run_tseries: python example - test_features.py train  --config config4
+    - name: tseries, python example - test_features.py train  --config config4
       run: |
         chmod -R 777 . 
         python example/test_features.py train  --config config4  # 2>&1 | tee   /home/runner/work/mlmodels/mlmodels_store/log_dsa2/log_encoder.py
