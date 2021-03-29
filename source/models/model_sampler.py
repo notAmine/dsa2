@@ -19,7 +19,7 @@ import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as 
 
 ####################################################################################################
 try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
-except Exception as e : verbosity = 2
+except Exception as e : verbosity = 4
 #raise Exception(f"{e}")
 
 def log(*s):
