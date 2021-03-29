@@ -7,7 +7,8 @@ Only with TF1
 """
 import os, pandas as pd, numpy as np, sklearn, copy, json
 from sklearn.model_selection import train_test_split
-
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 import tensorflow as tf
 assert "2.4"  in str(tf.version.VERSION), 'Compatible only with TF 2.4.1, keras 2.4.3, ' + str(tf.version.VERSION)
@@ -279,34 +280,30 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     Xtrain_tuple, ytrain, Xtest_tuple, ytest = get_dataset(data_pars, task_type="train",)
     
     cpars          = copy.deepcopy( compute_pars.get("compute_pars", {}))   ## issue with pickle
-
-
     early_stopping = EarlyStopping(monitor='loss', patience=3)
     path_check     = compute_pars.get('path_checkpoint', 'ztmp/model_dir/check_ckpt')
     #os.makedirs(os.path.abspath(path_check) , exist_ok= True)
-    #model_ckpt     = ModelCheckpoint(filepath =  path_check,
-    #                                 save_best_only = True, monitor='loss')
+    #model_ckpt     = ModelCheckpoint(filepath =  path_check,   save_best_only = True, monitor='loss')
     cpars['callbacks'] =  [early_stopping] # , model_ckpt]
     # cpars['callbacks'] = {}
+    assert 'epochs' in cpars, 'epoch missing'
+
 
     ### Fake label
     Xtest_dummy  = np.ones((Xtest_tuple.shape[0], 1))
     Xtrain_dummy = np.ones((Xtrain_tuple.shape[0], 1))
 
-    assert 'epochs' in cpars, 'epoch missing'
     hist = model.model.fit([Xtrain_tuple, ytrain],
-                           validation_data=[Xtest_tuple, ytest],
+                            validation_data=[Xtest_tuple, ytest],
                             **cpars)
     model.history = hist
 
-import pyarrow as pa
-import pyarrow.parquet as pq
+
 
 def encode(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     global model, session
     if Xpred is None:
         Xpred_tuple = get_dataset(data_pars, task_type="predict")
-
     else :
         cols_type   = data_pars.get('cols_model_type2', {})  ##
         Xpred_tuple = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel)
@@ -314,17 +311,17 @@ def encode(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     #log2(Xpred_tuple)
     Xdummy      = np.ones((Xpred_tuple.shape[0], 1))
     Xnew_encode = model.encoder.predict([Xpred_tuple, Xdummy ] )
-    filename = {0:'encoded_mean.parquet',1:'encoded_logvar.parquet',2:'encoded_mu.parquet'}
+    filename    = {0:'encoded_mean.parquet',1:'encoded_logvar.parquet',2:'encoded_mu.parquet'}
     for j,encodings in enumerate(Xnew_encode[:3]):
         parquetDic = {}
         for i in range(encodings.shape[1]):
             name = f'col_{i+1}'
             parquetDic[name] = encodings[:,i]
-        print(f'Encoder Columns shape: {encodings.shape}')
+        log2(f'Encoder Columns shape: {encodings.shape}')
         
         ndarray_table = pa.table(parquetDic)
         pq.write_table(ndarray_table,filename[j])
-        print(f'{filename[j]} created')
+        log(f'{filename[j]} created')
         
     return Xnew_encode
 
@@ -346,11 +343,11 @@ def decode(Xpred=None, data_pars=None, compute_pars={}, out_pars={},index = 0, *
     for i in range(decoded_array.shape[1]):
         name = f'col_{i+1}'
         parquetDic[name] = decoded_array[:,i]
-    print(f'Decoder Columns Shape {decoded_array.shape}')
+    log2(f'Decoder Columns Shape {decoded_array.shape}')
     #log2(decoded_array)
     ndarray_table = pa.table(parquetDic)
     pq.write_table(ndarray_table,filename[index])
-    print(f'{filename[index]} created')
+    log(f'{filename[index]} created')
     return decoded_array
 
 
@@ -365,11 +362,9 @@ def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
 
     #log2(Xpred_tuple)
 
-    Xdummy      = np.ones((Xpred_tuple.shape[0], 1))
-    Xnew = model.model.predict([Xpred_tuple, Xdummy ] )
+    Xdummy = np.ones((Xpred_tuple.shape[0], 1))
+    Xnew   = model.model.predict([Xpred_tuple, Xdummy ] )
     return Xnew
-
-
 
 
 
@@ -875,7 +870,7 @@ def test_helper(model_pars, data_pars, compute_pars):
 if __name__ == "__main__":
     # test()
     import fire
-    fire.Fire(test2)
+    fire.Fire()
 
 
 
