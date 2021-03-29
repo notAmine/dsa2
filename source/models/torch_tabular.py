@@ -190,11 +190,6 @@ def predict(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dic
     return ypred, ypred_proba
 
 
-
-def reset():
-    global model, session
-    model, session = None, None
-
 def save(path=None, info=None):
     """ Custom saving
     """
@@ -355,63 +350,60 @@ def test_dataset_covtype(nrows=1000):
     return df, colnum, colcat, coly
 
 
+def train_test_split2(df, coly):
+    log3(df.dtypes)
+    y = df[coly] ### If clonassificati
+    X = df.drop(coly,  axis=1)
+    log3('y', np.sum(y[y==1]) , X.head(3))
+    ######### Split the df into train/test subsets
+    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021)
+    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021)
 
-def test(nrows=1000):
+    #####
+    # y = y.astype('uint8')
+    num_classes                                = len(set(y_train_full.values.ravel()))
+
+    return X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes
+
+
+def test(n_sample = 100):
     """
         nrows : take first nrows from dataset
     """
     global model, session
     df, colnum, colcat, coly = test_dataset_covtype()
+    X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes = train_test_split2(df, coly)
 
-    #### Matching Big dict  ##################################################    
-    X = df
-    y = df[coly].astype('uint8')
-    log('y', np.sum(y[y==1]) )
-
-    # Split the df into train/test subsets
-    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, stratify=y)
-    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
-    num_classes = len(set(y_train_full[coly].values.ravel()))
-    log(X_train)
-
-
+    #### Matching Big dict  ##################################################
     cols_input_type_1 = []
-    n_sample = 100
     def post_process_fun(y): return int(y)
     def pre_process_fun(y):  return int(y)
-
 
     m = {
     'model_pars': {
         # Specify the ModelConfig for pytorch_tabular
         'model_class':  "torch_tabular.py::CategoryEmbeddingModelConfig"
 
-        ,'model_pars' : { 
+        ,'model_pars' : {
                         # 'task': "classification",
                         # 'metrics' : ["f1","accuracy"],
                         # 'metrics_params' : [{"num_classes":num_classes},{}]
-                        }  
+                        }
 
         , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
         , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
-
-        ### Pipeline for data processing ##############################
-        'pipe_list': [  #### coly target prorcessing
-        {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
-
-        {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
-        {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
-
-        #### catcol INTO integer,   colcat into OneHot
-        {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
-        {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
-
+            ### Pipeline for data processing ##############################
+            'pipe_list': [  #### coly target prorcessing
+            {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+            {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+            #### catcol INTO integer,   colcat into OneHot
+            {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+            {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
         ],
             }
     },
 
     'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
-
                 # batch_size (int): Number of samples in each batch of training
                 # fast_dev_run (bool): Quick Debug Run of Val
                 # max_epochs (int): Maximum number of epochs to be run
@@ -465,7 +457,7 @@ def test(nrows=1000):
         'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
 
 
-        ###################################################  
+        ###################################################
         'train':   {'Xtrain': X_train, 'ytrain': y_train,  'Xtest': X_valid,  'ytest':  y_valid},
         'eval':    {'X': X_valid,  'y': y_valid},
         'predict': {}
@@ -488,35 +480,35 @@ def test(nrows=1000):
 
     """
     ll = [
-        ('torch_tabular.py::CategoryEmbeddingModelConfig', 
+        ('torch_tabular.py::CategoryEmbeddingModelConfig',
             {   'task': "classification",
                 'metrics' : ["f1","accuracy"],
                 'metrics_params' : [{"num_classes":num_classes},{}]
-            }  
+            }
         ),
-        ('torch_tabular.py::TabNetModelConfig', 
+        ('torch_tabular.py::TabNetModelConfig',
            {   'task': "classification",
                 'metrics' : ["f1","accuracy"],
                 'metrics_params' : [{"num_classes":num_classes},{}]
-            }  
-        ), 
-        ('torch_tabular.py::NodeConfig', 
+            }
+        ),
+        ('torch_tabular.py::NodeConfig',
            {   'task': "classification",
                 'metrics' : ["f1","accuracy"],
                 'metrics_params' : [{"num_classes":num_classes},{}]
-            }  
+            }
         ),
-        ('torch_tabular.py::CategoryEmbeddingMDNConfig', 
+        ('torch_tabular.py::CategoryEmbeddingMDNConfig',
             {   'task'       : "regression",
             'mdn_config'     : 'MixtureDensityHeadConfig',
             'num_gaussian'   : 2,
             'metrics'        : ["mean_absolute_error"],
             'metrics_params' : [{}],
             }
-        
+
         ),
 
-        ("torch_tabular.py::AutoIntConfig", 
+        ("torch_tabular.py::AutoIntConfig",
             {
                 'task'           : 'classification',
                 'mdn_config'     : None,
@@ -533,6 +525,123 @@ def test(nrows=1000):
         m['model_pars']['model_pars']  = {**m['model_pars']['model_pars'] , **cfg[1] }
         test_helper(m)
 
+
+
+
+def test3(n_sample = 100):
+    """
+        nrows : take first nrows from dataset
+    """
+    global model, session
+    df, colnum, colcat, coly = test_dataset_covtype()
+    X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes = train_test_split2(df, coly)
+
+    #### Matching Big dict  ##################################################
+    cols_input_type_1 = []
+    def post_process_fun(y): return int(y)
+    def pre_process_fun(y):  return int(y)
+
+    m = {
+    'model_pars': {
+        # Specify the ModelConfig for pytorch_tabular
+        'model_class':  "torch_tabular.py::CategoryEmbeddingModelConfig"
+
+        ,'model_pars' : {
+                        # 'task': "classification",
+                        # 'metrics' : ["f1","accuracy"],
+                        # 'metrics_params' : [{"num_classes":num_classes},{}]
+                        }
+
+        , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
+        , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
+            ### Pipeline for data processing ##############################
+            'pipe_list': [  #### coly target prorcessing
+            {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+            {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+            #### catcol INTO integer,   colcat into OneHot
+            {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+            {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
+        ],
+            }
+    },
+
+    'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
+                'compute_pars' : {   'max_epochs' : 10, 'min_epochs': 100
+
+                }
+    },
+
+    'data_pars': { 'n_sample' : n_sample,
+        'download_pars'   : None,
+        'cols_input_type' : cols_input_type_1,
+
+        ### family of columns for MODEL  #########################################################
+        'cols_model_group'  : [ 'colnum_bin',   'colcat_bin' ],
+
+        ### Added continuous & sparse features groups ###
+        'cols_model_type2': {
+            'colcontinuous':  colnum ,
+            'colsparse'    : colcat,
+            'coly'         : coly
+        },
+        ### Filter data rows   ##################################################################
+        'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+
+
+        ###################################################
+        'train':   {'Xtrain': X_train, 'ytrain': y_train,  'Xtest': X_valid,  'ytest':  y_valid},
+        'eval':    {'X': X_valid,  'y': y_valid},
+        'predict': {}
+
+    }
+    }
+
+    ##### Running loop
+    ll = [
+        ('torch_tabular.py::CategoryEmbeddingModelConfig',
+            {   'task': "classification",
+                'metrics' : ["f1","accuracy"],
+                'metrics_params' : [{"num_classes":num_classes},{}]
+            }
+        ),
+        ('torch_tabular.py::TabNetModelConfig',
+           {   'task': "classification",
+                'metrics' : ["f1","accuracy"],
+                'metrics_params' : [{"num_classes":num_classes},{}]
+            }
+        ),
+        ('torch_tabular.py::NodeConfig',
+           {   'task': "classification",
+                'metrics' : ["f1","accuracy"],
+                'metrics_params' : [{"num_classes":num_classes},{}]
+            }
+        ),
+        ('torch_tabular.py::CategoryEmbeddingMDNConfig',
+            {   'task'       : "regression",
+            'mdn_config'     : 'MixtureDensityHeadConfig',
+            'num_gaussian'   : 2,
+            'metrics'        : ["mean_absolute_error"],
+            'metrics_params' : [{}],
+            }
+
+        ),
+
+        ("torch_tabular.py::AutoIntConfig",
+            {
+                'task'           : 'classification',
+                'mdn_config'     : None,
+                'metrics'        : ["f1","accuracy"],
+                'metrics_params' : [{"num_classes":num_classes},{}]
+            }
+        )
+    ]
+    for cfg in ll:
+        log("******************************************** New Model ********************************************")
+        log(f"******************************************** {cfg[0]} ********************************************")
+        # Set the ModelConfig
+        m['model_pars']['model_class'] = cfg[0]
+        m['model_pars']['model_pars']  = {**m['model_pars']['model_pars'] , **cfg[1] }
+        test_helper(m)
 
 
 def test_helper(m):
@@ -569,14 +678,6 @@ def test_helper(m):
 
 
 
-
-
-
-
-
-
-
-
 def test2(nrows=10000):
     """
        python source/models/torch_tabular.py test
@@ -586,7 +687,6 @@ def test2(nrows=10000):
 
     #X = np.random.rand(10000,20)
     #y = np.random.binomial(n=1, p=0.5, size=[10000])
-
     BASE_DIR = Path.home().joinpath('data/input/covtype/')
     datafile = BASE_DIR.joinpath('covtype.data.gz')
     datafile.parent.mkdir(parents=True, exist_ok=True)
