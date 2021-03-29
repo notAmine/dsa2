@@ -120,7 +120,8 @@ def titanic1(path_model_out="") :
                             'colcat_bin',
                           ],
       'cols_model_type' : {
-           'colall' : 'colnum'
+         'continuous'   : [ 'colnum',   ],
+         'sparse'       : [ 'colcat_bin', 'colnum_bin',  ],
       }
 
       ### Filter data rows   ##################################################################
