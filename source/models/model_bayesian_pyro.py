@@ -108,7 +108,7 @@ class Model(object):
             self.pred_summary = None  ### All MC summary
             self.history      = None
 
-            if VERBOSE: log(self.guide, self.model)
+            log(self.guide, self.model)
 
 
 def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
@@ -123,7 +123,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     ytrain = torch.tensor(ytrain.values, dtype=torch.float)
     ytest  = torch.tensor(ytest.values, dtype=torch.float)
 
-    if VERBOSE: log(Xtrain, model.model)
+    log(Xtrain, model.model)
 
     ###############################################################
     compute_pars2 = compute_pars.get('compute_pars', {})
