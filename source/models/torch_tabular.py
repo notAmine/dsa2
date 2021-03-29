@@ -355,6 +355,7 @@ def test_dataset_covtype(nrows=1000):
     return df, colnum, colcat, coly
 
 
+
 def test(nrows=1000):
     """
         nrows : take first nrows from dataset
@@ -410,7 +411,7 @@ def test(nrows=1000):
     },
 
     'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
-                      
+
                 # batch_size (int): Number of samples in each batch of training
                 # fast_dev_run (bool): Quick Debug Run of Val
                 # max_epochs (int): Maximum number of epochs to be run
@@ -484,7 +485,6 @@ def test(nrows=1000):
 
     Mixed Density Network
 
-
     """
     ll = [
         ('torch_tabular.py::CategoryEmbeddingModelConfig', 
@@ -527,39 +527,52 @@ def test(nrows=1000):
     for cfg in ll:
         log("******************************************** New Model ********************************************")
         log(f"******************************************** {cfg[0]} ********************************************")
-        reset()
         # Set the ModelConfig
         m['model_pars']['model_class'] = cfg[0]
         m['model_pars']['model_pars']  = {**m['model_pars']['model_pars'] , **cfg[1] }
+        test_helper(m)
 
-        log('Setup model..')
-        model = Model(model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
 
-        log('\n\nTraining the model..')
-        fit(data_pars=m['data_pars'], compute_pars= m['compute_pars'], out_pars=None)
-        log('Training completed!\n\n')
 
-        log('Predict data..')
-        ypred, ypred_proba = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
-        log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
+def test_helper(m):
+    global model, session
+    reset()
+    log('Setup model..')
+    model = Model(model_pars=m['model_pars'], data_pars=m['data_pars'], compute_pars= m['compute_pars'] )
 
-        if cfg != "torch_tabular.py::NodeConfig":
-            log('Saving model..')
-            save(path= "ztmp/data/output/torch_tabular")
-            #  os.path.join(root, 'data\\output\\torch_tabular\\model'))
+    log('\n\nTraining the model..')
+    fit(data_pars=m['data_pars'], compute_pars= m['compute_pars'], out_pars=None)
+    log('Training completed!\n\n')
 
-            log('Load model..')
-            model, session = load_model(path="ztmp/data/output/torch_tabular")
-            #os.path.join(root, 'data\\output\\torch_tabular\\model'))
-        else:
-            log('\n*** !!! Saving Bug in pytorch_tabular for NodeConfig !!! ***\n')
-            
-        log('Model architecture:')
-        log(model.model)
+    log('Predict data..')
+    ypred, ypred_proba = predict(Xpred=None, data_pars=m['data_pars'], compute_pars=m['compute_pars'])
+    log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
 
-        log('Model config:')
-        log(model.model.config._config_name)
-        reset()
+    if m['model_pars']['model_class'] != "torch_tabular.py::NodeConfig":
+        log('Saving model..')
+        save(path= "ztmp/data/output/torch_tabular")
+        #  os.path.join(root, 'data\\output\\torch_tabular\\model'))
+
+        log('Load model..')
+        model, session = load_model(path="ztmp/data/output/torch_tabular")
+        #os.path.join(root, 'data\\output\\torch_tabular\\model'))
+    else:
+        log('\n*** !!! Saving Bug in pytorch_tabular for NodeConfig !!! ***\n')
+
+    log('Model architecture:')
+    log(model.model)
+
+    log('Model config:')
+    log(model.model.config._config_name)
+    reset()
+
+
+
+
+
+
+
+
 
 
 
