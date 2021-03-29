@@ -5,31 +5,28 @@ Template for tseries type of model:
 
 
 """
-import os, pandas as pd, numpy as np, scipy as sci, sklearn
-from sklearn.linear_model import *
-from sklearn.svm import *
-from sklearn.ensemble import *
-from sklearn.tree import *
-from lightgbm import LGBMModel, LGBMRegressor, LGBMClassifier
+import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
 
-try :
-   from supervised.automl import *
-except:
-    print('cannot import automl')    
- 
 ####################################################################################################
-VERBOSE = True
+try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
+except Exception as e : verbosity = 2
+#raise Exception(f"{e}")
 
 def log(*s):
     print(*s, flush=True)
 
+def log2(*s):
+    if verbosity >= 2 : print(*s, flush=True)
 
 def log3(*s):
-    print(*s, flush=True)
+    if verbosity >= 3 : print(*s, flush=True)
+
+def os_makedirs(dir_or_file):
+    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
+    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
 
 ####################################################################################################
 global model, session
-
 def init(*kw, **kwargs):
     global model, session
     model = Model(*kw, **kwargs)
@@ -39,7 +36,15 @@ def reset():
     global model, session
     model, session = None, None
 
-####################################################################################################
+
+########Custom Model ################################################################################
+from sklearn.linear_model import *
+from sklearn.svm import *
+from sklearn.ensemble import *
+from sklearn.tree import *
+from lightgbm import LGBMModel, LGBMRegressor, LGBMClassifier
+
+
 class myModel(object):
     pass
 
@@ -59,7 +64,7 @@ class Model(object):
         else:
             model_class = globals()[model_pars['model_class']]
             self.model = model_class(**model_pars['model_pars'])
-            if VERBOSE: log(model_class, self.model)
+            log(model_class, self.model)
 
 
 def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
@@ -68,7 +73,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     global model, session
     session = None  # Session type for compute
     Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
-    if VERBOSE: log(Xtrain.shape, model.model)
+    log(Xtrain.shape, model.model)
 
     if "LGBM" in model.model_pars['model_class']:
         model.model.fit(Xtrain, ytrain, eval_set=[(Xtest, ytest)], **compute_pars.get("compute_pars", {}))
