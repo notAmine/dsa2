@@ -36,6 +36,12 @@ def log2(*s):
 def log3(*s):
     if verbosity >= 3 : print(*s, flush=True)
 
+def os_makedirs(dir_or_file):
+    if os.path.isfile(dir_or_file) :
+        os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
+    else :
+        os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
+
 ####################################################################################################
 global model, session
 
@@ -311,16 +317,21 @@ def encode(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     #log2(Xpred_tuple)
     Xdummy      = np.ones((Xpred_tuple.shape[0], 1))
     Xnew_encode = model.encoder.predict([Xpred_tuple, Xdummy ] )
-    filename    = {0:'encoded_mean.parquet', 1:'encoded_logvar.parquet',2:'encoded_mu.parquet'}
-    for j,encodings in enumerate(Xnew_encode[:3]):
-        parquetDic = {}
-        for i in range(encodings.shape[1]):
-            name             = f'col_{i+1}'
-            parquetDic[name] = encodings[:,i]
-        log2(f'Encoder Columns shape: {encodings.shape}')
-        # ndarray_table = pa.table(parquetDic)
-        # pq.write_table(ndarray_table,filename[j])
-        # log(f'{filename[j]} created')
+
+    #### Saving on disk
+    path_save = compute_pars.get('compute_extra', {}).get('path_encoding', None)
+    if path_save is not None :
+        os_makedirs(path_save)
+        filename    = {0:'encoded_mean.parquet', 1:'encoded_logvar.parquet', 2:'encoded_mu.parquet'}
+        for j,encodings in enumerate(Xnew_encode[:3]):
+            parquetDic = {}
+            for i in range(encodings.shape[1]):
+                name             = f'col_{i+1}'
+                parquetDic[name] = encodings[:,i]
+            log2(f'Encoder Columns shape: {encodings.shape}')
+            ndarray_table = pa.table(parquetDic)
+            pq.write_table(ndarray_table,   path_save  + "/" + filename[j] )
+            log(f'{path_save}/{filename[j]} created')
         
     return Xnew_encode
 
@@ -338,18 +349,21 @@ def decode(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, index = 0, 
     #Xdummy      = np.ones((Xpred_tuple.shape[0], 1))
     decoded_array = model.decoder.predict(Xpred )
 
-    parquetDic = {}
-    for i in range(decoded_array.shape[1]):
-        name = f'col_{i+1}'
-        #### TODO : Actual Column names, looks tricky ????
-        parquetDic[name] = decoded_array[:,i]
-    log2(f'Decoder Columns Shape {decoded_array.shape}')
+    #### Saving on disk
+    path_save = compute_pars.get('compute_extra', {}).get('path_encoding', None)
+    if path_save is not None :
+        parquetDic = {}
+        for i in range(decoded_array.shape[1]):
+            name = f'col_{i+1}'
+            #### TODO : Actual Column names from data_pars, looks tricky ????
+            parquetDic[name] = decoded_array[:,i]
+        log2(f'Decoder Columns Shape {decoded_array.shape}')
 
-    # filename = {0:'decoded_mean.parquet', 1:'decoded_logvar.parquet', 2:'decoded_mu.parquet'}
-    #log2(decoded_array)
-    #ndarray_table = pa.table(parquetDic)
-    #pq.write_table(ndarray_table,filename[index])
-    #log(f'{filename[index]} created')
+        filename = {0:'decoded_mean.parquet', 1:'decoded_logvar.parquet', 2:'decoded_mu.parquet'}
+        log2(decoded_array)
+        ndarray_table = pa.table(parquetDic)
+        pq.write_table(ndarray_table,filename[index])
+        log(f'{filename[index]} created')
     return decoded_array
 
 
@@ -366,6 +380,7 @@ def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     Xdummy = np.ones((Xpred_tuple.shape[0], 1))
     Xnew   = model.model.predict([Xpred_tuple, Xdummy ] )
     return Xnew
+
 
 
 
@@ -621,7 +636,6 @@ def test():
     test_helper(model_pars, data_pars, compute_pars, Xpred)
 
 
-
 def test_dataset_classi_fake(nrows=500):
     from sklearn import datasets as sklearn_datasets
     ndim=11
@@ -641,7 +655,6 @@ def test_dataset_classi_fake(nrows=500):
     df[coly]   = y.reshape(-1, 1)
     # log(df)
     return df, colnum, colcat, coly
-
 
 
 def test_dataset_petfinder(nrows=1000):
@@ -796,6 +809,8 @@ def test3(n_sample          = 1000):
 
     'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
                       'compute_pars' : {'epochs': 50 },
+
+                      'compute_extra' : {'path_encoding': 'ztmp/'}
                     },
 
     'data_pars': { 'n_sample' : n_sample,
