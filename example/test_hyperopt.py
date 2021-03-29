@@ -76,6 +76,9 @@ cols_input_type_2 = {
 
 
 #################################################################################
+def post_process_fun(y): return  int(y)
+def pre_process_fun(y):  return  int(y)
+
 def titanic1(path_model_out="") :
     """ One big dict
     """
@@ -83,9 +86,6 @@ def titanic1(path_model_out="") :
     data_name    = "titanic"         ### in data/input/
     model_class  = 'LGBMClassifier'  ### ACTUAL Class name for model_sklearn.py
     n_sample     = 500
-
-    def post_process_fun(y): return  int(y)
-    def pre_process_fun(y):  return  int(y)
 
     model_dict = {
     'model_pars': {

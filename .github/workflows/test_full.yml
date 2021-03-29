@@ -117,11 +117,19 @@ jobs:
       run:  |
             python  example/test_hyperopt.py  hyperparam  --ntrials 1 
 
+
     - name: python example/test_mkeras.py  train    --config config1  
       # continue-on-error: true
       run:  |
-            python example/test_mkeras.py  train    --config config1 
+            python example/test_mkeras.py  train    --config config1
+            python example/test_mkeras.py  predict    --config config1 
 
+
+    - name: python   test_automl.py  train   
+      # continue-on-error: true
+      run:  |
+            python   test_automl.py  train       --nsample 200
+            python   test_automl.py  predict     --nsample 200 
 
 
     - name: python example/regress/regress_salary.py
