@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 
-python source/run_train.py  run_train --config_name elasticnet  --path_data_train data/input/train/    --path_output data/output/a01_elasticnet/
+python source/run_sampler.py  run_train --config_name elasticnet  --path_data_train data/input/train/    --path_output data/output/a01_elasticnet/
 
-python source/run_train.py  run_train   --n_sample 100  --config_name lightgbm  --path_model_config source/config_model.py  --path_output /data/output/a01_test/     --path_data_train /data/input/train/
+python source/run_sampler.py  run_train   --n_sample 100  --config_name lightgbm  --path_model_config source/config_model.py  --path_output /data/output/a01_test/     --path_data_train /data/input/train/
 
 """
 import warnings, sys, os, json, importlib, pandas as pd
@@ -142,15 +142,15 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
 
     log("#### Model Input preparation #########################################################")
-    log(dfX.shape)
+    log2(dfX.shape)
     dfX    = dfX.sample(frac=1.0)
     itrain = int(0.6 * len(dfX))
     ival   = int(0.8 * len(dfX))
     colsX  = data_pars['cols_model']
     coly   = data_pars['coly']
-    log('Model colsX',colsX)
-    log('Model coly', coly)
-    log('Model column type: ',data_pars['cols_model_type2'])
+    log2('Model colsX',colsX)
+    log2('Model coly', coly)
+    log3('Model column type: ',data_pars['cols_model_type2'])
 
     data_pars['data_type'] = 'ram'
     data_pars['train'] = {'Xtrain' : dfX[colsX].iloc[:itrain, :],
@@ -166,7 +166,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
                           'y'   : dfX[coly].iloc[ival:],
                           }
 
-    log("#### Init, Train ###################################################################")
+    log("#### Init, Train ###############################################################")
     # from config_model import map_model    
     if len(model_file) == 0:
         modelx = map_model(model_name)

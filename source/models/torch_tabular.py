@@ -376,19 +376,15 @@ def test(nrows=1000):
 
     cols_input_type_1 = []
     n_sample = 100
-    def post_process_fun(y):
-        return int(y)
-
-    def pre_process_fun(y):
-        return int(y)
+    def post_process_fun(y): return int(y)
+    def pre_process_fun(y):  return int(y)
 
 
-    m = {'model_pars': {
-        ### LightGBM API model   #######################################
+    m = {
+    'model_pars': {
         # Specify the ModelConfig for pytorch_tabular
         'model_class':  "torch_tabular.py::CategoryEmbeddingModelConfig"
-        
-        # Type of target prediction, evaluation metrics
+
         ,'model_pars' : { 
                         # 'task': "classification",
                         # 'metrics' : ["f1","accuracy"],
@@ -413,35 +409,31 @@ def test(nrows=1000):
             }
         },
 
-    'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
+    'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
+                      'compute_pars' : {    }
                     },
 
     'data_pars': { 'n_sample' : n_sample,
-        'download_pars' : None,
+        'download_pars'   : None,
         'cols_input_type' : cols_input_type_1,
+
         ### family of columns for MODEL  #########################################################
-        'cols_model_group': [ 'colnum_bin',   'colcat_bin',
-                            ]
+        'cols_model_group'  : [ 'colnum_bin',   'colcat_bin' ],
 
-        ,'cols_model_group_custom' :  { 'colnum' : colnum,
-                                        'colcat' : colcat,
-                                        'coly' : coly
-                            }
-        ###################################################  
-        ,'train': {'Xtrain': X_train, 'ytrain': y_train,
-                   'Xtest': X_valid,  'ytest':  y_valid},
-                'eval': {'X': X_valid,  'y': y_valid},
-                'predict': {'X': X_valid}
-
-        ### Filter data rows   ##################################################################
-        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
-
-        
         ### Added continuous & sparse features groups ###
         'cols_model_type2': {
             'colcontinuous':   colnum ,
-            'colsparse' : colcat, 
+            'colsparse' : colcat,
         },
+        ### Filter data rows   ##################################################################
+        'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+
+
+        ###################################################  
+        'train':   {'Xtrain': X_train, 'ytrain': y_train,  'Xtest': X_valid,  'ytest':  y_valid},
+        'eval':    {'X': X_valid,  'y': y_valid},
+        'predict': {}
+
         }
     }
 
@@ -536,7 +528,8 @@ def test(nrows=1000):
         reset()
 
 
-def test2(nrow=10000):
+
+def test2(nrows=10000):
     """
        python source/models/torch_tabular.py test
 
@@ -554,10 +547,8 @@ def test2(nrow=10000):
         wget.download(url, datafile.as_posix())
 
     target_name = ["Covertype"]
-
     colcat = [ "Wilderness_Area1", "Wilderness_Area2", "Wilderness_Area3", "Wilderness_Area4", "Soil_Type1", "Soil_Type2", "Soil_Type3", "Soil_Type4", "Soil_Type5", "Soil_Type6", "Soil_Type7", "Soil_Type8", "Soil_Type9", "Soil_Type10", "Soil_Type11", "Soil_Type12", "Soil_Type13", "Soil_Type14", "Soil_Type15", "Soil_Type16", "Soil_Type17", "Soil_Type18", "Soil_Type19", "Soil_Type20", "Soil_Type21", "Soil_Type22", "Soil_Type23", "Soil_Type24", "Soil_Type25", "Soil_Type26", "Soil_Type27", "Soil_Type28", "Soil_Type29", "Soil_Type30", "Soil_Type31", "Soil_Type32", "Soil_Type33", "Soil_Type34", "Soil_Type35", "Soil_Type36", "Soil_Type37", "Soil_Type38", "Soil_Type39", "Soil_Type40"
                       ]
-
     colnum = [ "Elevation", "Aspect", "Slope", "Horizontal_Distance_To_Hydrology", "Vertical_Distance_To_Hydrology", "Horizontal_Distance_To_Roadways", "Hillshade_9am", "Hillshade_Noon", "Hillshade_3pm", "Horizontal_Distance_To_Fire_Points"
     ]
 

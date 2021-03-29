@@ -2,17 +2,18 @@
 # -*- coding: utf-8 -*-
 """
 Genreate  train_data  ---> New train data by sampling
-cd source/
-python source/model_sampler.py test
-Transformation for ALL Columns :
-   Increase samples, Reduce Samples.
+
+python model_sampler.py test
+
+Transformation for ALL Columns :   Increase samples, Reduce Samples.
+
+WARNING :
 Main isssue is the number of rows change  !!!!
   cannot merge with others
   --> store as train data
   train data ---> new train data
   Transformation with less rows !
-2 usage :
-    Afte preprocessing, over sample, under-sample.
+
 """
 import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
 

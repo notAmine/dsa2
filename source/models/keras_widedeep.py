@@ -524,9 +524,7 @@ def test(config=''):
         'cols_input_type' : cols_input_type_1,
         ### family of columns for MODEL  #########################################################
          'cols_model_group': [ 'colnum_bin',   'colcat_bin', ]
-        ,'cols_model_group_custom' :  { 'colnum' : colnum,
-                                        'colcat' : colcat,
-                                        'coly' : coly  }
+
         ####### ACTUAL data pipeline #############################################################
         ,'train':   {} #{'X_train': train_df,'Y_train':train_label, 'X_test':  val_df,'Y_test':val_label }
         ,'val':     {}  #{  'X':  val_df ,'Y':val_label }
