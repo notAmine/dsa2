@@ -39,11 +39,10 @@ def reset():
 
 ########Custom Model ################################################################################
 from sklearn.linear_model import *
-from sklearn.svm import *
-from sklearn.ensemble import *
 from sklearn.tree import *
 from lightgbm import LGBMModel, LGBMRegressor, LGBMClassifier
 
+from sktime import forecasting
 
 class myModel(object):
     pass
@@ -159,7 +158,6 @@ def load_info(path=""):
 
 
 ####################################################################################################
-############ Do not change #########################################################################
 def get_dataset(data_pars=None, task_type="train", **kw):
     """
       "ram"  : 
@@ -192,7 +190,7 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
-def test_dataset_tseries()
+def test_dataset_tseries():
    pass
 
 
@@ -202,7 +200,7 @@ def test(nrows=1000):
         nrows : take first nrows from dataset
     """
     global model, session
-    df, colnum, colcat, coly = test_dataset()
+    df, colnum, colcat, coly = test_dataset_tseries()
 
     #### Matching Big dict  ##################################################    
     X = df
@@ -266,7 +264,7 @@ def test(nrows=1000):
         ,'train': {'Xtrain': X_train, 'ytrain': y_train,
                    'Xtest': X_valid,  'ytest':  y_valid},
                 'eval': {'X': X_valid,  'y': y_valid},
-                'predict': {'X': X_valid}
+                'predict': {}
 
         ### Filter data rows   ##################################################################
         ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
