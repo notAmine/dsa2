@@ -2,6 +2,12 @@
 # -*- coding: utf-8 -*-
 """
 
+python   test_automl.py  preprocess  --nsample 100
+python   test_automl.py  train       --nsample 200
+python   test_automl.py  check
+python   test_automl.py  predict
+
+
 https://github.com/mljar/mljar-supervised
 
   python  test_automl.py  train    > zlog/log_titanic_train.txt 2>&1
@@ -27,9 +33,6 @@ conda install -c conda-forge fastparquet
  tabulate==0.8.7, but you'll have tabulate 0.8.6 which is incompatible.
  xgboost==1.2.0, but you'll have xgboost 1.3.3 which is incompatible.
 
-
-
-
 """
 import warnings, copy, os, sys
 warnings.filterwarnings('ignore')
@@ -41,8 +44,6 @@ THIS_FILEPATH  =  os.path.abspath(__file__)
 
 sys.path.append(root_repo)
 from source.util_feature import save,os_get_function_name
-
-
 
 
 def global_pars_update(model_dict,  data_name, config_name):
@@ -82,7 +83,6 @@ def global_pars_update(model_dict,  data_name, config_name):
 
     model_dict[ 'global_pars'] = m
     return model_dict
-
 
 
 ####################################################################################
@@ -133,7 +133,7 @@ def config1() :
             # stack_models='auto', eval_metric='auto', validation_strategy='auto', explain_level='auto',
             # golden_features='auto', features_selection='auto', start_random_models='auto',
             # hill_climbing_steps='auto', top_models_to_improve='auto', verbose=1, random_state=1234)
-                        }
+          }
 
         , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
         , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
@@ -155,10 +155,6 @@ def config1() :
 
         ### Cross_feat = feat1 X feat2
         # {'uri': 'source/prepro.py::pd_colcross',             'pars': {}, 'cols_family': 'colcross',   'cols_out': 'colcross_pair',  'type': 'cross'},
-
-
-        #### Example of Custom processor
-        #{'uri':  THIS_FILEPATH + '::pd_col_myfun',   'pars': {}, 'cols_family': 'colnum',   'cols_out': 'col_myfun',  'type': '' },                
 
 
         ],
@@ -201,55 +197,11 @@ def config1() :
     return model_dict
 
 
-
-def pd_col_myfun(df=None, col=None, pars={}):
-    """
-         Example of custom Processor
-    """
-    from source.util_feature import save, load
-    prefix = 'col_myfun`'
-    if 'path_pipeline' in pars :   #### Inference time LOAD previous pars
-        prepro   = load(pars['path_pipeline'] + f"/{prefix}_model.pkl" )
-        pars     = load(pars['path_pipeline'] + f"/{prefix}_pars.pkl" )
-        pars     = {} if pars is None else  pars
-    #### Do something #################################################################
-    df_new         = df[col]  ### Do nithi
-    df_new.columns = [  col + "_myfun"  for col in df.columns ]
-    cols_new       = list(df_new.columns)
-
-    prepro   = None
-    pars_new = None
-
-
-
-    ###################################################################################
-    if 'path_features_store' in pars and 'path_pipeline_export' in pars:
-       save(prepro,         pars['path_pipeline_export'] + f"/{prefix}_model.pkl" )
-       save(cols_new,       pars['path_pipeline_export'] + f"/{prefix}.pkl" )
-       save(pars_new,       pars['path_pipeline_export'] + f"/{prefix}_pars.pkl" )
-
-    col_pars = {'prefix' : prefix , 'path' :   pars.get('path_pipeline_export', pars.get('path_pipeline', None)) }
-    col_pars['cols_new'] = {
-        'col_myfun' :  cols_new  ### list
-    }
-    return df_new, col_pars
-
-
-
-
 #####################################################################################
 ########## Profile data #############################################################
 from core_run import  data_profile
 # def data_profile(path_data="", path_output="", n_sample= 5000):
-"""
 
-def data_profile(path_data="", path_output="", n_sample= 5000):
-   from source.run_feature_profile import run_profile
-   run_profile(path_data   = path_data,
-               path_output = path_output + "/profile/",
-               n_sample    = n_sample,
-              )
-"""
 
 
 
@@ -258,49 +210,12 @@ def data_profile(path_data="", path_output="", n_sample= 5000):
 ### def preprocess(config='', nsample=1000):
 from core_run import preprocess
 
-"""
-def preprocess(config=None, nsample=None):
-    config_name  = config  if config is not None else config_default
-    mdict        = globals()[config_name]()
-    m            = mdict['global_pars']
-    print(mdict)
-
-    from source import run_preprocess
-    run_preprocess.run_preprocess(config_name   =  config_name,
-                                  config_path   =  m['config_path'],
-                                  n_sample      =  nsample if nsample is not None else m['n_sample'],
-
-                                  ### Optonal
-                                  mode          =  'run_preprocess')
-"""
 
 
 
 ##################################################################################
 ########## Train #################################################################
 from core_run import train
-"""
-def train(config=None, nsample=None):
-
-    config_name  = config  if config is not None else config_default
-    mdict        = globals()[config_name]()
-    m            = mdict['global_pars']
-    print(mdict)
-    
-    from source import run_train
-    run_train.run_train(config_name       =  config_name,
-                        config_path       =  m['config_path'],
-                        n_sample          =  nsample if nsample is not None else m['n_sample']
-                        )
-"""
-
-
-
-###################################################################################
-######### Check data ##############################################################
-def check():
-   pass
-
 
 
 
@@ -309,37 +224,10 @@ def check():
 # predict(config='', nsample=10000)
 from core_run import predict
 
-"""
-def predict(config=None, nsample=None):
-    config_name  = config  if config is not None else config_default
-    mdict        = globals()[config_name]()
-    m            = mdict['global_pars']
-
-
-    from source import run_inference
-    run_inference.run_predict(config_name = config_name,
-                              config_path = m['config_path'],
-                              n_sample    = nsample if nsample is not None else m['n_sample'],
-
-                              #### Optional
-                              path_data   = m['path_pred_data'],
-                              path_output = m['path_pred_output'],
-                              model_dict  = None
-                              )
-"""
 
 
 ###########################################################################################################
 ###########################################################################################################
-"""
-python   test_automl.py  data_profile
-python   test_automl.py  preprocess  --nsample 100
-python   test_automl.py  train       --nsample 200
-python   test_automl.py  check
-python   test_automl.py  predict
-
-
-"""
 if __name__ == "__main__":
     d = { 'data_profile': data_profile,  'train' : train, 'predict' : predict, 'config' : config_default }
     import fire
