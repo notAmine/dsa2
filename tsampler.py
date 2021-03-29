@@ -170,11 +170,13 @@ from core_run import train_sampler
 
 
 def test_batch():
-   mdict = config_sampler()
-   
+   from core_run import  get_config_path, get_global_pars
+   mdict  = config_sampler()
+
+   nsample = 100
+   config  = ""
    ll = [
      ('CTGAN', { })
-
    ]
 
    for m in ll :
@@ -185,7 +187,7 @@ def test_batch():
 
     mdict = get_global_pars(  config_uri)
     m     = mdict['global_pars']
-    log(mdict)
+    print(mdict)
     from source import run_sampler
     run_sampler.run_train(config_name     =  None,
                         config_path       =  None,
