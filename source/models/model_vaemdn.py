@@ -2,19 +2,15 @@
 # -*- coding: utf-8 -*-
 """
 Multi Density Variationnal Autoencoder
-
-python model_vaemdn.py test2
-
+Only with TF1
 
 """
-import os, pandas as pd, numpy as np, sklearn, copy
+import os, pandas as pd, numpy as np, sklearn, copy, json
 from sklearn.model_selection import train_test_split
-import pyarrow as pa
-import pyarrow.parquet as pq
-import tensorflow as tf
 
-if  "1." in tf.version.VERSION :
-    print('Compatible only with TF 2.')
+
+import tensorflow as tf
+assert "2.4"  in str(tf.version.VERSION), 'Compatible only with TF 2.4.1, keras 2.4.3, ' + str(tf.version.VERSION)
 
 from tensorflow import keras
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -26,15 +22,18 @@ from tensorflow.keras.utils import plot_model
 from tensorflow.keras import backend as K
 
 ####################################################################################################
-verbosity =2
+try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
+except Exception as e : verbosity = 2
+#raise Exception(f"{e}")
 
 def log(*s):
     print(*s, flush=True)
 
 def log2(*s):
-    if verbosity >= 2 :
-      print(*s, flush=True)
+    if verbosity >= 2 : print(*s, flush=True)
 
+def log3(*s):
+    if verbosity >= 3 : print(*s, flush=True)
 
 ####################################################################################################
 global model, session
@@ -44,7 +43,9 @@ def init(*kw, **kwargs):
     model = Model(*kw, **kwargs)
     session = None
 
-
+def reset():
+    global model, session
+    model, session = None, None
 
 ####################################################################################################
 ##### Custom code  #################################################################################
@@ -119,7 +120,7 @@ def VAEMDN(model_pars):
     decoder = keras.models.Model(latent_inputs, outputs, name='decoder')
     # plot_model(decoder, to_file='vae_mlp_decoder.png', show_shapes=True)
     decoder.compile(optimizer='adam',loss='binary_crossentropy',metrics=['accuracy'])
-    log(decoder.summary())
+    #log(decoder.summary())
 
     ################## instantiate VAE model  ####################################################
     outputs = decoder(encoder([inputs, dummy])[2])
@@ -285,7 +286,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     #os.makedirs(os.path.abspath(path_check) , exist_ok= True)
     #model_ckpt     = ModelCheckpoint(filepath =  path_check,
     #                                 save_best_only = True, monitor='loss')
-    # cpars['callbacks'] =  [early_stopping] # , model_ckpt]
+    cpars['callbacks'] =  [early_stopping] # , model_ckpt]
     # cpars['callbacks'] = {}
 
     ### Fake label
@@ -298,6 +299,8 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
                             **cpars)
     model.history = hist
 
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 def encode(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     global model, session
@@ -455,10 +458,6 @@ def get_label(encoder, x_train, dummy_train, class_num=5, batch_size=256):
 
 
 ######################################################################################
-def reset():
-    global model, session
-    model, session = None, None
-
 def save(path=None, info=None):
     import dill as pickle, copy
     global model, session
@@ -648,7 +647,9 @@ def test_dataset_classi_fake(nrows=500):
     return df, colnum, colcat, coly
 
 
+
 def test_dataset_petfinder(nrows=1000):
+    from sklearn.preprocessing import LabelEncoder
     # Dense features
     colnum = ['PhotoAmt', 'Fee','Age' ]
 
@@ -664,45 +665,46 @@ def test_dataset_petfinder(nrows=1000):
     csv_file    = 'datasets/petfinder-mini/petfinder-mini.csv'
     tf.keras.utils.get_file('petfinder_mini.zip', dataset_url,extract=True, cache_dir='.')
 
-    print('Data Frame Loaded')
+    log3('Data Frame Loaded')
     df      = pd.read_csv(csv_file)
     df      = df.iloc[:nrows, :]
     df['y'] = np.where(df['AdoptionSpeed']==4, 0, 1)
     df      = df.drop(columns=['AdoptionSpeed', 'Description'])
-
-    print(df.dtypes)
+    df      = df.apply(LabelEncoder().fit_transform)
+    log3(df.dtypes)
     return df, colnum, colcat, coly, colembed
 
 
-
-def test2(config=''):
-    n_sample          = 100
-    df, colnum, colcat, coly= test_dataset_classi_fake(nrows=500)
-
-    #### Matching Big dict  ##################################################
-    
-    y = df[coly].astype('uint8')
-    X = df.iloc[:,:-1]
-    log('y', np.sum(y[y==1]) )
-    log(X)
+def train_test_split2(df, coly):
+    log3(df.dtypes)
+    y = df[coly] ### If clonassificati
+    X = df.drop(coly,  axis=1)
+    log3('y', np.sum(y[y==1]) , X.head(3))
     ######### Split the df into train/test subsets
     X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021)
     X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021)
-    
+
+    #####
+    # y = y.astype('uint8')
     num_classes                                = len(set(y_train_full.values.ravel()))
-    
 
-    def post_process_fun(y):
-        return int(y)
+    return X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes
 
-    def pre_process_fun(y):
-        return int(y)
+
+
+def test2(n_sample          = 1000):
+    df, colnum, colcat, coly = test_dataset_classi_fake(nrows= n_sample)
+    X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes  = train_test_split2(df, coly)
+
+    #### Matching Big dict  ##################################################
+    def post_process_fun(y): return int(y)
+    def pre_process_fun(y):  return int(y)
 
     m = {'model_pars': {
         'model_class':  "model_vaem.py::VAMDN"
         ,'model_pars' : {
             'original_dim':       len( colcat + colnum),
-            'class_num':             1,
+            'class_num':             2,
             'intermediate_dim':     64,
             'intermediate_dim_2':   16,
             'latent_dim' :           3,
@@ -735,30 +737,102 @@ def test2(config=''):
             'coly'  :  coly,
         },
         ### family of columns for MODEL  #########################################################
-        'cols_model_group': [ 'colnum_bin',   'colcat_bin', ]
+        'cols_model_group': [ 'colnum_bin',   'colcat_bin',  ],
 
         ### Added continuous & sparse features groups ###
-       ,'cols_model_type2': {
+        'cols_model_type2': {
             'colcontinuous':   colnum ,
             'colsparse' : colcat,
         }
+
+        ### Filter data rows   ##################################################################
+        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 }
+
 
         ###################################################
         ,'train':   {'Xtrain': X_train,  'ytrain': y_train, 'Xtest':  X_valid,  'ytest':  y_valid}
         ,'eval':    {'X': X_valid,  'y': y_valid}
         ,'predict': {'X': X_valid}
 
-        ,'data_type': 'ram'
-
-
-        ### Filter data rows   ##################################################################
-        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+        ,'task_type' : 'train', 'data_type': 'ram'
 
         }
     }
 
     ###  Tester #########################################################
     test_helper(m['model_pars'], m['data_pars'], m['compute_pars'])
+
+
+
+
+def test3(n_sample          = 1000):
+    df, colnum, colcat, coly,colyembed = test_dataset_petfinder(nrows= n_sample)
+    X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes  = train_test_split2(df, coly)
+
+    #### Matching Big dict  ##################################################
+    def post_process_fun(y): return int(y)
+    def pre_process_fun(y):  return int(y)
+
+    m = {'model_pars': {
+        'model_class':  "model_vaem.py::VAMDN"
+        ,'model_pars' : {
+            'original_dim':       len( colcat + colnum),
+            'class_num':             2,
+            'intermediate_dim':     64,
+            'intermediate_dim_2':   16,
+            'latent_dim' :           3,
+            'Lambda1'    :           1,
+            'batch_size' :         256,
+            'Lambda2'    :         200,
+            'Alpha'      :         0.075
+        }
+        , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
+        , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
+
+        ### Pipeline for data processing ##############################
+        'pipe_list': [  #### coly target prorcessing
+            {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+            {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+            {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+        ],
+        }
+        },
+
+    'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
+                      'compute_pars' : {'epochs': 50 },
+                    },
+
+    'data_pars': { 'n_sample' : n_sample,
+        'download_pars' : None,
+        'cols_input_type' : {
+            'colcat' : colcat,
+            'colnum' : colnum,
+            'coly'  :  coly,
+        },
+
+        ### family of columns for MODEL  #########################################################
+        'cols_model_group': [ 'colnum_bin',   'colcat_bin',  ],
+
+        ### Added continuous & sparse features groups ###
+        'cols_model_type2': {
+            'colcontinuous':   colnum ,
+            'colsparse' :      colcat,
+        }
+        ### Filter data rows   ##################################################################
+        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 }
+
+        ###################################################
+        ,'train':   {'Xtrain': X_train,  'ytrain': y_train, 'Xtest':  X_valid,  'ytest':  y_valid}
+        ,'eval':    {'X': X_valid,  'y': y_valid}
+        ,'predict': {'X': X_valid}
+
+        ,'task_type' : 'train', 'data_type': 'ram'
+        }
+    }
+
+    ###  Tester #########################################################
+    test_helper(m['model_pars'], m['data_pars'], m['compute_pars'])
+
 
 
 def test_helper(model_pars, data_pars, compute_pars):
@@ -772,12 +846,11 @@ def test_helper(model_pars, data_pars, compute_pars):
 
 
     log('Predict data..')
-    Xnew    = predict(data_pars=data_pars,  compute_pars=compute_pars)
+    Xnew = predict(data_pars=data_pars,  compute_pars=compute_pars)
     encoded = encode(data_pars=data_pars,  compute_pars=compute_pars)
     encoded = encoded[:3]
     print('Encoded X (Batch 1): \n')
-    log(encoded)
-
+    #log(encoded)
     #There are different batches of Dataframe we have to perform on each batches
     decoded_array = []
     for num,Xpred in enumerate(encoded):
@@ -808,10 +881,8 @@ if __name__ == "__main__":
 
 
 
-############################################################################################################
-############################################################################################################
-def a():
-    """
+
+"""
 
     I had the same issue here using tf.data.Datasets and, for me, the problem was related with the inputs and outputs.
 
@@ -835,5 +906,4 @@ def a():
     dataset.map(input_solver) # this will map the first and the second feature in this triple-sample to the inputs.
     model.fit(dataset, epochs=5)
 
-    """
-    pass
+"""
