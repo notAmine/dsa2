@@ -129,6 +129,7 @@ def VAEMDN(model_pars):
     decoder.compile(optimizer='adam',loss='binary_crossentropy',metrics=['accuracy'])
     #log(decoder.summary())
 
+
     ################## instantiate VAE model  ####################################################
     outputs = decoder(encoder([inputs, dummy])[2])
     vae = keras.models.Model([inputs, dummy], outputs, name='vae_mlp')
