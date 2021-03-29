@@ -16,45 +16,28 @@ sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
 root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
 print(root)
 
-DEBUG = True
-
 ####################################################################################################
+try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
+except Exception as e : verbosity = 4
+#raise Exception(f"{e}")
+
+def log(*s):
+    print(*s, flush=True)
+
+def log2(*s):
+    if verbosity >= 2 : print(*s, flush=True)
+
+def log3(*s):
+    if verbosity >= 3 : print(*s, flush=True)
+
+def os_makedirs(dir_or_file):
+    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
+    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
+
+
 ####################################################################################################
 from util_feature import   load, save_list, load_function_uri, save
 from run_preprocess import  preprocess, preprocess_load
-
-
-"""
-### bug with logger
-from util import logger_class
-logger = logger_class()
-
-def log(*s):
-    logger.log(*s, level=1)
-
-def log2(*s):
-    logger.log(*s, level=2)
-
-def log_pd(df, *s, n=0, m=1):
-    sjump = "\n" * m
-    log(sjump,  df.head(n))
-"""
-
-
-def log(*s, n=0, m=0):
-    sspace = "#" * n
-    sjump = "\n" * m
-    ### Implement pseudo Logging
-    print(sjump, sspace, s, sspace, flush=True)
-
-
-def log2(*s, n=0, m=0):
-    if DEBUG :
-        sspace = "#" * n
-        sjump = "\n" * m
-        ### Implement pseudo Logging
-        print(sjump, sspace, s, sspace, flush=True)
-
 
 def save_features(df, name, path):
     if path is not None :
@@ -99,7 +82,6 @@ def map_model(model_name):
     :return: model module
 
     """
-
     ##### Custom folder
     if ".py" in model_name :
        ### Asbolute path of the file
@@ -125,26 +107,6 @@ def map_model(model_name):
        modelx = importlib.import_module(mod)
 
     return modelx
-
-
-def mlflow_register(dfXy, model_dict: dict, stats: dict, mlflow_pars:dict ):
-    log("#### Using mlflow #########################################################")
-    # def register(run_name, params, metrics, signature, model_class, tracking_uri= "sqlite:///local.db"):
-    from run_mlflow import register
-    from mlflow.models.signature import infer_signature
-
-    train_signature = dfXy[model_dict['data_pars']['cols_model']]
-    y_signature     = dfXy[model_dict['data_pars']['coly']]
-    signature       = infer_signature(train_signature, y_signature)
-
-    register( run_name    = model_dict['global_pars']['config_name'],
-             params       = model_dict['global_pars'],
-             metrics      = stats["metrics_test"],
-             signature    = signature,
-             model_class  = model_dict['model_pars']["model_class"],
-             tracking_uri = mlflow_pars.get( 'tracking_db', "sqlite:///mlflow_local.db")
-            )
-
 
 def train(model_dict, dfX, cols_family, post_process_fun):
     """  Train the model using model_dict, save model, save prediction
@@ -416,6 +378,31 @@ def run_model_check(path_output, scoring):
         print(lgb_featimpt_train)
     except :
         pass
+
+
+
+
+
+
+def mlflow_register(dfXy, model_dict: dict, stats: dict, mlflow_pars:dict ):
+    log("#### Using mlflow #########################################################")
+    # def register(run_name, params, metrics, signature, model_class, tracking_uri= "sqlite:///local.db"):
+    from run_mlflow import register
+    from mlflow.models.signature import infer_signature
+
+    train_signature = dfXy[model_dict['data_pars']['cols_model']]
+    y_signature     = dfXy[model_dict['data_pars']['coly']]
+    signature       = infer_signature(train_signature, y_signature)
+
+    register( run_name    = model_dict['global_pars']['config_name'],
+             params       = model_dict['global_pars'],
+             metrics      = stats["metrics_test"],
+             signature    = signature,
+             model_class  = model_dict['model_pars']["model_class"],
+             tracking_uri = mlflow_pars.get( 'tracking_db', "sqlite:///mlflow_local.db")
+            )
+
+
 
 
 if __name__ == "__main__":

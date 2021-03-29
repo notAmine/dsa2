@@ -1,17 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-activate py36 && python source/run_inference.py  run_predict  --n_sample 1000  --config_name lightgbm  --path_model /data/output/a01_test/   --path_output /data/output/a01_test_pred/     --path_data_train /data/input/train/
+python source/run_inference.py  run_predict  --n_sample 1000  --config_name lightgbm  --path_model /data/output/a01_test/   --path_output /data/output/a01_test_pred/     --path_data_train /data/input/train/
 
 """
-import warnings
+import warnings,sys, json, gc, os, pandas as pd, importlib
 warnings.filterwarnings('ignore')
-import sys, gc, os, pandas as pd, importlib
-
 
 #### Add path for python import
 sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
-# import util_feature
-
 
 #### Root folder analysis
 root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
@@ -19,22 +15,29 @@ print(root)
 
 
 ####################################################################################################
+try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
+except Exception as e : verbosity = 2
+#raise Exception(f"{e}")
+
+def log(*s):
+    print(*s, flush=True)
+
+def log2(*s):
+    if verbosity >= 2 : print(*s, flush=True)
+
+def log3(*s):
+    if verbosity >= 3 : print(*s, flush=True)
+
+def os_makedirs(dir_or_file):
+    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
+    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
+
+
 ####################################################################################################
-def log(*s, n=0, m=1):
-    sspace = "#" * n
-    sjump = "\n" * m
-    ### Implement Logging
-    print(sjump, sspace, *s, sspace, flush=True)
-
-
-
 from util_feature import load, load_function_uri, load_dataset
-####################################################################################################
+
 def model_dict_load(model_dict, config_path, config_name, verbose=True):
-    """model_dict_load 
-
-    [extended_summary]
-
+    """model_dict_load
     Args:
         model_dict ([type]): [description]
         config_path ([type]): [description]
@@ -53,14 +56,32 @@ def model_dict_load(model_dict, config_path, config_name, verbose=True):
 
 
 def map_model(model_name):
-    if 'optuna' in model_name:
+    """ Get the Class of the object stored in source/models/
+    :param model_name:   model_sklearn
+    :return: model module
+    """
+
+    ##### Custom folder
+    if ".py" in model_name :
+       ### Asbolute path of the file
+       path = os.path.dirname(os.path.abspath(model_name))
+       sys.path.append(path)
+       mod    = os.path.basename(model_name).replace(".py", "")
+       modelx = importlib.import_module(mod)
+       return modelx
+
+    ##### Repo folder
+    model_file = model_name.split(":")[0]
+    if  'optuna' in model_name : model_file = 'optuna_lightgbm'
+
+    try :
        ##  'models.model_bayesian_pyro'   'model_widedeep'
-       mod    = f'models.model_optuna'
+       mod    = f'models.{model_file}'
        modelx = importlib.import_module(mod)
 
-    else :
-        ### Al SKLEARN API
-        #['ElasticNet', 'ElasticNetCV', 'LGBMRegressor', 'LGBMModel', 'TweedieRegressor', 'Ridge']:
+    except :
+        ### All SKLEARN API
+        ### ['ElasticNet', 'ElasticNetCV', 'LGBMRegressor', 'LGBMModel', 'TweedieRegressor', 'Ridge']:
        mod    = 'models.model_sklearn'
        modelx = importlib.import_module(mod)
 
@@ -69,7 +90,6 @@ def map_model(model_name):
 
 def predict(model_name, path_model, dfX, cols_family, model_dict):
     """
-
     Arguments:
         model_name {[str]} -- [description]
         path_model {[str]} -- [description]
@@ -79,36 +99,31 @@ def predict(model_name, path_model, dfX, cols_family, model_dict):
     Returns: ypred
         [numpy.array] -- [vector of prediction]
     """
-
-
+    log("#### Load  model class  ############################################")
     modelx = map_model(model_name)
+    assert modelx is not None, "cannot load modelx, " + path_model
     modelx.reset()
-    log(modelx, path_model)
+    log2(modelx, path_model)
     #log(os.getcwd())
     sys.path.append( root)    #### Needed due to import source error
 
-
-    log("#### Load model  ############################################")
-    print(path_model + "/model/model.pkl")
+    log("#### Load existing model weights  #################################")
+    print(path_model + "/model/")
     # modelx.model = load(path_model + "/model//model.pkl")
-    modelx.model = load(path_model + "/model.pkl")
-
-    # stats = load(path_model + "/model/info.pkl")
-    # colsX       = load(path_model + "/model/colsX.pkl")   ## column name
+    # modelx.model = load(path_model + "/model.pkl")
+    modelx.load_model( path_model)
     colsX       = load(path_model + "/colsX.pkl")   ## column name
 
-    # coly  = load( path_model + "/model/coly.pkl"   )
     assert colsX is not None, "cannot load colsx, " + path_model
     assert modelx.model is not None, "cannot load modelx, " + path_model
-    log("#### modelx\n", modelx.model.model)
+    log2("#### modelx\n", modelx.model)
 
     log("### Prediction  ############################################")
     dfX1  = dfX.reindex(columns=colsX)   #reindex included
-
-    ypred = modelx.predict(dfX1,
-                           data_pars    = model_dict['data_pars'],
+    ypred = modelx.predict(dfX1, data_pars    = model_dict['data_pars'],
                            compute_pars = model_dict['compute_pars']
                            )
+    log2('ypred shape', ypred.shape)
     return ypred
 
 
@@ -117,10 +132,11 @@ def predict(model_name, path_model, dfX, cols_family, model_dict):
 def run_predict(config_name, config_path, n_sample=-1,
                 path_data=None, path_output=None, pars={}, model_dict=None):
 
+    log("#### Run predict  ###############################################################")
     model_dict = model_dict_load(model_dict, config_path, config_name, verbose=True)
-    m          = model_dict['global_pars']
-
     model_class      = model_dict['model_pars']['model_class']
+
+    m                = model_dict['global_pars']
     path_data        = m['path_pred_data']   if path_data   is None else path_data
     path_pipeline    = m['path_pred_pipeline']    #   path_output + "/pipeline/" )
     path_model       = m['path_pred_model']
@@ -132,9 +148,7 @@ def run_predict(config_name, config_path, n_sample=-1,
             'pipe_list' : model_dict['model_pars']['pre_process_pars']['pipe_list']}
 
 
-
-
-    ##########################################################################################
+    log("#### Run preprocess  ###########################################################")
     from run_preprocess import preprocess_inference   as preprocess
     colid            = load(f'{path_pipeline}/colid.pkl')
     df               = load_dataset(path_data, path_data_y=None, colid=colid, n_sample=n_sample)
@@ -155,7 +169,7 @@ def run_predict(config_name, config_path, n_sample=-1,
         model_dict['data_pars']['cols_model_type2'][colg] = list(set(sum([  cols[colgroup] for colgroup in colg_list ]   , [])))
 
 
-    log("############ Prediction  ###################################################" )
+    log("############ Prediction  ##########################################################" )
     ypred, yproba    = predict(model_class, path_model, dfX, cols, model_dict)
 
     post_process_fun        = model_dict['model_pars']['post_process_fun']
