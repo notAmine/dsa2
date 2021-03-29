@@ -22,10 +22,9 @@ from tensorflow.keras import layers
 
 ####################################################################################################
 try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
-except Exception as e :
-    verbosity = 2
-    #raise Exception(f"{e}") 
-    
+except Exception as e : verbosity = 2
+#raise Exception(f"{e}")
+
 def log(*s):
     print(*s, flush=True)
 
