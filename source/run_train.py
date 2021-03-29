@@ -125,7 +125,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     log2(data_pars['cols_model_type2'])
 
 
-    log("#### Model Input preparation #########################################################")
+    log("#### Model Input preparation ##################################################")
     log(dfX.shape)
     dfX    = dfX.sample(frac=1.0)
     itrain = int(0.6 * len(dfX))
@@ -153,16 +153,13 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     log("#### Init, Train ############################################################")
     # from config_model import map_model    
     modelx = map_model(model_name)    
-    log(modelx)
+    log2(modelx)
     modelx.reset()
+    ###  data_pars_ref has NO data.
     modelx.init(model_pars, data_pars= data_pars_ref, compute_pars=compute_pars)
 
-    if 'optuna' in model_name:
-        modelx.fit(data_pars, compute_pars)
-        # No need anymore
-        # modelx.model.model_pars['optuna_model'] = modelx.fit(data_pars, compute_pars)
-    else:
-        modelx.fit(data_pars, compute_pars)
+    ### Using Actual daa in data_pars['train']
+    modelx.fit(data_pars, compute_pars)
 
 
     log("#### Predict ################################################################")
@@ -208,10 +205,12 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
 
     log("### Reload model,            ###############################################")
-    log(modelx.model.model_pars, modelx.model.compute_pars)
-    a = load(model_path + "/model.pkl")
-    log("Reload model pars", a.model_pars)
-    
+    log2(modelx.model.model_pars, modelx.model.compute_pars)
+    modelx = map_model(model_name)
+    modelx.load_model(model_path )
+    log("Reload model pars", modelx.model.model_pars)
+    log2("Reload model", modelx.model)
+
     return dfX.iloc[:ival, :].reset_index(), dfX.iloc[ival:, :].reset_index(), stats
 
 
