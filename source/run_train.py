@@ -17,7 +17,7 @@ root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
 print(root)
 
 ####################################################################################################
-try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
+try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../config.json", mode='r'))['verbosity'])
 except Exception as e : verbosity = 4
 #raise Exception(f"{e}")
 
@@ -61,7 +61,7 @@ def model_dict_load(model_dict, config_path, config_name, verbose=True):
 
     else :
         ### Passing dict 
-        ### Due to Error when saving on disk the model, function definition is LOST, need dynamic loca
+        ### Due to Error when saving on disk the model, function definition is LOST, need dynamic load
         path_config = model_dict[ 'global_pars']['config_path']
 
         p1 = path_config + "::" + model_dict['model_pars']['post_process_fun'].__name__
@@ -126,15 +126,15 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
 
     log("#### Model Input preparation ##################################################")
-    log(dfX.shape)
+    log2(dfX.shape)
     dfX    = dfX.sample(frac=1.0)
     itrain = int(0.6 * len(dfX))
     ival   = int(0.8 * len(dfX))
     colsX  = data_pars['cols_model']
     coly   = data_pars['coly']
-    log('Model colsX',colsX)
-    log('Model coly', coly)
-    log('Model column type: ',data_pars['cols_model_type2'])
+    log2('Model colsX',colsX)
+    log2('Model coly', coly)
+    log2('Model column type: ',data_pars['cols_model_type2'])
 
     ### Only Parameters
     data_pars_ref = copy.deepcopy(data_pars)
@@ -183,8 +183,8 @@ def train(model_dict, dfX, cols_family, post_process_fun):
         dfX[coly + '_proba'] = np_conv_to_one_col(ypred_proba, ";")  ### merge into string "p1,p2,p3,p4"
         log(dfX.head(3).T)
 
-    log("Actual    : ",  dfX[coly ])
-    log("Prediction: ",  dfX[coly + '_pred'])
+    log2("Actual    : ",  dfX[coly ])
+    log2("Prediction: ",  dfX[coly + '_pred'])
 
     log("#### Metrics ###############################################################")
     from util_feature import  metrics_eval
@@ -197,7 +197,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
 
     log("### Saving model, dfX, columns #############################################")
-    log(model_path + "/model.pkl")
+    log2(model_path + "/model.pkl")
     os.makedirs(model_path, exist_ok=True)
     save(colsX, model_path + "/colsX.pkl")
     save(coly,  model_path + "/coly.pkl")
@@ -269,7 +269,7 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     log("#### load raw data column family, colum check  ###################################")
     cols_validate(model_dict)
     cols_group = model_dict['data_pars']['cols_input_type']  ### Raw
-    log(cols_group)
+    log2(cols_group)
 
 
     log("#### Preprocess  ################################################################")
@@ -295,7 +295,7 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     model_dict['data_pars']['cols_model'] = list(set(sum([  cols[colgroup] for colgroup in model_dict['data_pars']['cols_model_group'] ]   , []) ))
 
 
-    #### Col Group by column type : Sparse, continuous, .... (ie Neural Network feed Input, remove duplicate names
+    #### Flatten Col Group by column type : Sparse, continuous, .... (ie Neural Network feed Input, remove duplicate names
     ## 'coldense' = [ 'colnum' ]     'colsparse' = ['colcat' ]
     model_dict['data_pars']['cols_model_type2'] = {}
     for colg, colg_list in model_dict['data_pars'].get('cols_model_type', {}).items() :
@@ -303,7 +303,7 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
 
 
     log("#### Train model: #############################################################")
-    log(str(model_dict)[:1000])
+    log2(str(model_dict)[:1000])
     post_process_fun      = model_dict['model_pars']['post_process_fun']
     dfXy, dfXytest,stats  = train(model_dict, dfXy, cols, post_process_fun)
 
