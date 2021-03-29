@@ -296,31 +296,15 @@ def get_dataset2(data_pars=None, task_type="train", **kw):
 ####################################################################################################
 ############ Test  #################################################################################
 
-def test_dataset_petfinder(nrows=1000):
+def test_dataset_goodbooks(nrows=1000):
     from sklearn.preprocessing import LabelEncoder
     # Dense features
-    colnum = ['PhotoAmt', 'Fee','Age' ]
+    coly = ['rating',  ]
 
     # Sparse features
-    colcat = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized',
-              'Health', 'Breed1' ]
+    colcat = ['user_id', 'item_id' ]
 
-    colembed = ['Breed1']
-    # Target column
-    coly        = "y"
-
-    dataset_url = 'http://storage.googleapis.com/download.tensorflow.org/data/petfinder-mini.zip'
-    csv_file    = 'datasets/petfinder-mini/petfinder-mini.csv'
-    tf.keras.utils.get_file('petfinder_mini.zip', dataset_url,extract=True, cache_dir='.')
-
-    log3('Data Frame Loaded')
-    df      = pd.read_csv(csv_file)
-    df      = df.iloc[:nrows, :]
-    df['y'] = np.where(df['AdoptionSpeed']==4, 0, 1)
-    df      = df.drop(columns=['AdoptionSpeed', 'Description'])
-    df      = df.apply(LabelEncoder().fit_transform)
-    log3(df.dtypes)
-    return df, colnum, colcat, coly, colembed
+    return df, colnum, colcat, coly
 
 
 def train_test_split2(df, coly):
