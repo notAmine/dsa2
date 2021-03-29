@@ -183,60 +183,43 @@ def VAEMDN(model_pars):
 
 
 
-def ae_basic():
-    from sklearn.compose import ColumnTransformer
-    from sklearn.preprocessing import OneHotEncoder, LabelEncoder
-    from sklearn.preprocessing import MinMaxScaler
-    import pandas as pd
-    import numpy as np
+def AUTOENCODER_BASIC(loss_type="CosineSimilarity"):
     import tensorflow as tf
     import keras.backend as K
     print(tf.__version__)
-    data = np.random.randint(10000, size=(10000, 2))
-    print(data.shape)
-    df = pd.DataFrame(data, columns = ["users","items"])
-    # df.head(3)
-
-    # print(len(df["users"].value_counts()))
-    # print(len(df["items"].value_counts()))
-
-    col_transform = ColumnTransformer(transformers=[('cat', OneHotEncoder(drop='first'), ["users","items"])], remainder="passthrough", sparse_threshold=0.1)
-    X = col_transform.fit_transform(df).todense()
-
-    xtrain = X[0:9000]
-    xtest =  X[9000:10000]
-    # xtrain
-
-    # X_train = tf.sparse.from_dense(xtrain) # from densed version to sparse
-    X_train = xtrain # keep densed
-    print(type(X_train))
 
     def custom_loss_func_dice(y_true, y_pred, smooth=1):
       intersection = K.sum(K.abs(y_true * y_pred), axis=-1)
       return (2. * intersection + smooth) / (K.sum(K.square(y_true),-1) + K.sum(K.square(y_pred),-1) + smooth)
 
+
     encodingdim = 50 
     # input =  tf.keras.layers.Input(X.shape[1],sparse=True) # use this if tensor is sparse
-    input   = tf.keras.layers.Input(X.shape[1]) 
+    input   = tf.keras.layers.Input(X_input_dim)
     encoded = tf.keras.layers.Dense(500, activation='relu')(input)
     encoded = tf.keras.layers.Dense(250, activation='relu')(encoded)
     encoded = tf.keras.layers.Dense(encodingdim, activation='relu')(encoded)
 
     decoded = tf.keras.layers.Dense(250, activation='relu')(encoded)
     decoded = tf.keras.layers.Dense(500, activation='relu')(decoded)
-    decoded = tf.keras.layers.Dense(X.shape[1], activation='relu')(decoded)
+    decoded = tf.keras.layers.Dense(X_input_dim, activation='relu')(decoded)
 
     autoencoder = tf.keras.Model(input, decoded)
 
     opt = tf.keras.optimizers.Adagrad(lr=0.01, epsilon=1e-3, decay=1e-4)
 
+    if loss_type == "cosinesimilarity" :
+       autoencoder.compile(optimizer=opt, loss=tf.keras.losses.CosineSimilarity(reduction="auto")) # cosine loss
 
-    # autoencoder.compile(optimizer=opt, loss=tf.keras.losses.CosineSimilarity(reduction="auto")) # cosine loss
-    # autoencoder.compile(optimizer=opt, loss= custom_loss_func_dice) # dice loss (I used custom loss function and implemented it freehand to show how you can create your own custom function.)
-    autoencoder.compile(optimizer=opt, loss= tf.keras.losses.categorical_crossentropy) # this is same algorith explained as "CustomLoss" topic in pytorch version.
+    if loss_type == "dice" :
+       autoencoder.compile(optimizer=opt, loss= custom_loss_func_dice) # dice loss (I used custom loss function and implemented it freehand to show how you can create your own custom function.)
 
+    else :
+       autoencoder.compile(optimizer=opt, loss= tf.keras.losses.categorical_crossentropy) # this is same algorith explained as "CustomLoss" topic in pytorch version.
+
+    log2(autoencoder.summary())
     return autoencoder
-    # autoencoder.fit(X_train, X_train,epochs=15,batch_size=64,shuffle=True)
+
 
 
 
