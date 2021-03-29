@@ -24,10 +24,6 @@ def log2(*s):
 def log3(*s):
     if verbosity >= 3 : print(*s, flush=True)
 
-def os_makedirs(dir_or_file):
-    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
-    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
-
 ####################################################################################################
 #### Add path for python import
 sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
@@ -321,8 +317,6 @@ def transform(model_name, path_model, dfX, model_dict, task_type='transform'):
     else :
        dfX = modelx.transform(dfX,  data_pars    = model_dict['data_pars'],
                                     compute_pars = model_dict['compute_pars'] )
-
-
 
     return dfX
 
