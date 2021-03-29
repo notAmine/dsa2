@@ -78,17 +78,8 @@ def model_class_loader(m_name='BayesianRegression', class_list:list=None):
   class_name = m_name.split("::")[-1]
   return class_list_dict.get(class_name)
 
+
 ####################################################################################################
-####################################################################################################
-global model, session
-
-
-def init(*kw, **kwargs):
-    global model, session
-    model = Model(*kw, **kwargs)
-    session = None
-
-
 class Model(object):
     def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
         self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
@@ -209,11 +200,6 @@ def predict(Xpred=None, data_pars={}, compute_pars=None, out_pars={}, **kw):
     if compute_pars.get("probability", False):
          ypred_proba = model.model.predict_proba(Xpred)
     return dd['y_mean'], ypred_proba
-
-
-def reset():
-    global model, session
-    model, session = None, None
 
 
 def save(path=None, info=None):
