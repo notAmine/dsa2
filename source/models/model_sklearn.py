@@ -81,7 +81,7 @@ def model_automl():
     try :
        from supervised.automl import AutoML
     except:
-       os.system('pip install mljar-supervised==0.10.2 pandas==1.2.0  xgboost==1.3.3 lightgbm==3.0.0 catboost==0.24.4 joblib==1.0.1 cloudpickle==1.3.0 pyarrow>=2.0.0 tabulate==0.8.7 matplotlib>=3.2.2 dtreeviz==1.0 shap==0.36.0 seaborn==0.10.1 wordcloud==1.8.1 category_encoders==2.2.2 optuna==2.6.0  --no-deps') 
+       os.system('pip install mljar-supervised==0.10.2  lightgbm==3.0.0 catboost==0.24.4 joblib==1.0.1 cloudpickle==1.3.0 pyarrow>=2.0.0 tabulate==0.8.7 matplotlib>=3.2.2 dtreeviz==1.0 shap==0.36.0 seaborn==0.10.1 wordcloud==1.8.1 category_encoders==2.2.2 optuna==2.6.0  --no-deps')
        from supervised.automl import AutoML
     model_class = AutoML
     return model_class

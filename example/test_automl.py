@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 
-python   test_automl.py  preprocess  --nsample 100
-python   test_automl.py  train       --nsample 200
+
+python   example/test_automl.py  train       --nsample 200
 python   test_automl.py  check
 python   test_automl.py  predict
 

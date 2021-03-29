@@ -325,7 +325,7 @@ def train_test_split2(df, coly):
 
 
 def test(n_sample          = 1000):
-    df, colnum, colcat, coly = test_dataset_classi_fake(nrows= n_sample)
+    df, colnum, colcat, coly = test_dataset_goodbooks(nrows= n_sample)
     X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes  = train_test_split2(df, coly)
 
     #### Matching Big dict  ##################################################
