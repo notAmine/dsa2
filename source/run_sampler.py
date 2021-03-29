@@ -220,7 +220,7 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
 
 
     log("#### load raw data column family  ###############################################")
-    cols_group = model_dict['data_pars']['cols_input_type']  ### Raw
+    cols_group = model_dict['data_pars']['cols_input_type']  ### Raw data column
     log(cols_group)
 
 

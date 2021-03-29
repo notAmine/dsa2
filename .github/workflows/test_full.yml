@@ -112,6 +112,17 @@ jobs:
     #- name: run_all
     #  run: chmod -R 777 . && ztest/run_full.sh   # 2>&1 | tee   /home/runner/work/mlmodels/mlmodels_store/log_import/log_optim.py
 
+    - name: python  example/test_hyperopt.py  hyperparam  --ntrials 1  
+      continue-on-error: true
+      run:  |
+            python  example/test_hyperopt.py  hyperparam  --ntrials 1 
+
+    - name: python example/test_mkeras.py  train    --config config1  
+      # continue-on-error: true
+      run:  |
+            python example/test_mkeras.py  train    --config config1 
+
+
 
     - name: python example/regress/regress_salary.py
       continue-on-error: true
@@ -126,18 +137,6 @@ jobs:
       run:  |
             python example/regress/regress_airbnb.py  train   --nsample 20000  
             python example/regress/regress_airbnb.py  predict  --nsample 5000
-
-
-    - name: python  example/test_hyperopt.py  hyperparam  --ntrials 1  
-      continue-on-error: true
-      run:  |
-            python  example/test_hyperopt.py  hyperparam  --ntrials 1 
-
-
-    - name: python example/test_mkeras.py  train    --config config1  
-      continue-on-error: true
-      run:  |
-            python example/test_mkeras.py  train    --config config1 
 
 
     - name: python tseries.py  train      --config  config1 
