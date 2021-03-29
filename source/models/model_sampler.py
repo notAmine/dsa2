@@ -95,7 +95,6 @@ class Model(object):
             log2(model_class, self.model)
 
 
-
 def fit(data_pars: dict=None, compute_pars: dict=None, out_pars: dict=None, **kw):
     """
     """
