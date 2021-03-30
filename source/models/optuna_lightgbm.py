@@ -1,18 +1,12 @@
 # pylint: disable=C0321,C0103,C0301,E1305,E1121,C0302,C0330,C0111,W0613,W0611,R1705
 # -*- coding: utf-8 -*-
 """
-
 https://optuna.readthedocs.io/en/stable/reference/generated/optuna.integration.lightgbm.train.html
-
 https://github.com/optuna/optuna/blob/master/examples/lightgbm_tuner_simple.py
-
 ### https://github.com/optuna/optuna/blob/master/examples/pruning/lightgbm_integration.py
-
-
-
 """
 import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
-
+from sklearn.model_selection import train_test_split
 ####################################################################################################
 try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
 except Exception as e : verbosity = 2
@@ -106,7 +100,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
 
     ### Best model store as
-    print(model_fit.params)
+    log2(model_fit.params)
     model.model                    = model_fit
     model.model_pars['model_pars'] = model_fit.params
     return model_fit
@@ -208,7 +202,8 @@ def test_dataset_classi_fake(nrows=500):
     colnum = ["colnum_" +str(i) for i in range(0, ndim) ]
     colcat = ['colcat_1']
     X, y    = sklearn_datasets.make_classification(
-        n_samples=1000, n_features=ndim, n_targets=1, n_informative=ndim)
+        # nbr_informative + nbr_redundent < n_features
+        n_samples=1000, n_features=ndim, n_classes=2, n_informative=ndim-2)
     df         = pd.DataFrame(X,  columns= colnum)
     df[coly]   = y.reshape(-1, 1)
 
@@ -233,6 +228,7 @@ def test(config=''):
 
     m = {
     'model_pars': {
+        'objective' : 'binary',
          'model_class' :  "optuna_lightgbm.py::LGBMClassifier"
          ,'model_pars' : {  }
         , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
@@ -284,14 +280,22 @@ def test(config=''):
     log("##### Sparse Tests  ############################################### ")
     ##### Dict update
     m['model_pars']['model_pars'] = {  }
+    train_df = df[colnum + colcat]
+    train_df, test_df = train_test_split(df, test_size=0.2)
+    # test_df, val_df = train_test_split(val_df, test_size=0.5)
 
-    m['data_pars']['train']     = {'X_train': train_df, 'X_test':  val_df}
+    m['data_pars']['train']     = {
+        'Xtrain': train_df[colcat+colnum], 
+        'ytrain': train_df[coly],
+        'Xtest':  test_df[colnum+colcat],
+        'ytest': test_df[coly]
+    }
     m['data_pars']['predict']   = {'X':       test_df }
     m['data_pars']['data_pars'] = {
-        'colcat_unique' : colcat_unique,
+        # 'colcat_unique' : colcat_unique,
         'colcat'        : colcat,
         'colnum'        : colnum,
-        'colembed_dict' : colembed_dict
+        # 'colembed_dict' : colembed_dict
     }
 
     test_helper( m['model_pars'], m['data_pars'], m['compute_pars'])
@@ -314,19 +318,15 @@ def test_helper(model_pars, data_pars, compute_pars):
     save(path= root + '/model_dir/')
 
     log('Model architecture:')
-    log(model.model.summary())
+    log(model.model)
 
-    log('Model Snapshot')
-    model_summary()
+    # log('Model Snapshot')
+    # model_summary()
 
 
 ####################################################################################################################
 if __name__ == '__main__':
     import fire
     fire.Fire()
-
-
-
-
 
 
