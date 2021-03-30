@@ -1024,10 +1024,12 @@ def test_autoencoder(model_pars, data_pars, compute_pars):
     log('Model architecture:')
     log(model.model.summary())
     '''
+
+
 if __name__ == "__main__":
     # test()
     import fire
-    fire.Fire(test3)
+    fire.Fire()
 
 
 
