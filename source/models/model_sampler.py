@@ -1,7 +1,7 @@
 # pylint: disable=C0321,C0103,C0301,E1305,E1121,C0302,C0330,C0111,W0613,W0611,R1705
 # -*- coding: utf-8 -*-
 """
-Genreate  train_data  ---> New train data by sampling
+Genreate New train_data  by sampling existing data.
 
 python model_sampler.py test
 
@@ -95,7 +95,6 @@ class Model(object):
             log2(model_class, self.model)
 
 
-
 def fit(data_pars: dict=None, compute_pars: dict=None, out_pars: dict=None, **kw):
     """
     """
@@ -148,7 +147,6 @@ def transform(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     :param kw:
     :return:
     """
-
     global model, session
     name = model.model_pars['model_class']
 
@@ -162,7 +160,7 @@ def transform(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
 
     else :
         cols_type         = data_pars['cols_model_type2']
-        cols_ref_formodel = cols_type
+        cols_ref_formodel = cols_type  ### Always match with feeded cols_type
         split             = kw.get("split", False)
 
         if name in IMBLEARN_MODELS:
@@ -306,7 +304,8 @@ def get_dataset(data_pars=None, task_type="train", **kw):
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
-
+##################################################################################################################
+##################################################################################################################
 def test():
     from sklearn.datasets import make_classification
     from sklearn.model_selection import train_test_split
@@ -516,7 +515,7 @@ def test2(n_sample          = 1000):
         ### Added continuous & sparse features groups ###
         'cols_model_type2': {
             'colcontinuous':   colnum ,
-            'colsparse' : colcat,
+            'colsparse' :      colcat,
         }
 
         ### Filter data rows   ##################################################################
@@ -526,7 +525,7 @@ def test2(n_sample          = 1000):
         ###################################################
         ,'train':   {'Xtrain': X_train,  'ytrain': y_train, 'Xtest':  X_valid,  'ytest':  y_valid}
         ,'eval':    {'X': X_valid,  'y': y_valid}
-        ,'predict': {'X': X_valid}
+        ,'predict': {}
 
         ,'task_type' : 'train', 'data_type': 'ram'
 
@@ -558,7 +557,6 @@ def test_helper(model_pars, data_pars, compute_pars):
     log('Load model..')
     model, session = load_model(path= root + "/model_dir/")
     log(model)
-
 
 
 

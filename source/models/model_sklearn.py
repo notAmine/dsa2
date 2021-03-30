@@ -1,29 +1,6 @@
 # pylint: disable=C0321,C0103,C0301,E1305,E1121,C0302,C0330,C0111,W0613,W0611,R1705
 # -*- coding: utf-8 -*-
 """
-Template for sklearn type of model:
-
-    #### 1. Global variables    : global variables **model** and **session**.
-
-    #### 2.  init method        : init method to initialize global variables `model and session`
-
-    #### 3. class Model         :   storing model details and parameters.
-
-    #### 4. preprocess method   :   preprocessing dataset.
-
-    #### 5. fit method          :   fitting the defined model and inputted data.
-
-    #### 6. predict method      :   predicting using the fitted model.
-
-    #### 7. save method         :   saving the model in the pickle file.
-
-    #### 8. load_model method   :   loading, the model saved in a pickle file.
-
-    #### 9. load_info method    :   loading the in mation stored in the pickle file.
-
-    #### 10. get_dataset method :   retrieving the dataset.
-
-    #### 11. get_params method  :   retrieving parameters.
 
 
 
@@ -68,10 +45,6 @@ from sklearn.cluster import *
 from sklearn.tree import *
 from lightgbm import LGBMModel, LGBMRegressor, LGBMClassifier
 
-try :
-   from supervised.automl import *
-except:
-    print('cannot import automl')    
 
 try :
     #### All are Un-supervised Model
@@ -104,15 +77,30 @@ except :
     print("cannot import pyod")
 
 
+def model_automl():
+    try :
+       from supervised.automl import AutoML
+    except:
+       os.system('pip install mljar-supervised==0.10.2  lightgbm==3.0.0 catboost==0.24.4 joblib==1.0.1 cloudpickle==1.3.0 pyarrow>=2.0.0 tabulate==0.8.7 matplotlib>=3.2.2 dtreeviz==1.0 shap seaborn==0.10.1 wordcloud==1.8.1 category_encoders==2.2.2 optuna==2.6.0   --no-deps')
+       from supervised.automl import AutoML
+    model_class = AutoML
+    return model_class
+
+
 ####################################################################################################
 class Model(object):
-    def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
+    def __init__(self, model_pars=None, data_pars=None
+        , compute_pars=None):
         self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
 
         if model_pars is None:
             self.model = None
         else:
-            model_class = globals()[model_pars['model_class']]
+            if  model_pars['model_class'] == 'AutoML':
+                model_class = model_automl()
+            else :
+                model_class = globals()[model_pars['model_class']]
+
             self.model = model_class(**model_pars['model_pars'])
             log(model_class, self.model)
 
@@ -424,6 +412,62 @@ def test(n_sample          = 1000):
         log('Model architecture:')
         log(model.model)
         reset()
+
+
+
+def test2():
+    """
+        from pyod.models.abod  import *
+    from pyod.models.auto_encoder import *
+    from pyod.models.cblof import *
+    from pyod.models.cof import *
+    from pyod.models.combination import *
+    from pyod.models.copod import *
+    from pyod.models.feature_bagging import *
+    from pyod.models.hbos import *
+    from pyod.models.iforest import *
+    from pyod.models.knn import *
+    from pyod.models.lmdd import *
+    from pyod.models.loda import *
+    from pyod.models.lof import *
+    from pyod.models.loci import *
+    from pyod.models.lscp import *
+    from pyod.models.mad import *
+    from pyod.models.mcd import *
+    from pyod.models.mo_gaal import *
+    from pyod.models.ocsvm import *
+    from pyod.models.pca import *
+    from pyod.models.sod import *
+    from pyod.models.so_gaal import *
+    from pyod.models.sos import *
+    from pyod.models.vae import *
+    from pyod.models.xgbod import *
+
+    https://pyod.readthedocs.io/en/latest/pyod.html
+
+    :return:
+    """
+    global model
+    try:
+        from pmlb import fetch_data, classification_dataset_names
+    except:
+        log("Installing pmlb...")
+        os.system("pip install pmlb")
+        log("Pmlb Installed")
+        from pmlb import fetch_data, classification_dataset_names
+
+
+    ####
+    m = template_dict()
+    ll= [ 'PCA', 'SO_GAAL', 'VAE', 'HBOS' ]
+
+    for dataset in classification_dataset_names :
+      for modeli in  ll:
+         m['model_class'] = modeli
+
+
+
+
 
 
 

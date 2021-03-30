@@ -204,7 +204,7 @@ def AUTOENCODER_BASIC(X_input_dim,loss_type="CosineSimilarity", lr=0.01, epsilon
     encoded = tf.keras.layers.Dense( dim_list[2], activation='relu')(encoded)
 
 
-    decoded_input = tf.keras.layers.Input( int(dim_list[2]) )
+    decoded_input = tf.keras.layers.Input( dim_list[2] )
     decoded = tf.keras.layers.Dense(dim_list[1], activation='relu')(decoded_input)
     decoded = tf.keras.layers.Dense(dim_list[0], activation='relu')(decoded)
     decoded = tf.keras.layers.Dense(X_input_dim, activation='relu')(decoded)
@@ -218,7 +218,6 @@ def AUTOENCODER_BASIC(X_input_dim,loss_type="CosineSimilarity", lr=0.01, epsilon
     outputs     = decoder(encoder(inputs))
     autoencoder = tf.keras.models.Model(inputs,outputs)
     opt         = tf.keras.optimizers.Adagrad(lr=lr, epsilon=epsilon, decay=decay)
-
 
     if loss_type == "cosinesimilarity" :
        autoencoder.compile(optimizer=opt, loss=tf.keras.losses.CosineSimilarity(reduction="auto")) # cosine loss
@@ -325,13 +324,11 @@ class Model(object):
 
         #### Model setup #############################################################
         self.model_pars['model_pars'] = mdict
-        '''if 'VAEMDN' in model_class:
+        if 'VAEMDN' in model_class:
             self.model, self.encoder, self.decoder = VAEMDN( self.model_pars['model_pars'])
         else:
-            self.model,self.encoder, self.decoder = AUTOENCODER_BASIC(dim)'''
-        input_dim = model_pars['model_pars']['original_dim']
-        self.model = AUTOENCODER_MULTIMODAL(input_shapes=[input_dim])
-        log2(self.model)
+            self.model,self.encoder, self.decoder = AUTOENCODER_BASIC(dim)
+        log2(self.model_pars, self.model)
         # self.model.summary()
 
 
@@ -867,7 +864,7 @@ def test3(n_sample = 1000):
     def pre_process_fun(y):  return int(y)
 
     m = {'model_pars': {
-        'model_class':  "model_vaem.py::VAEMDN"
+        'model_class':  "model_vaem.py::Basic_AE"
 
         ,'model_pars' : {
             'original_dim':       len( colcat + colnum),

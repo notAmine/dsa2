@@ -47,13 +47,12 @@ from sklearn.model_selection import train_test_split
 import sklearn.preprocessing as preprocessing
 from sklearn.metrics import mean_squared_error
 from sklearn.feature_selection import mutual_info_regression, mutual_info_classif
-
-# tfd = tf.contrib.distributions
 import seaborn as sns; sns.set(style="ticks", color_codes=True)
 
 ### Need TF 1.4    pip install tensorflow=1.14
 import tensorflow as tf
 print(tf.__version__)
+assert "1."  in str(tf.version.VERSION), 'Compatible only with TF 1.5.1, keras 2.3.1, ' + str(tf.version.VERSION)
 
 thisfile_path = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")
 sys.path.append( thisfile_path + "/repo/VAEM/" )
@@ -68,9 +67,7 @@ import utils.reward as reward
 
 # Making Args Global Variable 
 args = params.Params('hyperparameters/bank_plot.json')
-
-if not os.path.exists(args.output_dir):
-    os.makedirs(args.output_dir)  
+os.makedirs(args.output_dir, exist_ok=True)
 rs = 42 # random seed
 fast_plot = 0
 
@@ -82,7 +79,11 @@ cols_ref_formodel = ['none']  ### No column group
 
 
 
-##################################################################################################################################
+####################################################################################################
+class Model(object):
+    pass
+
+
 def save(path='', info=None):
     import dill as pickle, copy
     global model, session
