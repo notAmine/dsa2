@@ -460,8 +460,10 @@ def test2():
     ####
     m = template_dict()
     ll= [ 'PCA', 'SO_GAAL', 'VAE', 'HBOS' ]
-    for modeli in  ll:
-        m['model_class'] = modeli
+
+    for dataset in classification_dataset_names :
+      for modeli in  ll:
+         m['model_class'] = modeli
 
 
 
