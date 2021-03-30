@@ -340,7 +340,6 @@ def benchmark():
     except:
         log("Installing pmlb...")
         os.system("pip install pmlb")
-        log("Pmlb Installed")
         from pmlb import fetch_data, classification_dataset_names
 
 
@@ -348,17 +347,13 @@ def benchmark():
         df = fetch_data(classification_dataset, return_X_y=False)
         train_df, test_df = train_test_split(df)
         log("\n\n")
-        log("\t\t######################## New Dataset ########################\n")
         log(f"\t\t######################## {classification_dataset} ########################\n")
-
-        init_params(train_df, test_df)
-
-        log(f"\t\t######################## {classification_dataset} ########################\n")
+        benchmark_helper(train_df, test_df)
         log(f"\t\t######################## !! END !! ########################\n")
 
         
 
-def init_params(train_df, test_df):
+def benchmark_helper(train_df, test_df):
     global model, session
     # plmb has no meta data available with the datasets
     # to get dynamicaly, but it keeps seperate datatypes for cat/num (float64/int64)
@@ -447,6 +442,8 @@ def init_params(train_df, test_df):
     }
 
     test_helper( m['model_pars'], m['data_pars'], m['compute_pars'])
+
+    
 ####################################################################################################################
 if __name__ == '__main__':
     import fire
