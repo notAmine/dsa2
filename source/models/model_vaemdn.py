@@ -183,7 +183,8 @@ def VAEMDN(model_pars):
 
 
 
-def AUTOENCODER_BASIC(X_input_dim,loss_type="CosineSimilarity"):
+def AUTOENCODER_BASIC(X_input_dim,loss_type="CosineSimilarity", lr=0.01, epsilon=1e-3, decay=1e-4,
+                      optimizer='adam', encodingdim = 50, dim_list="50,25,10" ):
     import tensorflow as tf
     import keras.backend as K
     print(tf.__version__)
@@ -192,29 +193,32 @@ def AUTOENCODER_BASIC(X_input_dim,loss_type="CosineSimilarity"):
       intersection = K.sum(K.abs(y_true * y_pred), axis=-1)
       return (2. * intersection + smooth) / (K.sum(K.square(y_true),-1) + K.sum(K.square(y_pred),-1) + smooth)
 
+    dim_list = dim_list.split(",")
 
-    encodingdim = 50 
+
+    # encodingdim = 50
     # input =  tf.keras.layers.Input(X.shape[1],sparse=True) # use this if tensor is sparse
-    inputs   = tf.keras.layers.Input(X_input_dim)
-    encoded = tf.keras.layers.Dense(500, activation='relu')(inputs)
-    encoded = tf.keras.layers.Dense(250, activation='relu')(encoded)
-    encoded = tf.keras.layers.Dense(encodingdim, activation='relu')(encoded)
-    
-    decoded_input = tf.keras.layers.Input(encodingdim)
-    decoded = tf.keras.layers.Dense(250, activation='relu')(decoded_input)
-    decoded = tf.keras.layers.Dense(500, activation='relu')(decoded)
+    inputs  = tf.keras.layers.Input(X_input_dim)
+    encoded = tf.keras.layers.Dense( dim_list[0], activation='relu')(inputs)
+    encoded = tf.keras.layers.Dense( dim_list[1], activation='relu')(encoded)
+    encoded = tf.keras.layers.Dense( dim_list[2], activation='relu')(encoded)
+
+
+    decoded_input = tf.keras.layers.Input( int(dim_list[2]) )
+    decoded = tf.keras.layers.Dense(dim_list[1], activation='relu')(decoded_input)
+    decoded = tf.keras.layers.Dense(dim_list[0], activation='relu')(decoded)
     decoded = tf.keras.layers.Dense(X_input_dim, activation='relu')(decoded)
     
     encoder = tf.keras.models.Model(inputs=inputs,outputs=encoded,name='encoder')
-    encoder.compile(optimizer='adam')
+    encoder.compile(optimizer=optimizer)
 
     decoder = tf.keras.models.Model(inputs=decoded_input,outputs=decoded,name='decoder')
-    decoder.compile(optimizer='adam')
+    decoder.compile(optimizer=optimizer)
 
-    outputs = decoder(encoder(inputs))
+    outputs     = decoder(encoder(inputs))
     autoencoder = tf.keras.models.Model(inputs,outputs)
+    opt         = tf.keras.optimizers.Adagrad(lr=lr, epsilon=epsilon, decay=decay)
 
-    opt = tf.keras.optimizers.Adagrad(lr=0.01, epsilon=1e-3, decay=1e-4)
 
     if loss_type == "cosinesimilarity" :
        autoencoder.compile(optimizer=opt, loss=tf.keras.losses.CosineSimilarity(reduction="auto")) # cosine loss
@@ -224,13 +228,68 @@ def AUTOENCODER_BASIC(X_input_dim,loss_type="CosineSimilarity"):
 
     else :
        autoencoder.compile(optimizer=opt, loss= tf.keras.losses.categorical_crossentropy) # this is same algorith explained as "CustomLoss" topic in pytorch version.
-    
 
-    
     log2(autoencoder.summary())
     return autoencoder,encoder,decoder
 
 
+def AUTOENCODER_MULTIMODAL(input_shapes=[10],
+                                  hidden_dims=[128, 64, 8],
+                                  output_activations=['sigmoid', 'relu'],
+                                  loss = ['bernoulli_divergence', 'poisson_divergence'],
+                                  optimizer='adam'):
+    """
+    pip install mmae[keras]
+    from tensorflow.keras.datasets import mnist
+    (x_train, y_train), (x_validation, y_validation) = mnist.load_data()
+    x_train = x_train.astype('float32') / 255.0
+    y_train = y_train.astype('float32') / 255.0
+    x_validation = x_validation.astype('float32') / 255.0
+    y_validation = y_validation.astype('float32') / 255.0
+
+    data = [x_train, y_train]
+    validation_data = [x_validation, y_validation]
+
+
+
+    # Train model where input and output are the same
+    autoencoder.fit(data, epochs=100, batch_size=256,
+                    validation_data=validation_data)
+
+    #To obtain a latent representation of the training data:
+    latent_data = autoencoder.encode(data)
+
+    #To decode the latent representation:
+    reconstructed_data = autoencoder.decode(latent_data)
+
+    #Encoding and decoding can also be merged into the following single statement:
+    reconstructed_data = autoencoder.predict(data)
+
+    :return:
+    """
+    # Remove 'tensorflow.' from the next line if you use just Keras
+
+    from mmae.multimodal_autoencoder import MultimodalAutoencoder
+
+    # Set network parameters
+    #input_shapes = [x_train.shape[1:], (1,)]
+
+    # Number of units of each layer of encoder network
+    #hidden_dims = [128, 64, 8]
+
+    # Output activation functions for each modality
+    #output_activations = ['sigmoid', 'relu']
+
+    #optimizer = 'adam'
+    # Loss functions corresponding to a noise model for each modality
+    #loss = ['bernoulli_divergence', 'poisson_divergence']
+
+    # Construct autoencoder network
+    autoencoder = MultimodalAutoencoder(input_shapes, hidden_dims,
+                                        output_activations)
+    autoencoder.compile(optimizer, loss)
+    autoencoder.summary()
+    return autoencoder
 
 
 
@@ -266,11 +325,13 @@ class Model(object):
 
         #### Model setup #############################################################
         self.model_pars['model_pars'] = mdict
-        if 'VAEMDN' in model_class:
+        '''if 'VAEMDN' in model_class:
             self.model, self.encoder, self.decoder = VAEMDN( self.model_pars['model_pars'])
         else:
-            self.model,self.encoder, self.decoder = AUTOENCODER_BASIC(dim)
-        log2(self.model_pars, self.model)
+            self.model,self.encoder, self.decoder = AUTOENCODER_BASIC(dim)'''
+        input_dim = model_pars['model_pars']['original_dim']
+        self.model = AUTOENCODER_MULTIMODAL(input_shapes=[input_dim])
+        log2(self.model)
         # self.model.summary()
 
 
@@ -733,7 +794,7 @@ def test2(n_sample          = 1000):
     def pre_process_fun(y):  return int(y)
 
     m = {'model_pars': {
-        'model_class':  "model_vaem.py::Basic_AE"
+        'model_class':  "model_vaem.py::VAEMDN"
         ,'model_pars' : {
             'original_dim':       len( colcat + colnum),
             'class_num':             2,
@@ -797,7 +858,7 @@ def test2(n_sample          = 1000):
 
 
 
-def test3(n_sample          = 1000):
+def test3(n_sample = 1000):
     df, colnum, colcat, coly,colyembed = test_dataset_petfinder(nrows= n_sample)
     X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes  = train_test_split2(df, coly)
 
@@ -806,7 +867,7 @@ def test3(n_sample          = 1000):
     def pre_process_fun(y):  return int(y)
 
     m = {'model_pars': {
-        'model_class':  "model_vaem.py::Basic_AE"
+        'model_class':  "model_vaem.py::VAEMDN"
 
         ,'model_pars' : {
             'original_dim':       len( colcat + colnum),
@@ -968,7 +1029,7 @@ def test_autoencoder(model_pars, data_pars, compute_pars):
 if __name__ == "__main__":
     # test()
     import fire
-    fire.Fire(test2)
+    fire.Fire(test3)
 
 
 
