@@ -335,8 +335,12 @@ def test_helper(model_pars, data_pars, compute_pars):
 
 def benchmark():
     global model
-    from pmlb import fetch_data, classification_dataset_names
-
+    try :
+      from pmlb import fetch_data, classification_dataset_names
+    except:
+      os.system( "pip install pmlb")
+      from pmlb import fetch_data, classification_dataset_names
+        
     for classification_dataset in classification_dataset_names:
         df = fetch_data(classification_dataset, return_X_y=False)
         train_df, test_df = train_test_split(df)
