@@ -335,23 +335,26 @@ def test_helper(model_pars, data_pars, compute_pars):
 
 def benchmark():
     global model
-    try :
-      from pmlb import fetch_data, classification_dataset_names
+    try:
+        from pmlb import fetch_data, classification_dataset_names
     except:
-      os.system( "pip install pmlb")
-      from pmlb import fetch_data, classification_dataset_names
-        
+        log("Installing pmlb...")
+        os.system("pip install pmlb")
+        log("Pmlb Installed")
+        from pmlb import fetch_data, classification_dataset_names
+
+
     for classification_dataset in classification_dataset_names:
         df = fetch_data(classification_dataset, return_X_y=False)
         train_df, test_df = train_test_split(df)
-        print("\n\n")
-        print("\t\t######################## New Dataset ########################\n")
-        print(f"\t\t######################## {classification_dataset} ########################\n")
+        log("\n\n")
+        log("\t\t######################## New Dataset ########################\n")
+        log(f"\t\t######################## {classification_dataset} ########################\n")
 
         init_params(train_df, test_df)
 
-        print(f"\t\t######################## {classification_dataset} ########################\n")
-        print(f"\t\t######################## !! END !! ########################\n")
+        log(f"\t\t######################## {classification_dataset} ########################\n")
+        log(f"\t\t######################## !! END !! ########################\n")
 
         
 
@@ -448,5 +451,4 @@ def init_params(train_df, test_df):
 if __name__ == '__main__':
     import fire
     fire.Fire()
-
 
