@@ -1054,7 +1054,7 @@ def benchmark(config=''):
 if __name__ == "__main__":
     # test()
     import fire
-    fire.Fire(test4)
+    fire.Fire()
 
 
 
