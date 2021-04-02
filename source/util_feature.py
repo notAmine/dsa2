@@ -1033,8 +1033,6 @@ def pd_colnum_tocat(  df, colname=None, colexclude=None, colbinmap=None, bins=5,
 def pd_colnum_normalize(df0, colname, pars, suffix="_norm", return_val='dataframe,param'):
     """
     :param df:
-    :param colnum_log:
-    :param colproba:
     :return:
     """
     df = df0[colname]
@@ -1043,9 +1041,25 @@ def pd_colnum_normalize(df0, colname, pars, suffix="_norm", return_val='datafram
             try:
                 if t['name'] == 'log'         : df[x] = np.log(df[x].values.astype(np.float64))
                 if t['name'] == 'fillna'      : df[x] = df[x].fillna( t['na_val'] )
-                if t['name'] == 'minmax_norm' : df[x] = (df[x] - df[x].min() )/ ( df[x].max() - df[x].min() )
+                if t['name'] == 'minmax' : 
+                  minx = df[x].min()
+                  df[x] = (df[x] - minx )/ ( df[x].max() - minx )
+
+                if t['name'] == 'stdev' : 
+                  sd    = df[x].std()
+                  df[x] = (df[x] - minx )/ ( 2* sd )
+
+                if t['name'] == 'quantile_cutoff' : 
+                  s1 = df[x].quantile(0.90)
+                  s0 = df[x].quantile(0.10)
+                  # me = df[x].median()
+                  df[x]  = (df[x] - s0 )/ ( s1-s0 )
+                  cutmax =  1.0
+                  cutmin = -1.0 
+                  df[x] = df[x].apply(lambda x : max( min(x, cutmax ), cutmin)  )
+
             except Exception as e:
-                pass
+                log('pd_colnum_normalize',t, e)
 
     df.columns  = [ t + suffix for t in df.columns ]
     colnum_norm = list(df.columns)
