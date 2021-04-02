@@ -1033,6 +1033,8 @@ def pd_colnum_tocat(  df, colname=None, colexclude=None, colbinmap=None, bins=5,
 def pd_colnum_normalize(df0, colname, pars, suffix="_norm", return_val='dataframe,param'):
     """
     :param df:
+    :param colnum_log:
+    :param colproba:
     :return:
     """
     df = df0[colname]
@@ -1054,8 +1056,16 @@ def pd_colnum_normalize(df0, colname, pars, suffix="_norm", return_val='datafram
                   s0 = df[x].quantile(0.10)
                   # me = df[x].median()
                   df[x]  = (df[x] - s0 )/ ( s1-s0 )
-                  cutmax =  1.0
-                  cutmin = -1.0 
+                  cutmin, cutmax = 0.0, 1.0 
+                  df[x] = df[x].apply(lambda x : max( min(x, cutmax ), cutmin)  )
+
+                if t['name'] == 'quantile_cutoff_2' : 
+                  s1 = df[x].quantile(0.90)
+                  s0 = df[x].quantile(0.10)
+                  me = df[x].median()
+
+                  df[x]  = (df[x] - me )/ ( s1-s0 )
+                  cutmin, cutmax = -1.0, 1.0
                   df[x] = df[x].apply(lambda x : max( min(x, cutmax ), cutmin)  )
 
             except Exception as e:
