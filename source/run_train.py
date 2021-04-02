@@ -76,10 +76,11 @@ def map_model(model_name):
     """
     ##### Custom folder
     if ".py" in model_name :
+       model_file = model_name.split(":")[0]    
        ### Asbolute path of the file
-       path = os.path.dirname(os.path.abspath(model_name))
+       path = os.path.dirname(os.path.abspath(model_file))
        sys.path.append(path)
-       mod    = os.path.basename(model_name).replace(".py", "")
+       mod    = os.path.basename(model_file).replace(".py", "")
        modelx = importlib.import_module(mod)
        return modelx
 
