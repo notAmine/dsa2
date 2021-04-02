@@ -987,11 +987,11 @@ def test_helper(model_pars, data_pars, compute_pars):
 
 
 
-def benchmark(config=''):
+def benchmark(config='', dmin=5, dmax=6):
     from pmlb import fetch_data, classification_dataset_names
     from sdv.evaluation import evaluate
 
-    for classification_dataset in classification_dataset_names[5:6]:
+    for classification_dataset in classification_dataset_names[dmin:dmax]:
         X, y = fetch_data(classification_dataset, return_X_y=True)
         
         X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021)

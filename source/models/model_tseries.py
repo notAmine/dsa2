@@ -58,7 +58,7 @@ class myModel(object):
 
 
 ####################################################################################################
-class Model(object):
+cclass Model(object):
     def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
         self.model_pars, self.compute_pars, self.data_pars = model_pars, compute_pars, data_pars
 
@@ -174,43 +174,52 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
 
 ####################################################################################################################
-def test_dataset_tseries()
-   pass
+def test_dataset_tseries(nrows=10000):
+
+    df = pd.read_csv(url_csv)
+    coly=None, 
+    coldate=None, 
+    colcat=None
+
+    return df, coly, coldate, colcat
 
 
 def LighGBM_forecaster(lightgbm_pars= {'objective':'quantile', 'alpha': 0.5},
-                       forecaster_pars = {'window_length': 4, 'strategy' : "recursive" }):
+                       forecaster_pars = {'window_length': 4}):
     """
-    """
-    #Initialize Light GBM Regressor
-    regressor = lgb.LGBMRegressor(**lightgbm_params)
-
     #1.Separate the Seasonal Component.
     #2.Fit a forecaster for the trend.
     #3.Fit a Autoregressor to the resdiual(autoregressing on four historic values).
-    forecaster = ReducedRegressionForecaster(
-                    regressor=regressor, **forecaster_pars  #hyper-paramter to set recursive strategy
+
+    """
+    #Initialize Light GBM Regressor
+    regressor = LGBMRegressor(**lightgbm_pars)
+    forecaster = RecursiveRegressionForecaster(regressor=regressor, 
+                  **forecaster_pars  #hyper-paramter to set recursive strategy
                     )
     return forecaster
 
 
-def test0(nrows=1000):
+def test0(nrows=1000, file_path=None, coly=None, coldate=None, colcat=None):
     """
         nrows : take first nrows from dataset
     """
     global model, session
-    df, coly, coldate, colcat = test_dataset_tseries()
+    df, coly, coldate, colcat = test_dataset_tseries(file_path, coly, coldate, colcat)
 
     #### Matching Big dict  ##################################################
+    df[coldate] = pd.to_datetime(df[coldate])
+    df = df.groupby([coldate])[coly].sum().reset_index()
     df = df.set_index(coldate)  #### Date as
-    X  = df.drop(coly)
+    df.index.freq="D"
+    X  = df.drop(coly, axis=1)
     y  = df[coly]
 
-    # Split the df into train/test subsets
-    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, stratify=y)
-    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
+    # # Split the df into train/test subsets
+    # X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, stratify=y)
+    # X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
 
-    sktime_y_train，sktime_y_test = temporal_train_test_split(y, test_size=0.2)
+    y_train, y_test = temporal_train_test_split(y, test_size=0.2)
 
     #A 10 percent and 90 percent prediction interval(0.1,0.9 respectively).
     quantiles = [.1, .5, .9] #Hyper-parameter "alpha" in Light GBM
@@ -236,19 +245,13 @@ def test0(nrows=1000):
         forecasts.append(y_pred)
 
     #Append the actual data for plotting.
-    store1_agg_monthly.index.name = "date"
-    store1_agg_monthly.name = "original"
-    forecasts.append(store1_agg_monthly)
+    # store1_agg_monthly.index.name = "date"
+    # store1_agg_monthly.name = "original"
+    # forecasts.append(store1_agg_monthly)
 
 
     log('Predict data..')
     log(f'Top 5 y_pred: {forecasts[:5]}')
-
-
-
-
-
-
 
 
 def test2(nrows=1000):
@@ -267,7 +270,7 @@ def test2(nrows=1000):
     X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, stratify=y)
     X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021, stratify=y_train_full)
 
-    sktime_y_train，sktime_y_test = temporal_train_test_split(y, test_size=0.2)
+    sktime_y_train, sktime_y_test = temporal_train_test_split(y, test_size=0.2)
 
     def get_transformed_target_forecaster(alpha,params):
 
@@ -280,7 +283,7 @@ def test2(nrows=1000):
         #2.Fit a forecaster for the trend.
         #3.Fit a Autoregressor to the resdiual(autoregressing on four historic values).
 
-        forecaster = ReducedRegressionForecaster(
+        forecaster = RecursiveRegressionForecaster(
                         regressor=regressor, window_length=4, strategy="recursive" #hyper-paramter to set recursive strategy
                         )
 
@@ -313,9 +316,9 @@ def test2(nrows=1000):
         forecasts.append(y_pred)
 
     #Append the actual data for plotting.
-    store1_agg_monthly.index.name = "date"
-    store1_agg_monthly.name = "original"
-    forecasts.append(store1_agg_monthly)
+    # store1_agg_monthly.index.name = "date"
+    # store1_agg_monthly.name = "original"
+    # forecasts.append(store1_agg_monthly)
 
 
     log('Predict data..')
@@ -427,8 +430,7 @@ def test2(nrows=1000):
         reset()
 
 
-
 if __name__ == "__main__":
-    import fire
-    fire.Fire()
-    # test()
+    # import fire
+    # fire.Fire()
+    test0(nrows=1000, file_path="train.csv", coly="sales", coldate="date", colcat=None)
