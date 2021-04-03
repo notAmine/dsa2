@@ -1,13 +1,12 @@
 import tensorflow as tf
 import pandas as pd
 import pprint
-dst = {}
+# dst = {}
+
 class dictEval(object):
-    
-    def eval_dict(self,src):
-        
-        
-        for key, value in src.items():
+    dst= {}
+    def eval_dict(self, ddict):
+        for key, value in ddict.items():
             if isinstance(value, dict):
                 node = dst.setdefault(key, {})
                 self.eval_dict(value)
@@ -15,10 +14,40 @@ class dictEval(object):
                 if "@lazy" in key :
                     dst[key] = value
                 else :
-                    if 'pandas.read_csv' in key :
+                    if 'pandas' in key :
                         key2 = key.split(":")[-1]
                         dst[key2] = pd.read_csv(value)
         return dst
+
+
+
+
+data_pars= {
+
+'train' :
+
+{
+	'@lazy_pandas:Xtrain' : folder_parquet_zip,
+
+	'@lazy_pandas:Xtest' :  folder_parquet_zip,
+
+    '@lazy_tfdataset:Xtest' :  folder_parquet,
+
+    '@lazy_pyarrow:Xtest' :  folder_parquet,
+
+},
+
+
+'pars' : 23,
+
+
+}
+test = dictEval()
+dict_new = test.eval_dict(data_pars)
+
+
+
+
 
 test = dictEval()
 dataset_url = 'http://storage.googleapis.com/download.tensorflow.org/data/petfinder-mini.zip'
@@ -31,36 +60,3 @@ src = {
 }
 
 pprint.pprint(test.eval_dict(src))
-
-
-
-data_pars= {
-	
-
-'train' :
-
-{
-	'@lazy_pandas:Xtrain' :csv_file,
-
-	'@lazy_pandas:Xtest' :csv_file,
-
-    '@lazy_tfdataset:Xtest' :csv_file,
-
-
-
-},
-
-
-'pars' : 23,
-
-
-}
-
-
-
-
-
-
-
-
-
