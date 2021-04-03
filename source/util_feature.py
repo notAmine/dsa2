@@ -9,14 +9,17 @@ from collections import OrderedDict
 #############################################################################################
 verbosity = 5
 
-def log(*s):
-    if verbosity >=1 : print(*s, flush=True)
+def log(*s, n=0, m=1, **kw):
+    sspace = "#" * n
+    sjump = "\n" * m
+    ### Implement Logging
+    print(sjump, sspace, s, sspace, flush=True, **kw)
 
-def log2(*s):
-    if verbosity >=2 : print(*s, flush=True)
+def log2(*s, **kw):
+    if verbosity >=2 : print(*s, flush=True, **kw)
 
-def log3(*s):
-    if verbosity >=2 : print(*s, flush=True)
+def log3(*s, **kw):
+    if verbosity >=2 : print(*s, flush=True, **kw)
 
 log2("os.getcwd", os.getcwd())
 
