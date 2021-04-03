@@ -4,26 +4,24 @@
 Methods for feature extraction and preprocessing
 util_feature: input/output is pandas
 """
-import copy
-import os
+import os, sys, copy, re, numpy as np, pandas as pd
 from collections import OrderedDict
+#############################################################################################
+verbosity = 5
 
-#import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import re
+def log(*s):
+    if verbosity >=1 : print(*s, flush=True)
+
+def log2(*s):
+    if verbosity >=2 : print(*s, flush=True)
+
+def log3(*s):
+    if verbosity >=2 : print(*s, flush=True)
+
+log2("os.getcwd", os.getcwd())
 
 
 #############################################################################################
-print("os.getcwd", os.getcwd())
-
-def log(*s, n=0, m=1, **kw):
-    sspace = "#" * n
-    sjump = "\n" * m
-
-    ### Implement Logging
-    print(sjump, sspace, s, sspace, flush=True, **kw)
-
 class dict2(object):
     def __init__(self, d):
         self.__dict__ = d
@@ -38,16 +36,14 @@ def os_getcwd():
     return  root
 
 
-                              
+#############################################################################################
 def pa_read_file(path=  'folder_parquet/', 
                  cols=None, n_rows=1000, file_start=0, file_end=100000, verbose=1, ) :
-    """
-       Requied HDFS connection
+    """Requied HDFS connection
        http://arrow.apache.org/docs/python/parquet.html
 
        conda install libhdfs3 pyarrow
        in your script.py:
-
         import os
         os.environ['ARROW_LIBHDFS_DIR'] = '/opt/cloudera/parcels/CDH/lib64/'
 
@@ -63,7 +59,7 @@ def pa_read_file(path=  'folder_parquet/',
        hdfs = pa.hdfs.connect()  
        flist = hdfs.ls( path )  
     else :  ###Local file
-       flist = glob.glob( path +v"/*.parquet" )        
+       flist = glob.glob( path + "/*.parquet" )
 
     flist = [ fi for fi in flist if  'hive' not in fi.split("/")[-1]  ]
     flist = flist[file_start:file_end]  #### Allow batch load by partition
@@ -97,9 +93,11 @@ def pa_read_file(path=  'folder_parquet/',
 
 def pa_write_file(df, path=  'folder_parquet/', 
                  cols=None,n_rows=1000, partition_cols=None, overwrite=True, verbose=1, filesystem = 'hdfs' ) :
-    """
-      Pandas to HDFS
-      pyarrow.parquet.write_table(table, where, row_group_size=None, version='1.0', use_dictionary=True, compression='snappy', write_statistics=True, use_deprecated_int96_timestamps=None, coerce_timestamps=None, allow_truncated_timestamps=False, data_page_size=None, flavor=None, filesystem=None, compression_level=None, use_byte_stream_split=False, data_page_version='1.0', **kwargs)
+    """ Pandas to HDFS
+      pyarrow.parquet.write_table(table, where, row_group_size=None, version='1.0',
+      use_dictionary=True, compression='snappy', write_statistics=True, use_deprecated_int96_timestamps=None,
+      coerce_timestamps=None, allow_truncated_timestamps=False, data_page_size=None,
+      flavor=None, filesystem=None, compression_level=None, use_byte_stream_split=False, data_page_version='1.0', **kwargs)
       
       https://arrow.apache.org/docs/python/generated/pyarrow.parquet.write_to_dataset.html#pyarrow.parquet.write_to_dataset
        
@@ -118,17 +116,17 @@ def pa_write_file(df, path=  'folder_parquet/',
       hdfs.mkdir(path.replace("hdfs://", ""))
       pq.write_to_dataset(table, root_path=path,
                           partition_cols=partition_cols, filesystem=hdfs)
-      
       flist = hdfs.ls( path )
       print(flist)
+
     else :
         if overwrite :
-            os.path.rm(path, recursive=True)
-        os.path.mkdir(path)
+            os.removedirs(path)
+        os.makedirs(path, exist_ok=True)
         pq.write_to_dataset(table, root_path=path,
-                            partition_cols=partition_cols, filesystem="local")
+                            partition_cols=partition_cols, filesystem= None)
         
-        flist = os.path.listdir( hdfs_path )  
+        flist = os.listdir( path )
         print(flist)
         
 
@@ -753,6 +751,7 @@ def test_mutualinfo(error, Xtest, colname=None, bins=5):
 ####################################################################################################
 def feature_importance_perm(clf, Xtrain, ytrain, cols, n_repeats=8, scoring='neg_root_mean_squared_error',
                             show_graph=1):
+    from matplotlib import pyplot as plt
     from sklearn.inspection import permutation_importance
     result = permutation_importance(clf, Xtrain[cols], ytrain, n_repeats=n_repeats,
                                     random_state=42, scoring=scoring)
@@ -805,6 +804,7 @@ def feature_selection_multicolinear(df, threshold=1.0):
 def feature_correlation_cat(df, colused):
     from scipy.stats import spearmanr
     from scipy.cluster import hierarchy
+    from matplotlib import pyplot as plt
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
     corr = spearmanr(df[colused]).correlation  # Ordinalon
