@@ -31,3 +31,36 @@ src = {
 }
 
 pprint.pprint(test.eval_dict(src))
+
+
+
+data_pars= {
+	
+
+'train' :
+
+{
+	'@lazy_pandas:Xtrain' :csv_file,
+
+	'@lazy_pandas:Xtest' :csv_file,
+
+    '@lazy_tfdataset:Xtest' :csv_file,
+
+
+
+},
+
+
+'pars' : 23,
+
+
+}
+
+
+
+
+
+
+
+
+
