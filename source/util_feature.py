@@ -96,7 +96,7 @@ def pa_read_file(path=  'folder_parquet/',
 
 
 def pa_write_file(df, path=  'folder_parquet/', 
-                 cols=None,n_rows=1000, partition_cols=None, overwrite=True, verbose=1, filesystem == 'hdfs' ) :
+                 cols=None,n_rows=1000, partition_cols=None, overwrite=True, verbose=1, filesystem = 'hdfs' ) :
     """
       Pandas to HDFS
       pyarrow.parquet.write_table(table, where, row_group_size=None, version='1.0', use_dictionary=True, compression='snappy', write_statistics=True, use_deprecated_int96_timestamps=None, coerce_timestamps=None, allow_truncated_timestamps=False, data_page_size=None, flavor=None, filesystem=None, compression_level=None, use_byte_stream_split=False, data_page_version='1.0', **kwargs)
@@ -115,11 +115,11 @@ def pa_write_file(df, path=  'folder_parquet/',
     if filesystem == 'hdfs' :
       if overwrite :
           hdfs.rm(path.replace("hdfs://", ""), recursive=True)
-      hdfs.mkdir(hdfs_path.replace("hdfs://", ""))
+      hdfs.mkdir(path.replace("hdfs://", ""))
       pq.write_to_dataset(table, root_path=path,
                           partition_cols=partition_cols, filesystem=hdfs)
       
-      flist = hdfs.ls( hdfs_path )  
+      flist = hdfs.ls( path )
       print(flist)
     else :
         if overwrite :
@@ -506,7 +506,7 @@ def load_function_uri(uri_name="myfolder/myfile.py::myFunction"):
 
     try:
         #### Import from package mlmodels sub-folder
-        return  getattr(importlib.import_module(package), name)
+        return  getattr(importlib.import_module(package), class_name)
 
     except Exception as e1:
         try:
