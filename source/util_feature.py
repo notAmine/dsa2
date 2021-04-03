@@ -38,6 +38,104 @@ def os_getcwd():
     return  root
 
 
+                              
+def pa_read_file(path=  'folder_parquet/', 
+                 cols=None, n_rows=1000, file_start=0, file_end=100000, verbose=1, ) :
+    """
+       Requied HDFS connection
+       http://arrow.apache.org/docs/python/parquet.html
+
+       conda install libhdfs3 pyarrow
+       in your script.py:
+
+        import os
+        os.environ['ARROW_LIBHDFS_DIR'] = '/opt/cloudera/parcels/CDH/lib64/'
+
+       https://stackoverflow.com/questions/18123144/missing-server-jvm-java-jre7-bin-server-jvm-dll
+       
+    """
+    import pyarrow as pa, gc, glob
+    import pyarrow.parquet as pq
+      
+    n_rows = 999999999 if n_rows < 0  else n_rows
+    
+    if "hdfs:" in path :
+       hdfs = pa.hdfs.connect()  
+       flist = hdfs.ls( path )  
+    else :  ###Local file
+       flist = glob.glob( path +v"/*.parquet" )        
+
+    flist = [ fi for fi in flist if  'hive' not in fi.split("/")[-1]  ]
+    flist = flist[file_start:file_end]  #### Allow batch load by partition
+    if verbose : print(flist)
+    dfall = None
+    for pfile in flist:
+        if not "parquet" in pfile :
+            continue
+        if verbose > 0 :print( pfile )            
+            
+        #arr_dataset = pq.ParquetDataset( pfile )
+        #arr_table   = arr_dataset.read(columns= cols)  ###load in RAM
+        #if verbose > 0 :
+        #   metadata = pq.read_metadata(pfile)
+        #   print(metadata)
+        
+        arr_table = pq.read_table(pfile, columns=cols)
+        df        = arr_table.to_pandas()
+        del arr_table; gc.collect()
+        
+        dfall = pd.concat((dfall, df)) if dfall is None else df
+        del df
+        if len(dfall) > n_rows :
+            break
+
+    if dfall is None : return None        
+    if verbose > 0 : print( dfall.head(2), dfall.shape )          
+    dfall = dfall.iloc[:n_rows, :]            
+    return dfall
+
+
+def pa_write_file(df, path=  'folder_parquet/', 
+                 cols=None,n_rows=1000, partition_cols=None, overwrite=True, verbose=1, filesystem == 'hdfs' ) :
+    """
+      Pandas to HDFS
+      pyarrow.parquet.write_table(table, where, row_group_size=None, version='1.0', use_dictionary=True, compression='snappy', write_statistics=True, use_deprecated_int96_timestamps=None, coerce_timestamps=None, allow_truncated_timestamps=False, data_page_size=None, flavor=None, filesystem=None, compression_level=None, use_byte_stream_split=False, data_page_version='1.0', **kwargs)
+      
+      https://arrow.apache.org/docs/python/generated/pyarrow.parquet.write_to_dataset.html#pyarrow.parquet.write_to_dataset
+       
+    """
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    hdfs = pa.hdfs.connect()    
+    n_rows = 999999999 if n_rows < 0  else n_rows
+    df = df.iloc[:n_rows, :]
+    
+    table = pa.Table.from_pandas(df)
+    
+    if filesystem == 'hdfs' :
+      if overwrite :
+          hdfs.rm(path.replace("hdfs://", ""), recursive=True)
+      hdfs.mkdir(hdfs_path.replace("hdfs://", ""))
+      pq.write_to_dataset(table, root_path=path,
+                          partition_cols=partition_cols, filesystem=hdfs)
+      
+      flist = hdfs.ls( hdfs_path )  
+      print(flist)
+    else :
+        if overwrite :
+            os.path.rm(path, recursive=True)
+        os.path.mkdir(path)
+        pq.write_to_dataset(table, root_path=path,
+                            partition_cols=partition_cols, filesystem="local")
+        
+        flist = os.path.listdir( hdfs_path )  
+        print(flist)
+        
+
+
+
+
+
 
 
 #############################################################################################
