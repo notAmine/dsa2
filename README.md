@@ -1,7 +1,7 @@
 
 #### Check here if latest commit is working :
 
-[Auto test status ](https://github.com/arita37/dsa2/actions/workflows/test_fast.yml?query=branch%3Amulti)
+[Testing code ](https://github.com/arita37/dsa2/blob/main/ztest/run_fast.sh)
 
 Main
 ![Main, test_fast_linux](https://github.com/arita37/dsa2/workflows/test_fast_linux/badge.svg?branch=main)
@@ -9,8 +9,12 @@ Main
 
 
 Multi
-  ![test_fast_linux](https://github.com/arita37/dsa2/workflows/test_fast_linux/badge.svg?branch=multi)
+   ![test_fast_linux](https://github.com/arita37/dsa2/workflows/test_fast_linux/badge.svg?branch=multi)
+   
    ![test_full](https://github.com/arita37/dsa2/workflows/test_full/badge.svg?branch=multi)
+
+   ![test_models(https://github.com/arita37/dsa2/workflows/test_models/badge.svg?branch=multi)
+
 
 
 Preprocessors Check
@@ -28,13 +32,10 @@ Preprocessors Check
 ### Install 
      git clone 
      cd dsa2
-     conda create -n dsa2  python=3.6.10
-     source activate dsa2
-     pip install -r install/py36.txt
+     pip install -r zrequirements.txt
 
 
 ### Basic usage 
-    cd dsa2
     python  titanic_classifier.py  preprocess    --nsample 1000
     python  titanic_classifier.py  train         --nsample 2000
     python  titanic_classifier.py  predict

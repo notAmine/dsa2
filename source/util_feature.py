@@ -4,26 +4,27 @@
 Methods for feature extraction and preprocessing
 util_feature: input/output is pandas
 """
-import copy
-import os
+import os, sys, copy, re, numpy as np, pandas as pd
 from collections import OrderedDict
-
-#import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import re
-
-
 #############################################################################################
-print("os.getcwd", os.getcwd())
+verbosity = 5
 
 def log(*s, n=0, m=1, **kw):
     sspace = "#" * n
     sjump = "\n" * m
-
     ### Implement Logging
     print(sjump, sspace, s, sspace, flush=True, **kw)
 
+def log2(*s, **kw):
+    if verbosity >=2 : print(*s, flush=True, **kw)
+
+def log3(*s, **kw):
+    if verbosity >=2 : print(*s, flush=True, **kw)
+
+log2("os.getcwd", os.getcwd())
+
+
+#############################################################################################
 class dict2(object):
     def __init__(self, d):
         self.__dict__ = d
@@ -38,23 +39,14 @@ def os_getcwd():
     return  root
 
 
-
-
-
-
-
-
-
-                              
-def pa_read_file(path=  'folder_of_parquet/', 
+#############################################################################################
+def pa_read_file(path=  'folder_parquet/', 
                  cols=None, n_rows=1000, file_start=0, file_end=100000, verbose=1, ) :
-    """
-       Requied HDFS connection
+    """Requied HDFS connection
        http://arrow.apache.org/docs/python/parquet.html
 
        conda install libhdfs3 pyarrow
        in your script.py:
-
         import os
         os.environ['ARROW_LIBHDFS_DIR'] = '/opt/cloudera/parcels/CDH/lib64/'
 
@@ -63,13 +55,14 @@ def pa_read_file(path=  'folder_of_parquet/',
     """
     import pyarrow as pa, gc, glob
     import pyarrow.parquet as pq
+      
     n_rows = 999999999 if n_rows < 0  else n_rows
     
     if "hdfs:" in path :
-       hdfs = pa.hdfs.connect()    
+       hdfs = pa.hdfs.connect()  
        flist = hdfs.ls( path )  
     else :  ###Local file
-       flist = glob.glob( path +v"/*.parquet" )        
+       flist = glob.glob( path + "/*.parquet" )
 
     flist = [ fi for fi in flist if  'hive' not in fi.split("/")[-1]  ]
     flist = flist[file_start:file_end]  #### Allow batch load by partition
@@ -101,11 +94,13 @@ def pa_read_file(path=  'folder_of_parquet/',
     return dfall
 
 
-def pa_write_file(df, path=  '/local/', 
-                 cols=None,n_rows=1000, partition_cols=None, overwrite=True, verbose=1, ) :
-    """
-      Pandas to HDFS
-      pyarrow.parquet.write_table(table, where, row_group_size=None, version='1.0', use_dictionary=True, compression='snappy', write_statistics=True, use_deprecated_int96_timestamps=None, coerce_timestamps=None, allow_truncated_timestamps=False, data_page_size=None, flavor=None, filesystem=None, compression_level=None, use_byte_stream_split=False, data_page_version='1.0', **kwargs)
+def pa_write_file(df, path=  'folder_parquet/', 
+                 cols=None,n_rows=1000, partition_cols=None, overwrite=True, verbose=1, filesystem = 'hdfs' ) :
+    """ Pandas to HDFS
+      pyarrow.parquet.write_table(table, where, row_group_size=None, version='1.0',
+      use_dictionary=True, compression='snappy', write_statistics=True, use_deprecated_int96_timestamps=None,
+      coerce_timestamps=None, allow_truncated_timestamps=False, data_page_size=None,
+      flavor=None, filesystem=None, compression_level=None, use_byte_stream_split=False, data_page_version='1.0', **kwargs)
       
       https://arrow.apache.org/docs/python/generated/pyarrow.parquet.write_to_dataset.html#pyarrow.parquet.write_to_dataset
        
@@ -121,22 +116,26 @@ def pa_write_file(df, path=  '/local/',
     if filesystem == 'hdfs' :
       if overwrite :
           hdfs.rm(path.replace("hdfs://", ""), recursive=True)
-      hdfs.mkdir(hdfs_path.replace("hdfs://", ""))
+      hdfs.mkdir(path.replace("hdfs://", ""))
       pq.write_to_dataset(table, root_path=path,
                           partition_cols=partition_cols, filesystem=hdfs)
-      
-      flist = hdfs.ls( hdfs_path )  
+      flist = hdfs.ls( path )
       print(flist)
+
     else :
         if overwrite :
-            os.path.rm(path, recursive=True)
-        os.path.mkdir(path)
+            os.removedirs(path)
+        os.makedirs(path, exist_ok=True)
         pq.write_to_dataset(table, root_path=path,
-                            partition_cols=partition_cols, filesystem="local")
+                            partition_cols=partition_cols, filesystem= None)
         
-        flist = os.path.listdir( hdfs_path )  
+        flist = os.listdir( path )
         print(flist)
         
+
+
+
+
 
 
 
@@ -261,10 +260,12 @@ def pd_read_file(path_glob="*.pkl", ignore_index=True,  cols=None,
 
   file_list = glob.glob(path_glob)
   # print("ok", verbose)
-  dfall = pd.DataFrame()
+  dfall  = pd.DataFrame()
   n_file = len(file_list)
+  m_job  = n_file // n_pool  if n_file > 1 else 1
+
   if verbose : log(n_file,  n_file // n_pool )
-  for j in range(n_file // n_pool +1 ) :
+  for j in range(0, m_job ) :
       log("Pool", j, end=",")
       job_list =[]
       for i in range(n_pool):
@@ -311,7 +312,11 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
     import glob, ntpath
 
     supported_extensions = [ ".txt", ".csv", ".zip", ".gzip", ".pkl", ".parquet" ]
-    # fallback_name        = "features"
+
+
+    if (path_data_x.startswith("spark")):
+        df = fetch_spark_koalas(path_data_x, path_data_y, colid, n_sample)
+        return df
 
     if (path_data_x.startswith("http")):
         download_path        = os.path.join(os.path.curdir, "data/input/download")
@@ -325,19 +330,20 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
 
     log("###### Load dfX target values ######################################")
     print(flist)
-    #df    = None
-    fstr = ",".join(flist)
+    df = None
     for fi in flist :
         try:
-            df = pd_read_file(fi)
-            if len(df) > 0:
-                break
+            if fi[-4:] in [".zip", ".csv", ".txt", '.gzip'] :  dfi = pd.read_csv(fi)
+            if fi.endswith(".parquet") :  dfi = pd.read_parquet(fi)
+            if fi.endswith(".pkl") :      dfi = pd.read_pickle(fi)
+            # dfi = pd_read_file(fi)
+            df  = pd.concat((df, dfi))  if df is not None else dfi
+
         except:
             pass
 
-    #    df = pd.concat((df, dfi))  if df is not None else dfi
     assert len(df) > 0 , " Dataframe is empty: " + path_data_x
-    log("dfX", df.T.head(4))
+    log("dfX", df.head(4) )
 
     #### Add unique column_id  ###############################################
     if colid not in list(df.columns ):
@@ -356,7 +362,7 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
         flist = [ f for f in flist if os.path.splitext(f)[1][1:].strip().lower() in [ 'zip', 'parquet'] and ntpath.basename(f)[:6] in ['target']]
         # dfy   = pd.DataFrame()
         fstr = ",".join(flist)
-        dfy  = pd_read_file(fstr)
+        dfy   = pd_read_file(fstr)
 
         log("dfy", dfy.head(4).T)
         if colid not in list(dfy.columns) :
@@ -367,6 +373,14 @@ def load_dataset(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
         log("dfy not loaded", path_data_y, e  )
 
     return df
+
+
+def fetch_spark_koalas(path_data_x, path_data_y='',  colid="jobId", n_sample=-1):
+   import databricks.koalas as ks
+   path_data = path_data_x.replace("spark:", "")
+   df= ks.read_parquet(path_data)
+   return df
+
 
 
 def fetch_dataset(url_dataset, path_target=None, file_target=None):
@@ -396,7 +410,6 @@ def fetch_dataset(url_dataset, path_target=None, file_target=None):
 
     if file_target is None:
         file_target = fallback_name # mktemp(dir="")
-
 
 
     if "github.com" in url_dataset:
@@ -494,7 +507,7 @@ def load_function_uri(uri_name="myfolder/myfile.py::myFunction"):
 
     try:
         #### Import from package mlmodels sub-folder
-        return  getattr(importlib.import_module(package), name)
+        return  getattr(importlib.import_module(package), class_name)
 
     except Exception as e1:
         try:
@@ -741,6 +754,7 @@ def test_mutualinfo(error, Xtest, colname=None, bins=5):
 ####################################################################################################
 def feature_importance_perm(clf, Xtrain, ytrain, cols, n_repeats=8, scoring='neg_root_mean_squared_error',
                             show_graph=1):
+    from matplotlib import pyplot as plt
     from sklearn.inspection import permutation_importance
     result = permutation_importance(clf, Xtrain[cols], ytrain, n_repeats=n_repeats,
                                     random_state=42, scoring=scoring)
@@ -793,6 +807,7 @@ def feature_selection_multicolinear(df, threshold=1.0):
 def feature_correlation_cat(df, colused):
     from scipy.stats import spearmanr
     from scipy.cluster import hierarchy
+    from matplotlib import pyplot as plt
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 8))
     corr = spearmanr(df[colused]).correlation  # Ordinalon
@@ -1129,9 +1144,33 @@ def pd_colnum_normalize(df0, colname, pars, suffix="_norm", return_val='datafram
             try:
                 if t['name'] == 'log'         : df[x] = np.log(df[x].values.astype(np.float64))
                 if t['name'] == 'fillna'      : df[x] = df[x].fillna( t['na_val'] )
-                if t['name'] == 'minmax_norm' : df[x] = (df[x] - df[x].min() )/ ( df[x].max() - df[x].min() )
+                if t['name'] == 'minmax' : 
+                  minx = df[x].min()
+                  df[x] = (df[x] - minx )/ ( df[x].max() - minx )
+
+                if t['name'] == 'stdev' : 
+                  sd    = df[x].std()
+                  df[x] = (df[x] - minx )/ ( 2* sd )
+
+                if t['name'] == 'quantile_cutoff' : 
+                  s1 = df[x].quantile(0.90)
+                  s0 = df[x].quantile(0.10)
+                  # me = df[x].median()
+                  df[x]  = (df[x] - s0 )/ ( s1-s0 )
+                  cutmin, cutmax = 0.0, 1.0 
+                  df[x] = df[x].apply(lambda x : max( min(x, cutmax ), cutmin)  )
+
+                if t['name'] == 'quantile_cutoff_2' : 
+                  s1 = df[x].quantile(0.90)
+                  s0 = df[x].quantile(0.10)
+                  me = df[x].median()
+
+                  df[x]  = (df[x] - me )/ ( s1-s0 )
+                  cutmin, cutmax = -1.0, 1.0
+                  df[x] = df[x].apply(lambda x : max( min(x, cutmax ), cutmin)  )
+
             except Exception as e:
-                pass
+                log('pd_colnum_normalize',t, e)
 
     df.columns  = [ t + suffix for t in df.columns ]
     colnum_norm = list(df.columns)
