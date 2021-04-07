@@ -985,12 +985,13 @@ def test_helper(model_pars, data_pars, compute_pars):
     log('Model architecture:')
     log(model.model.summary())
 
-def test4(config=''):
-    
+
+
+def benchmark(config=''):
     from pmlb import fetch_data, classification_dataset_names
     from sdv.evaluation import evaluate
 
-    for classification_dataset in classification_dataset_names[:1]:
+    for classification_dataset in classification_dataset_names[5:6]:
         X, y = fetch_data(classification_dataset, return_X_y=True)
         
         X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021)
@@ -1024,22 +1025,27 @@ def test4(config=''):
         ],
         }
         }
+
+        log(f'{classification_dataset} Metrics: ------------')
+        column  = [f'col_{i}' for i in range(X.shape[1])]
+        real_df = pd.DataFrame(X_test,columns=column)
+
+        ##### VAEMDN
         vae,vae_enc,vae_dec= VAEMDN(model_pars=model_pars['model_pars'])
-        basic_ae,ae_enc,ae_dec = AUTOENCODER_BASIC(X.shape[1])
-
         vae.fit([X_train_full,y_train_full],epochs=50)
-        basic_ae.fit(X_train_full,X_train_full,epochs=50)
-
         vae_data = vae.predict([X_test,y_test])
-        basic_data = basic_ae.predict(X_test)
+        vae_df   = pd.DataFrame(vae_data,columns=column)
+        evl_vae  = evaluate(real_df,vae_df,metrics=['LogisticDetection','CSTest', 'KSTest'])
+        log(f'Evaluation on VAE: {evl_vae}')
 
-        print(f'{classification_dataset} Metrics: ------------')
-        column = [f'col_{i}' for i in range(X.shape[1])]
-        real_df = pd.DataFrame(X_test[:100],columns=column)
-        vae_df = pd.DataFrame(vae_data[:100],columns=column)
-        basic_df = pd.DataFrame(basic_data[:100],columns=column)
-        #print(real_df,vae_df,basic_ae)
-        print(evaluate(real_df,vae_df))
+
+        log("##### AE")
+        basic_ae,ae_enc,ae_dec = AUTOENCODER_BASIC(X.shape[1])
+        basic_ae.fit(X_train_full,X_train_full,epochs = 50)
+        basic_data = basic_ae.predict(X_test)
+        basic_df   = pd.DataFrame(basic_data,columns=column)
+        evl_ae     = evaluate(real_df,basic_df,metrics=['LogisticDetection','CSTest', 'KSTest'])
+        log(f'Evaluation on Basic_AE: {evl_ae}')
 
 
 
@@ -1048,7 +1054,7 @@ def test4(config=''):
 if __name__ == "__main__":
     # test()
     import fire
-    fire.Fire(test4)
+    fire.Fire()
 
 
 
