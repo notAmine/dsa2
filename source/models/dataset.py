@@ -7,18 +7,16 @@ import zipfile
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 from glob import glob
-from petastorm.tf_utils import make_petastorm_dataset
 
-dst = {}
+
+
 def pack_features_vector(features, labels):
     """Pack the features into a single array."""
     features = tf.stack(list(features.values()), axis=1)
     return features, labels
 class dictEval(object):
-    
+    global dst
     def eval_dict(self,src):
-        
-        
         for key, value in src.items():
             if isinstance(value, dict):
                 node = dst.setdefault(key, {})
@@ -30,51 +28,80 @@ class dictEval(object):
                     key2 = key.split(':')[-1]
                     ext = value.split('.')[-1]
                     target = src.get('target','y')
-                    
-                    if ext == 'zip':
-                        zf = zipfile.ZipFile(value)
-                        fileNames = zf.namelist()
-                        for idx,file in enumerate(fileNames):
 
-                            if file.split('.')[-1] in ['csv','txt']:
-                                file = 'datasets/'+file
-                                if 'pandas' in key:
-                                        dst[key2+'_'+str(idx)] = pd.read_csv(file)
-                                elif 'tf' in key:
+
+                    ##################################################################################################
+                    if 'tf' in key :
+                        print('TF is HEre')
+                        self.tf_dataset_create(ext,key2,target,value)
+                        return dst
+
+
+
+                    ##################################################################################################
+                    if 'pandas' in key :
+                        self.pandas_create(ext,key2,target,value)
+                        return dst
+
+
+                    ##################################################################################################
+                    if 'pandas' in key :
+                        pass
+
+    def tf_dataset_create(self, ext,key2,target,value):
+                        if ext == 'zip':
+                            zf = zipfile.ZipFile(value)
+                            fileNames = zf.namelist()
+                            for idx,file in enumerate(fileNames):
+
+                                if file.split('.')[-1] in ['csv','txt']:
+                                    file = 'datasets/'+file
                                     try:
                                         dataset = tf.data.experimental.make_csv_dataset(file,label_name=target, batch_size=32,ignore_errors=True)
                                         dataset = dataset.map(pack_features_vector)
                                         dst[key2+'_'+str(idx)] = dataset.repeat()
                                     except:
                                         pass
-                                elif 'torch' in key:
-                                    dst[key2+'_'+str(idx)] = None
-                            
 
-                    elif ext in ['csv','txt']:
-                        if 'pandas' in key:
-                            dst[key2] = pd.read_csv(value)
-                        elif 'tf' in key:
-                                dataset = tf.data.experimental.make_csv_dataset(value, label_name=target,batch_size=32,ignore_errors=True)
+                        elif ext in ['csv','txt']:
+                                    dataset = tf.data.experimental.make_csv_dataset(value, label_name=target,batch_size=32,ignore_errors=True)
+                                    dataset = dataset.map(pack_features_vector)
+                                    dst[key2] = dataset.repeat()
+
+                        elif ext == 'parquet':
+                                filename = value.split('.')[0]+'.csv'
+                                pd.read_parquet(value).to_csv(filename)
+                                dataset = tf.data.experimental.make_csv_dataset(filename, label_name=target,batch_size=32,ignore_errors=True)
                                 dataset = dataset.map(pack_features_vector)
                                 dst[key2] = dataset.repeat()
-                        elif 'torch' in key:
-                            dst[key2] = None
-                    
-                    elif ext == 'parquet':
-                        if 'pandas' in key:
-                            dst[key2] = pd.read_parquet(value)
-                        elif 'tf' in key:
-                            filename = value.split('.')[0]+'.csv'
-                            pd.read_parquet(value).to_csv(filename)
-                            dataset = tf.data.experimental.make_csv_dataset(filename, label_name=target,batch_size=32,ignore_errors=True)
-                            dataset = dataset.map(pack_features_vector)
-                            dst[key2] = dataset.repeat()
-        return dst
+
+
+    def pandas_create(self,ext,key2,target,value):
+                        if ext == 'zip':
+                            zf = zipfile.ZipFile(value)
+                            fileNames = zf.namelist()
+                            for idx,file in enumerate(fileNames):
+
+                                if file.split('.')[-1] in ['csv','txt']:
+                                    file = 'datasets/'+file
+                                    dst[key2+'_'+str(idx)] = pd.read_csv(file)
+
+
+
+                        elif ext in ['csv','txt']:
+                                dst[key2] = pd.read_csv(value)
+
+                        elif ext == 'parquet':
+                                dst[key2] = pd.read_parquet(value)
+                        return dst
+
+
+
+
 
 if __name__ == '__main__':
     test = dictEval()
-
+    dst = {}
     dataset_url = 'http://storage.googleapis.com/download.tensorflow.org/data/petfinder-mini.zip'
     csv_file    = 'datasets/petfinder-mini/petfinder-mini.csv'
     zip_file = 'datasets/petfinder_mini.zip'
@@ -92,14 +119,22 @@ if __name__ == '__main__':
     df.to_csv('datasets/petfinder-mini/petfinder-mini.csv')'''
     
     
-    parquet_file = 'datasets/petfinder_mini.parquet'
-    txt_file = '/home/tushargoel/Desktop/sample.txt'
+    # parquet_file = 'datasets/petfinder_mini.parquet'
+    # txt_file = '/home/tushargoel/Desktop/sample.txt'
+
+    parquet_path = 'datasets/petfinder_mini.parquet'
+    txt_path = '/home/tushargoel/Desktop/sample.txt'
+
+    csv_path    = 'datasets/petfinder-mini/petfinder-mini.csv'
+    zip_path = 'datasets/petfinder_mini.zip'
+
+
     data_pars = {
         'train':{
             'target': 'Type',
-            '@lazy_tf:Xtrain':parquet_file, #CSV file extraction #Tensorflow Dataset
-            '@lazy_tf:Xtest':zip_file, #zip File Extraction
-            '@lazy_pandas:Xtest':txt_file, #Pandas 
+            '@lazy_tf:Xtrain':parquet_path, #CSV file extraction #Tensorflow Dataset
+            '@lazy_tf:Xtest':zip_path, #zip File Extraction
+            '@lazy_pandas:Xtest':txt_path, #Pandas
         },
         'pars': 23,
         
@@ -109,23 +144,22 @@ if __name__ == '__main__':
     }
 
 
-    lazy_dic = test.eval_dict(data_pars)
+    test.eval_dict(data_pars)
+   
     from tensorflow.keras import layers
     model = tf.keras.Sequential([
         layers.Flatten(),
         layers.Dense(256, activation='elu'),
-        layers.Dense(256, activation='elu'),
-        layers.Dense(128, activation='elu'),  
-        layers.Dense(64, activation='elu'), 
-        layers.Dense(32, activation='elu'), 
+        layers.Dense(128, activation='elu'),
+        layers.Dense(32, activation='elu'),
         layers.Dense(1,activation='sigmoid') 
         ])
     model.compile(optimizer='adam',
                 loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
                 metrics=['accuracy'])    
-    model.fit(lazy_dic['Xtrain'],
-            steps_per_epoch=30,
-            epochs=20,
+    model.fit(dst['Xtrain'],
+            steps_per_epoch=1,
+            epochs=1,
             verbose=1
             )
 
