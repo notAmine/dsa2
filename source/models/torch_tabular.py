@@ -725,13 +725,11 @@ if __name__ == "__main__":
 
 
 
-
+"""
 
 def get_dataset2(data_pars=None, task_type="train", **kw):
-    """
-      "ram"  :
-      "file" :
-    """
+    #  "ram"  :
+    #  "file" :
     # log(data_pars)
     data_type = data_pars.get('type', 'ram')
     if data_type == "ram":
@@ -752,3 +750,4 @@ def get_dataset2(data_pars=None, task_type="train", **kw):
 
     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
+"""

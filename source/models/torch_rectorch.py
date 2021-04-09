@@ -210,11 +210,8 @@ def make_rand_sparse_dataset(
     # Split data
     train_df, val_df = train_test_split(df, test_size=0.1, shuffle=True)
     val_df, test_df = train_test_split(val_df, test_size=0.5)
-
-    
-    
-
     return df, train_df, val_df, test_df 
+
 
 
 def test(n_sample          = 1000):
