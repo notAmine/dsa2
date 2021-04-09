@@ -7,16 +7,24 @@ import zipfile
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 from glob import glob
-from petastorm.tf_utils import make_petastorm_dataset
 
-dst = {}
+
+
 def pack_features_vector(features, labels):
     """Pack the features into a single array."""
     features = tf.stack(list(features.values()), axis=1)
     return features, labels
+
+
 class dictEval(object):
-    
+    global dst
+
+    def __init__(self):
+        global dst
+        dst = {}
+
     def eval_dict(self,src):
+        global dst
         for key, value in src.items():
             if isinstance(value, dict):
                 node = dst.setdefault(key, {})
@@ -24,74 +32,74 @@ class dictEval(object):
             else:
                 if "@lazy" not in key :
                     dst[key] = value
-                else :
-                    key2 = key.split(':')[-1]
-                    ext = value.split('.')[-1]
-                    target = src.get('target','y')
+                    continue
+
+                ##################################################################################################
+                key2   = key.split(':')[-1]
+                ext    = value.split('.')[-1]
+                target = src.get('target','y')
 
 
-                    ##################################################################################################
-                    if 'tf' in key :
-                        ds = tf_dataset_create(self, path)
-                        return ds
+                ##################################################################################################
+                if 'tf:' in key :
+                    #log('TF is HEre')
+                    return self.tf_dataset_create(ext,key2,target,value)
 
 
+                ##################################################################################################
+                if 'pandas:' in key :
+                    return self.pandas_create(ext,key2,target,value)
 
-                    ##################################################################################################
-                    if 'pandas' in key :
-                        ds = pandas_create(self, path)
+        return dst
 
+    def tf_dataset_create(self, ext,key2,target,value):
+        if ext == 'zip':
+            zf = zipfile.ZipFile(value)
+            fileNames = zf.namelist()
+            for idx,file in enumerate(fileNames):
 
-                    ##################################################################################################
-                    if 'pandas' in key :
+                if file.split('.')[-1] in ['csv','txt']:
+                    file = 'datasets/'+file
+                    try:
+                        dataset = tf.data.experimental.make_csv_dataset(file,label_name=target, batch_size=32,ignore_errors=True)
+                        dataset = dataset.map(pack_features_vector)
+                        dst[key2+'_'+str(idx)] = dataset.repeat()
+                    except:
                         pass
 
-    def tf_dataset_create(self, path):
-                        if ext == 'zip':
-                            zf = zipfile.ZipFile(value)
-                            fileNames = zf.namelist()
-                            for idx,file in enumerate(fileNames):
+        elif ext in ['csv','txt']:
+                    dataset = tf.data.experimental.make_csv_dataset(value, label_name=target,batch_size=32,ignore_errors=True)
+                    dataset = dataset.map(pack_features_vector)
+                    dst[key2] = dataset.repeat()
 
-                                if file.split('.')[-1] in ['csv','txt']:
-                                    file = 'datasets/'+file
-                                        try:
-                                            dataset = tf.data.experimental.make_csv_dataset(file,label_name=target, batch_size=32,ignore_errors=True)
-                                            dataset = dataset.map(pack_features_vector)
-                                            dst[key2+'_'+str(idx)] = dataset.repeat()
-                                        except:
-                                            pass
+        elif ext == 'parquet':
+                filename = value.split('.')[0]+'.csv'
+                pd.read_parquet(value).to_csv(filename)
+                pd.read_parquet(value).to_csv(filename)
 
-                        elif ext in ['csv','txt']:
-                                    dataset = tf.data.experimental.make_csv_dataset(value, label_name=target,batch_size=32,ignore_errors=True)
-                                    dataset = dataset.map(pack_features_vector)
-                                    dst[key2] = dataset.repeat()
-
-                        elif ext == 'parquet':
-                                filename = value.split('.')[0]+'.csv'
-                                pd.read_parquet(value).to_csv(filename)
-                                dataset = tf.data.experimental.make_csv_dataset(filename, label_name=target,batch_size=32,ignore_errors=True)
-                                dataset = dataset.map(pack_features_vector)
-                                dst[key2] = dataset.repeat()
+                dataset = tf.data.experimental.make_csv_dataset(filename, label_name=target,batch_size=32,ignore_errors=True)
+                dataset = dataset.map(pack_features_vector)
+                dst[key2] = dataset.repeat()
 
 
-    def pandas_create(self, path):
-                        if ext == 'zip':
-                            zf = zipfile.ZipFile(value)
-                            fileNames = zf.namelist()
-                            for idx,file in enumerate(fileNames):
+    def pandas_create(self,ext,key2,target,value):
+        if ext == 'zip':
+            zf = zipfile.ZipFile(value)
+            fileNames = zf.namelist()
+            for idx,file in enumerate(fileNames):
 
-                                if file.split('.')[-1] in ['csv','txt']:
-                                    file = 'datasets/'+file
-                                    dst[key2+'_'+str(idx)] = pd.read_csv(file)
+                if file.split('.')[-1] in ['csv','txt']:
+                    file = 'datasets/'+file
+                    dst[key2+'_'+str(idx)] = pd.read_csv(file)
 
 
 
-                        elif ext in ['csv','txt']:
-                                dst[key2] = pd.read_csv(value)
+        elif ext in ['csv','txt']:
+                dst[key2] = pd.read_csv(value)
 
-                        elif ext == 'parquet':
-                                dst[key2] = pd.read_parquet(value)
-                        return dst
+        elif ext == 'parquet':
+                dst[key2] = pd.read_parquet(value)
+        return dst
 
 
 
@@ -99,7 +107,7 @@ class dictEval(object):
 
 if __name__ == '__main__':
     test = dictEval()
-
+    dst = {}
     dataset_url = 'http://storage.googleapis.com/download.tensorflow.org/data/petfinder-mini.zip'
     csv_file    = 'datasets/petfinder-mini/petfinder-mini.csv'
     zip_file = 'datasets/petfinder_mini.zip'
@@ -120,11 +128,11 @@ if __name__ == '__main__':
     # parquet_file = 'datasets/petfinder_mini.parquet'
     # txt_file = '/home/tushargoel/Desktop/sample.txt'
 
-    path_parquet = 'datasets/*.parquet'
-    path_txt = '/home/tushargoel/Desktop/*sample.txt'
+    parquet_path = 'datasets/petfinder_mini.parquet'
+    txt_path     = '/home/tushargoel/Desktop/sample.txt'
 
-    path_csv    = 'datasets/petfinder-mini/*petfinder-mini*.csv'
-    path_zip = 'datasets/*petfinder_mini*.zip'
+    csv_path    = 'datasets/petfinder-mini/petfinder-mini.csv'
+    zip_path    = 'datasets/petfinder_mini.zip'
 
 
     data_pars = {
@@ -142,21 +150,24 @@ if __name__ == '__main__':
     }
 
 
-    lazy_dic = test.eval_dict(data_pars)
+    data_pars2 = test.eval_dict(data_pars)
+
+
+
+
     from tensorflow.keras import layers
     model = tf.keras.Sequential([
         layers.Flatten(),
         layers.Dense(256, activation='elu'),
-        layers.Dense(128, activation='elu'),
         layers.Dense(32, activation='elu'),
         layers.Dense(1,activation='sigmoid') 
         ])
     model.compile(optimizer='adam',
                 loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
                 metrics=['accuracy'])    
-    model.fit(lazy_dic['Xtrain'],
+    model.fit(dst['Xtrain'],
             steps_per_epoch=1,
-            epochs=1,
+            epochs=30,
             verbose=1
             )
 
