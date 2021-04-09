@@ -7,8 +7,8 @@ python torch_ease.py test
 
 """
 import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
-import wget, zipfile
-import scipy.sparse as scipy_sparse
+from sklearn.model_selection import train_test_split
+
 ####################################################################################################
 try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
 except Exception as e : verbosity = 2
@@ -42,7 +42,8 @@ def reset():
 ########Custom Model ################################################################################
 from pathlib import Path
 from collections import namedtuple
-
+import wget
+import zipfile
 # torch.manual_seed(0)
 # np.random.seed(0)
 # torch.set_deterministic(True)
@@ -51,44 +52,40 @@ import torch
 from torch import nn
 from torch import optim
 from torch.nn import functional as F
-from sklearn.model_selection import train_test_split
+from rectorch.evaluation import evaluate
+from rectorch.utils import collect_results
+
 ##### Add custom repo to Python Path ################################################################
-thisfile_dirpath = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")
-import_path      = thisfile_dirpath + "/repo/TorchEASE/"
-sys.path.append(import_path)
+#thisfile_dirpath = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")
+#import_path      = thisfile_dirpath + "/repo/TorchEASE/"
+#sys.path.append(import_path)
 
 ##### Import from src/core_models/
-from main.EASE import TorchEASE
+import rectorch
 
-from rectorch.data import Dataset
-from rectorch.samplers import SparseDummySampler
-from rectorch.models.mf import EASE
 ##### pkg
-path_pkg =  thisfile_dirpath + "/repo/TorchEASE/"
-
+# path_pkg =  thisfile_dirpath + "/repo/TorchEASE/"
+from rectorch.models.mf import EASE
+from rectorch.data import DataProcessing
+from rectorch.samplers import ArrayDummySampler
 
 ####################################################################################################
 class Model(object):
-    def __init__(self, model_pars=None, data_pars=None, compute_pars=None):
-        
+    def __init__(self, model_pars=None, data_pars=None, compute_pars=None, global_pars=None):
+        self.model_pars, self.compute_pars, self.data_pars, self.global_pars = model_pars, compute_pars, data_pars, global_pars
         if model_pars is None:
             self.model = None
             return 
 
-        # # Fuse all params for RVAE 
-        # model_pars2 = copy.deepcopy(self.model_pars['model_pars'])
-        # model_pars2.update(self.compute_pars['compute_pars'])
-        # model_pars2.update(self.compute_pars['compute_extra'])
-        # model_pars2.update(self.data_pars)
-        # model_pars2.update(self.global_pars)
-
-        n_samples = data_pars["n_sample"]
-        train_df = data_pars["df"].iloc[:n_samples]
-        # self.args = model_pars2
-        self.model = TorchEASE(
-            train_df, user_col="user_id", item_col="book_id", score_col="rating", reg=250.0
-        )
-        log2(self.model)
+        dataset = data_pars['dataset']
+        self.model = EASE(**model_pars["model_cfg"])
+                # enc_dims=None,
+                # dropout=0.5,
+                # beta=.2,
+                # anneal_steps=100000,
+                # opt_conf=None,
+                # device="cpu",
+                # trainer=None)
 
 
 
@@ -163,54 +160,44 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     global model, session
     session = None  # Session type for compute
 
-    # X_train, target_errors_train, dataset_obj, attributes = get_dataset(
-    #     data_pars, task_type='train'
-    # )
-
-    model.model.fit()
+    sampler = data_pars["sampler"]
+    valid_metric = compute_pars["train"]["valid_metric"]
+    model.model.train(sampler)
 
 
 
 def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     global model, session
-    if Xpred is None:
-        Xpred = data_pars["df"]
-        colcat = data_pars["cols_input_type"]["colcat"]
+    data_sampler = Xpred
+    if data_sampler is None:
+        data_sampler = data_pars['sampler']
 
-    ypred = model.model.predict_all(Xpred[colcat])
+        one_batch = next(iter(data_sampler))
+        X_one_batch = one_batch[0]
 
-    return ypred
+    ypred = model.model.predict(X_one_batch[0], X_one_batch[1])
+
+    
+    return ypred[0], None
 
     
 
 def eval(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dict={}, **kw):
     global model, session
-    """
-         Encode + Decode 
-    """
-    Xencoded = encode(Xpred=Xpred, data_pars=data_pars, compute_pars=compute_pars, out_pars=out_pars)
-    log("\nEncoded : ", Xencoded)
-
-    log('\nDecoding : ')
-    Xnew_original = decode(Xpred=Xencoded, data_pars=data_pars, compute_pars=compute_pars, out_pars=out_pars)
-    log('\nDecoded : ', Xnew_original)
-
+  
+    data_sampler = data_pars["sampler"]
+    results = evaluate(model.model, data_sampler, ["ndcg@100", "recall@100", "ndcg@20", "recall@20"])
+    return results
 
 def save(path=None, info=None):
     """ Custom saving
     """
     global model, session
     import cloudpickle as pickle
-    os.makedirs(path + "/model/", exist_ok=True)
+    os.makedirs(os.path.normpath(path + "/model/model_rec_ease_checkpoint/"), exist_ok=True)
 
     #### Torch part
-    model.model.save_model(path + "/model/torch_checkpoint")
-
-    #### Wrapper
-    model.model = None   ## prevent issues
-    pickle.dump(model,  open(path + "/model/model.pkl", mode='wb')) # , protocol=pickle.HIGHEST_PROTOCOL )
-    pickle.dump(info, open(path   + "/model/info.pkl", mode='wb'))  # ,protocol=pickle.HIGHEST_PROTOCOL )
-
+    model.model.save_model(os.path.normpath(path + "/model/model_rec_ease_checkpoint"))
 
 
 def load_info(path=""):
@@ -299,29 +286,6 @@ def get_dataset2(data_pars=None, task_type="train", **kw):
 ####################################################################################################
 ############ Test  #################################################################################
 
-def test_dataset_goodbooks(nrows=1000):
-    from sklearn.preprocessing import LabelEncoder
-    data_path = "./goodbooks_dataset"
-    if not os.path.isdir(data_path):
-        os.makedirs(data_path, exist_ok=True)
-    
-        wget.download(
-            "https://github.com/zygmuntz/goodbooks-10k/releases/download/v1.0/goodbooks-10k.zip",
-            out=data_path
-        )
-
-        with zipfile.ZipFile(f"{data_path}/goodbooks-10k.zip") as zip_ref:
-            zip_ref.extractall(data_path)
-    df = pd.read_csv(data_path + "/ratings.csv")
-    # Dense features
-    coly = ['rating',  ]
-
-    # Sparse features
-    colcat = ['user_id', 'book_id' ]
-    colnum = []
-    return df, colnum, colcat, coly
-
-
 def train_test_split2(df, coly):
     log3(df.dtypes)
     y = df[coly] ### If clonassificati
@@ -337,127 +301,101 @@ def train_test_split2(df, coly):
 
     return X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes
 
+def get_dataset_sampler(data_pars):
 
-def make_rand_sparse_dataset(
-        n_rows=1000,
-    ):
-    # we need a single source of all user_ids and item_ids 
-    # to avoid ids apearing in test that wasn't available in train
-    all_train_data = np.random.randint(0, 10000000, (n_rows, 2)).astype(np.int32)
+    try:
+        cfg_data = data_pars['data_cfg']
+        dataset = DataProcessing(cfg_data).process_and_split()
 
-    # Split data
-    train_data, val_data = train_test_split(all_train_data, test_size=0.1, shuffle=True)
-    val_data, test_data = train_test_split(val_data, test_size=0.5)
+        sampler = ArrayDummySampler(dataset, mode="train", batch_size=500)
+    except:
+        data_path = data_pars["data_path"]
+        log("Dataset not downloaded, downloading now ....")
+        
+        # if not os.path.isdir(f"{data_path}ml-20m"):
+        #     log("\n\nDownloading ml-20m ....")
 
-    # add val to train_data and create df
-    val = np.ones((train_data.shape[0],1)).astype(np.int32)
-    train_data = np.hstack((train_data, val))
-    train_set_df = pd.DataFrame(
-        data=train_data 
-    )
+        #     wget.download(
+        #         "http://files.grouplens.org/datasets/movielens/ml-20m.zip",
+        #         out=data_path
+        #     )
+        #     with zipfile.ZipFile(f"{data_path}ml-20m.zip") as zip_ref:
+        #         zip_ref.extractall(data_path)
 
-    # add val to val_data and create df
-    val = np.ones((val_data.shape[0],1))
-    val_data = np.hstack((val_data, val))
-    val_set_df = pd.DataFrame(
-        data=val_data
-    )
+        if not os.path.isdir(f"{data_path}ml-1m"):
+            log("\n\nDownloading ml-1m ....\n")
 
-    # add val to test_data and create df
-    val = np.ones((test_data.shape[0],1))
-    test_data = np.hstack((test_data, val))
-    test_set_df = pd.DataFrame(
-        data=test_data
-    )
+            wget.download(
+                "http://files.grouplens.org/datasets/movielens/ml-1m.zip",
+                out=data_path
+            )
+            with zipfile.ZipFile(f"{data_path}ml-1m.zip") as zip_ref:
+                zip_ref.extractall(data_path)
+
+        dataset, sampler = get_dataset_sampler(data_pars)
+
+
+    return dataset, sampler
+
+def init_dataset(data_pars):
+    data_path = data_pars['data_pars']['data_cfg']["processing"]["data_path"]
     
-    ds = Dataset(
-        uids=np.unique(all_train_data[:,0]).astype(np.int32),
-        iids=np.unique(all_train_data[:,1]).astype(np.int32),
-        train_set=train_set_df,
-        valid_set=val_set_df,
-        test_set=test_set_df
-    )
-
-    train_sampler = SparseDummySampler(
-        data=ds,
-        mode='train',
-        batch_size=128,
-        shuffle=True
-    )
-
-    return train_sampler 
-
-    
-def test_sparse(n_sample=1000):
-
-    train_sampler = make_rand_sparse_dataset(
-        n_rows=1000,
-    )
-
-    model = EASE()
-    
-    log("Training...")
-
-    model.train(train_sampler)
-    test_te = train_sampler.data_te
-
-    test_uids = np.random.choice(train_sampler.data.unique_uid, 500)
-    uid_to_internal_rectorch_id = lambda uid: train_sampler.data.u2id[uid]
-    id_mapper = np.vectorize(uid_to_internal_rectorch_id)
-    test_mapped_ids = id_mapper(test_uids)
-
-    log("Predicting...")
-    
-    res = model.predict(test_mapped_ids, test_te, False)
-    log(res)
-
-
 def test(n_sample          = 1000):
-    df, colnum, colcat, coly = test_dataset_goodbooks(nrows= n_sample)
-    X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes  = train_test_split2(df, coly)
 
-    #### Matching Big dict  ##################################################
+    # #### Matching Big dict  ##################################################
     def post_process_fun(y): return int(y)
     def pre_process_fun(y):  return int(y)
-
+    data_path = './rec_data/Movies/'
+    if not os.path.isdir(data_path):
+        os.makedirs(data_path, exist_ok=True)
+        
     m = {'model_pars': {
-        'model_class':  "model_vaem.py::EASE"
-        ,'model_pars' : {
-            'original_dim':       len( colcat + colnum),
-            'class_num':             2,
+            'model_class':  "model_rec.py::REC"
+            ,'model_pars' : {
+                'original_dim':       None,
+                'class_num':             2,
 
-        }
-        , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
-        , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
+            }
+            , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
+            , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
 
-        ### Pipeline for data processing ##############################
-        'pipe_list': [  #### coly target prorcessing
-            {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
-            {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
-            {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
-        ],
-        }
+            ### Pipeline for data processing ##############################
+        
+            },
+            'model_cfg' : {
+                "lam" : 200.,
+            }
         },
 
-    'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
-                      'compute_pars' : {'epochs': 1 },
+    'compute_pars': { 'metric_list': ['ndcg@100'],
+                      "train": {
+                            "valid_metric": "ndcg@100"
+                        },
+                        "test":{
+                            "metrics": ["ndcg@100", "ndcg@10", "recall@20", "recall@50"]
+                        },
                     },
 
-    'data_pars': { 
-        'n_sample' : n_sample,
-        'download_pars' : None,
-        'cols_input_type' : {
-            'colcat' : colcat,
-            'colnum' : colnum,
-            'coly'  :  coly,
-        },
-        ### family of columns for MODEL  #########################################################
-        'cols_model_group': [ 'colnum_bin',   'colcat_bin',  ],
-
-        ### Added continuous & sparse features groups ###
-        'cols_model_type2': {
-            'colcontinuous':   colnum ,
-            'colsparse' : colcat,
+    'data_pars': {
+        'data_path' : data_path,
+        'data_cfg' : {
+                "processing": {
+                "data_path": data_path + "ml-1m/ratings.dat",
+                "threshold": 3.5,
+                "separator": "::",
+                #"header": 0,
+                "u_min": 5,
+                "i_min": 0
+            },
+            "splitting": {
+                "split_type": "vertical",
+                "sort_by": None,
+                "seed": 98765,
+                "shuffle": True,
+                "valid_size": 200,
+                "test_size": 200,
+                "test_prop": 0.2
+            }
         }
 
         ### Filter data rows   ##################################################################
@@ -465,17 +403,24 @@ def test(n_sample          = 1000):
 
 
         ###################################################
-        'df' : df
-        ,'train':   {'Xtrain': X_train,  'ytrain': y_train, 'Xtest':  X_valid,  'ytest':  y_valid}
-        ,'eval':    {'X': X_valid,  'y': y_valid}
-        ,'predict': {'X': X_valid}
-
-        ,'task_type' : 'train', 'data_type': 'ram'
+        'sampler' : None,
+        'dataset' : None
 
         }
     }
+    dataset, sampler = get_dataset_sampler(m["data_pars"])
 
-    ###  Tester #########################################################
+    m["data_pars"]["sampler"] = sampler
+    m["data_pars"]["dataset"] = dataset
+
+    model = Model(
+        model_pars=m["model_pars"],
+        data_pars=m["data_pars"],
+        compute_pars=m["compute_pars"]
+    )
+            
+    # model.model.train(sampler, valid_metric="ndcg@100")
+    # ###  Tester #########################################################
     test_helper(m['model_pars'], m['data_pars'], m['compute_pars'])
 
 
@@ -489,17 +434,20 @@ def test_helper(model_pars, data_pars, compute_pars):
     fit(data_pars=data_pars, compute_pars=compute_pars)
 
     log('Predict data..')
-    ypred = predict(data_pars=data_pars,compute_pars=compute_pars)
-    log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
+    ypred, ypred_proba = predict(data_pars=data_pars,compute_pars=compute_pars)
+    log(f'y_pred: {ypred}')
+    log(ypred.shape)
 
-
+    log('Eval data..')
+    eval_results = eval(data_pars=data_pars, compute_pars=compute_pars)
+    log(collect_results(eval_results))
     # log('Saving model..')
-    # save(path= root + '/model_dir/')
+    # save(path= root + '/model_rec/')
 
-    # log('Model architecture:')
-    # log(model.model.summary())
+    log('Model architecture:')
+    log(model.model)
 
-    # log('Model Snapshot')
+    log('Model Snapshot')
     # model_summary()
 
 
