@@ -161,7 +161,6 @@ def transform(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     if Xpred is None:
         if name in IMBLEARN_MODELS:
             Xpred_tuple, y = get_dataset(data_pars, task_type="eval")
-
         else:
             Xpred_tuple = get_dataset(data_pars, task_type="predict")
 
@@ -247,9 +246,17 @@ def transform2(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
 
 
     else :
+       if Xpred is None:
+            Xpred_tuple, y = get_dataset(data_pars, task_type="eval")
+       else :
+            cols_type         = data_pars['cols_model_type2']
+            cols_ref_formodel = cols_type  ### Always match with feeded cols_type
+            split             = kw.get("split", False)
+            Xpred_tuple       = get_dataset_tuple(Xpred, cols_type, cols_ref_formodel, split)
+
        Xnew = model.model.transform( Xpred_tuple, **compute_pars.get('compute_pars', {}) )
        log3("generated data", Xnew)
-        return Xnew
+       return Xnew
 
 
 
