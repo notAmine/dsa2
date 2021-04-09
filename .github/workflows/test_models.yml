@@ -103,12 +103,28 @@ jobs:
     #  run: chmod -R 777 . && ztest/run_models.sh   # 2>&1 | tee   /home/runner/work/mlmodels/mlmodels_store/log_import/log_optim.py
 
 
+    - name: python torch_ease.py test_sparse
+      continue-on-error: false
+      run: cd source/models && ipython torch_ease.py test_sparse
+
+      
+    - name: python model_rec_ease.py test
+      continue-on-error: false
+      run:  cd source/models && ipython model_rec_ease.py test
+
+
+    - name: python torch_rectorch.py test
+      continue-on-error: false
+      run: cd source/models && ipython torch_rectorch.py test
+
+
     - name: python keras_widedeep.py  test
       continue-on-error: true
       run:  |
             cd source/models && ipython keras_widedeep.py  test
             echo "keras_widedeep.py" >> file_check.txt
       ## ipython keras_widedeep.py  test2
+
 
     - name: python keras_widedeep_dense.py  test
       # continue-on-error: true
