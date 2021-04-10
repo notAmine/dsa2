@@ -87,69 +87,7 @@ class Model(object):
 
 
 
-# def get_dataset(data_pars, task_type="train"):
-#     """
-#     :param data_pars:
-#     :param task_type:
-#     :return:
-#     """
-#     clean       = data_pars["data_pars"].get('clean', True)
-#     data_path   = data_pars["data_pars"]["data_path"]
-#     batch_size  = data_pars["data_pars"]["batch_size"]
 
-#     if task_type == 'pred_encode':
-#             train_loader, X_train, target_errors_train, dataset_obj,  attributes = utils.load_data(data_path, batch_size,
-#                                             is_train=True,
-#                                             get_data_idxs=False)
-
-#             return X_train
-        
-#     elif task_type == 'pred_decode':
-#         train_loader, X_train, target_errors_train, dataset_obj,  attributes = utils.load_data(data_path, batch_size,
-#                                         is_train=True,
-#                                         get_data_idxs=False)
-
-#         return target_errors_train
-
-
-#     if not clean:
-#         if task_type == 'train':
-#             train_loader, X_train, target_errors_train, dataset_obj,  attributes = utils.load_data(data_path, batch_size,
-#                                             is_train=True,
-#                                             get_data_idxs=False)
-
-#             return train_loader, X_train, target_errors_train, dataset_obj, attributes
-        
-#         elif task_type == 'test':
-
-#             test_loader, X_test, target_errors_test, _, _ = utils.load_data(
-#                 data_path, batch_size, is_train=False
-#             )
-
-#             return test_loader, X_test, target_errors_test
-#         elif task_type == 'predict':
-#             train_loader, _, _, _,  _ = utils.load_data(data_path, batch_size,
-#                                             is_train=True,
-#                                             get_data_idxs=False)
-
-#             return train_loader
-        
-#     # -- clean versions for evaluation
-#     else:
-
-#         if task_type == 'train':
-#             _, X_train_clean, _, _, _ = utils.load_data(
-#                 data_path, batch_size, is_train=True, is_clean=True, stdize_dirty=True
-#             )
-
-#             return X_train_clean
-
-#         elif task_type == 'test':
-#             _, X_test_clean, _, _, _ = utils.load_data(
-#                 data_path, batch_size, is_train=False, is_clean=True, stdize_dirty=True
-#             )
-
-#             return X_test_clean
         
 
 def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
@@ -178,20 +116,6 @@ def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
 
     return ypred
 
-    
-
-# def eval(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dict={}, **kw):
-#     global model, session
-#     """
-#          Encode + Decode 
-#     """
-#     Xencoded = encode(Xpred=Xpred, data_pars=data_pars, compute_pars=compute_pars, out_pars=out_pars)
-#     log("\nEncoded : ", Xencoded)
-
-#     log('\nDecoding : ')
-#     Xnew_original = decode(Xpred=Xencoded, data_pars=data_pars, compute_pars=compute_pars, out_pars=out_pars)
-#     log('\nDecoded : ', Xnew_original)
-
 
 def save(path=None, info=None):
     """ Custom saving
@@ -219,77 +143,6 @@ def load_info(path=""):
             key = fp.split("/")[-1]
             dd[key] = obj
     return dd
-
-
-# cols_ref_formodel = ['cols_single_group']
-# cols_ref_formodel = ['colcontinuous', 'colsparse']
-# def get_dataset_tuple(Xtrain, cols_type_received, cols_ref):
-#     """  Split into Tuples to feed  Xyuple = (df1, df2, df3) OR single dataframe
-#     :param Xtrain:
-#     :param cols_type_received:
-#     :param cols_ref:
-#     :return:
-#     """
-#     if len(cols_ref) <= 1 :
-#         return Xtrain
-
-#     Xtuple_train = []
-#     # cols_ref is the reference for types of cols groups (sparse/continuous)
-#     # This will result in deviding the dataset into many groups of features
-#     for cols_groupname in cols_ref :
-#         # Assert the group name is in the cols reference
-#         assert cols_groupname in cols_type_received, "Error missing colgroup in config data_pars[cols_model_type] "
-#         cols_i = cols_type_received[cols_groupname]
-#         # Add the columns of this group to the list
-#         Xtuple_train.append( Xtrain[cols_i] )
-
-#     if len(cols_ref) == 1 :
-#         return Xtuple_train[0]  ### No tuple
-#     else :
-#         return Xtuple_train
-
-
-# def get_dataset2(data_pars=None, task_type="train", **kw):
-#     """  Return tuple of dataframes
-#     """
-#     # log(data_pars)
-#     data_type = data_pars.get('type', 'ram')
-#     cols_ref  = cols_ref_formodel
-
-#     if data_type == "ram":
-#         # cols_ref_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input' ]
-#         ### dict  colgroup ---> list of colname
-
-#         cols_type_received     = data_pars.get('cols_model_type2', {} )  ##3 Sparse, Continuous
-
-#         if task_type == "predict":
-#             d = data_pars[task_type]
-#             Xtrain       = d["X"]
-#             Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
-#             return Xtuple_train
-
-#         if task_type == "eval":
-#             d = data_pars[task_type]
-#             Xtrain, ytrain  = d["X"], d["y"]
-#             Xtuple_train    = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
-#             return Xtuple_train, ytrain
-
-#         if task_type == "train":
-#             d = data_pars[task_type]
-#             Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
-
-#             ### dict  colgroup ---> list of df
-#             Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
-#             Xtuple_test  = get_dataset_tuple(Xtest, cols_type_received, cols_ref)
-#             log2("Xtuple_train", Xtuple_train)
-
-#             return Xtuple_train, ytrain, Xtuple_test, ytest
-
-
-#     elif data_type == "file":
-#         raise Exception(f' {data_type} data_type Not implemented ')
-
-#     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
 
@@ -334,79 +187,6 @@ def train_test_split2(df, coly):
 
     return X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes
 
-
-# def make_rand_sparse_dataset(
-#         n_rows=1000,
-#     ):
-#     # we need a single source of all user_ids and item_ids 
-#     # to avoid ids apearing in test that wasn't available in train
-#     all_train_data = np.random.randint(0, 10000000, (n_rows, 2)).astype(np.int32)
-
-#     # Split data
-#     train_data, val_data = train_test_split(all_train_data, test_size=0.1, shuffle=True)
-#     val_data, test_data = train_test_split(val_data, test_size=0.5)
-
-#     # add val to train_data and create df
-#     val = np.ones((train_data.shape[0],1)).astype(np.int32)
-#     train_data = np.hstack((train_data, val))
-#     train_set_df = pd.DataFrame(
-#         data=train_data 
-#     )
-
-#     # add val to val_data and create df
-#     val = np.ones((val_data.shape[0],1))
-#     val_data = np.hstack((val_data, val))
-#     val_set_df = pd.DataFrame(
-#         data=val_data
-#     )
-
-#     # add val to test_data and create df
-#     val = np.ones((test_data.shape[0],1))
-#     test_data = np.hstack((test_data, val))
-#     test_set_df = pd.DataFrame(
-#         data=test_data
-#     )
-    
-#     ds = Dataset(
-#         uids=np.unique(all_train_data[:,0]).astype(np.int32),
-#         iids=np.unique(all_train_data[:,1]).astype(np.int32),
-#         train_set=train_set_df,
-#         valid_set=val_set_df,
-#         test_set=test_set_df
-#     )
-
-#     train_sampler = SparseDummySampler(
-#         data=ds,
-#         mode='train',
-#         batch_size=128,
-#         shuffle=True
-#     )
-
-#     return train_sampler 
-
-    
-# def test_sparse(n_sample=1000):
-
-#     train_sampler = make_rand_sparse_dataset(
-#         n_rows=1000,
-#     )
-
-#     model = EASE()
-    
-#     log("Training...")
-
-#     model.train(train_sampler)
-#     test_te = train_sampler.data_te
-
-#     test_uids = np.random.choice(train_sampler.data.unique_uid, 500)
-#     uid_to_internal_rectorch_id = lambda uid: train_sampler.data.u2id[uid]
-#     id_mapper = np.vectorize(uid_to_internal_rectorch_id)
-#     test_mapped_ids = id_mapper(test_uids)
-
-#     log("Predicting...")
-    
-#     res = model.predict(test_mapped_ids, test_te, False)
-#     log(res)
 
 
 def get_dataset3(data_pars=None, task_type="train", **kwargs):
@@ -512,6 +292,227 @@ def test_helper(model_pars, data_pars, compute_pars):
     # log('Model Snapshot')
     # model_summary()
 
+# def get_dataset(data_pars, task_type="train"):
+#     """
+#     :param data_pars:
+#     :param task_type:
+#     :return:
+#     """
+#     clean       = data_pars["data_pars"].get('clean', True)
+#     data_path   = data_pars["data_pars"]["data_path"]
+#     batch_size  = data_pars["data_pars"]["batch_size"]
+
+#     if task_type == 'pred_encode':
+#             train_loader, X_train, target_errors_train, dataset_obj,  attributes = utils.load_data(data_path, batch_size,
+#                                             is_train=True,
+#                                             get_data_idxs=False)
+
+#             return X_train
+        
+#     elif task_type == 'pred_decode':
+#         train_loader, X_train, target_errors_train, dataset_obj,  attributes = utils.load_data(data_path, batch_size,
+#                                         is_train=True,
+#                                         get_data_idxs=False)
+
+#         return target_errors_train
+
+
+#     if not clean:
+#         if task_type == 'train':
+#             train_loader, X_train, target_errors_train, dataset_obj,  attributes = utils.load_data(data_path, batch_size,
+#                                             is_train=True,
+#                                             get_data_idxs=False)
+
+#             return train_loader, X_train, target_errors_train, dataset_obj, attributes
+        
+#         elif task_type == 'test':
+
+#             test_loader, X_test, target_errors_test, _, _ = utils.load_data(
+#                 data_path, batch_size, is_train=False
+#             )
+
+#             return test_loader, X_test, target_errors_test
+#         elif task_type == 'predict':
+#             train_loader, _, _, _,  _ = utils.load_data(data_path, batch_size,
+#                                             is_train=True,
+#                                             get_data_idxs=False)
+
+#             return train_loader
+        
+#     # -- clean versions for evaluation
+#     else:
+
+#         if task_type == 'train':
+#             _, X_train_clean, _, _, _ = utils.load_data(
+#                 data_path, batch_size, is_train=True, is_clean=True, stdize_dirty=True
+#             )
+
+#             return X_train_clean
+
+#         elif task_type == 'test':
+#             _, X_test_clean, _, _, _ = utils.load_data(
+#                 data_path, batch_size, is_train=False, is_clean=True, stdize_dirty=True
+#             )
+
+#             return X_test_clean
+
+
+# def make_rand_sparse_dataset(
+#         n_rows=1000,
+#     ):
+#     # we need a single source of all user_ids and item_ids 
+#     # to avoid ids apearing in test that wasn't available in train
+#     all_train_data = np.random.randint(0, 10000000, (n_rows, 2)).astype(np.int32)
+
+#     # Split data
+#     train_data, val_data = train_test_split(all_train_data, test_size=0.1, shuffle=True)
+#     val_data, test_data = train_test_split(val_data, test_size=0.5)
+
+#     # add val to train_data and create df
+#     val = np.ones((train_data.shape[0],1)).astype(np.int32)
+#     train_data = np.hstack((train_data, val))
+#     train_set_df = pd.DataFrame(
+#         data=train_data 
+#     )
+
+#     # add val to val_data and create df
+#     val = np.ones((val_data.shape[0],1))
+#     val_data = np.hstack((val_data, val))
+#     val_set_df = pd.DataFrame(
+#         data=val_data
+#     )
+
+#     # add val to test_data and create df
+#     val = np.ones((test_data.shape[0],1))
+#     test_data = np.hstack((test_data, val))
+#     test_set_df = pd.DataFrame(
+#         data=test_data
+#     )
+    
+#     ds = Dataset(
+#         uids=np.unique(all_train_data[:,0]).astype(np.int32),
+#         iids=np.unique(all_train_data[:,1]).astype(np.int32),
+#         train_set=train_set_df,
+#         valid_set=val_set_df,
+#         test_set=test_set_df
+#     )
+
+#     train_sampler = SparseDummySampler(
+#         data=ds,
+#         mode='train',
+#         batch_size=128,
+#         shuffle=True
+#     )
+
+#     return train_sampler 
+
+    
+# def test_sparse(n_sample=1000):
+
+#     train_sampler = make_rand_sparse_dataset(
+#         n_rows=1000,
+#     )
+
+#     model = EASE()
+    
+#     log("Training...")
+
+#     model.train(train_sampler)
+#     test_te = train_sampler.data_te
+
+#     test_uids = np.random.choice(train_sampler.data.unique_uid, 500)
+#     uid_to_internal_rectorch_id = lambda uid: train_sampler.data.u2id[uid]
+#     id_mapper = np.vectorize(uid_to_internal_rectorch_id)
+#     test_mapped_ids = id_mapper(test_uids)
+
+#     log("Predicting...")
+    
+#     res = model.predict(test_mapped_ids, test_te, False)
+#     log(res)
+
+
+# cols_ref_formodel = ['cols_single_group']
+# cols_ref_formodel = ['colcontinuous', 'colsparse']
+# def get_dataset_tuple(Xtrain, cols_type_received, cols_ref):
+#     """  Split into Tuples to feed  Xyuple = (df1, df2, df3) OR single dataframe
+#     :param Xtrain:
+#     :param cols_type_received:
+#     :param cols_ref:
+#     :return:
+#     """
+#     if len(cols_ref) <= 1 :
+#         return Xtrain
+
+#     Xtuple_train = []
+#     # cols_ref is the reference for types of cols groups (sparse/continuous)
+#     # This will result in deviding the dataset into many groups of features
+#     for cols_groupname in cols_ref :
+#         # Assert the group name is in the cols reference
+#         assert cols_groupname in cols_type_received, "Error missing colgroup in config data_pars[cols_model_type] "
+#         cols_i = cols_type_received[cols_groupname]
+#         # Add the columns of this group to the list
+#         Xtuple_train.append( Xtrain[cols_i] )
+
+#     if len(cols_ref) == 1 :
+#         return Xtuple_train[0]  ### No tuple
+#     else :
+#         return Xtuple_train
+
+
+# def get_dataset2(data_pars=None, task_type="train", **kw):
+#     """  Return tuple of dataframes
+#     """
+#     # log(data_pars)
+#     data_type = data_pars.get('type', 'ram')
+#     cols_ref  = cols_ref_formodel
+
+#     if data_type == "ram":
+#         # cols_ref_formodel = ['cols_cross_input', 'cols_deep_input', 'cols_deep_input' ]
+#         ### dict  colgroup ---> list of colname
+
+#         cols_type_received     = data_pars.get('cols_model_type2', {} )  ##3 Sparse, Continuous
+
+#         if task_type == "predict":
+#             d = data_pars[task_type]
+#             Xtrain       = d["X"]
+#             Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
+#             return Xtuple_train
+
+#         if task_type == "eval":
+#             d = data_pars[task_type]
+#             Xtrain, ytrain  = d["X"], d["y"]
+#             Xtuple_train    = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
+#             return Xtuple_train, ytrain
+
+#         if task_type == "train":
+#             d = data_pars[task_type]
+#             Xtrain, ytrain, Xtest, ytest  = d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
+
+#             ### dict  colgroup ---> list of df
+#             Xtuple_train = get_dataset_tuple(Xtrain, cols_type_received, cols_ref)
+#             Xtuple_test  = get_dataset_tuple(Xtest, cols_type_received, cols_ref)
+#             log2("Xtuple_train", Xtuple_train)
+
+#             return Xtuple_train, ytrain, Xtuple_test, ytest
+
+
+#     elif data_type == "file":
+#         raise Exception(f' {data_type} data_type Not implemented ')
+
+#     raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
+
+
+# def eval(Xpred=None, data_pars: dict={}, compute_pars: dict={}, out_pars: dict={}, **kw):
+#     global model, session
+#     """
+#          Encode + Decode 
+#     """
+#     Xencoded = encode(Xpred=Xpred, data_pars=data_pars, compute_pars=compute_pars, out_pars=out_pars)
+#     log("\nEncoded : ", Xencoded)
+
+#     log('\nDecoding : ')
+#     Xnew_original = decode(Xpred=Xencoded, data_pars=data_pars, compute_pars=compute_pars, out_pars=out_pars)
+#     log('\nDecoded : ', Xnew_original)
 
 if __name__ == "__main__":
     import fire

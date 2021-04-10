@@ -198,44 +198,6 @@ def load_info(path=""):
 ####################################################################################################
 ############ Test  #################################################################################
 
-# def test_dataset_goodbooks(nrows=1000):
-#     from sklearn.preprocessing import LabelEncoder
-#     data_path = "./goodbooks_dataset"
-#     if not os.path.isdir(data_path):
-#         os.makedirs(data_path, exist_ok=True)
-    
-#         wget.download(
-#             "https://github.com/zygmuntz/goodbooks-10k/releases/download/v1.0/goodbooks-10k.zip",
-#             out=data_path
-#         )
-
-#         with zipfile.ZipFile(f"{data_path}/goodbooks-10k.zip") as zip_ref:
-#             zip_ref.extractall(data_path)
-#     df = pd.read_csv(data_path + "/ratings.csv")
-#     # Dense features
-#     coly = ['rating',  ]
-
-#     # Sparse features
-#     colcat = ['user_id', 'book_id' ]
-#     colnum = []
-#     return df, colnum, colcat, coly
-
-
-# def train_test_split2(df, coly):
-#     log3(df.dtypes)
-#     y = df[coly] ### If clonassificati
-#     X = df.drop(coly,  axis=1)
-#     log3('y', np.sum(y[y==1]) , X.head(3))
-#     ######### Split the df into train/test subsets
-#     X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021)
-#     X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021)
-
-#     #####
-#     # y = y.astype('uint8')
-#     num_classes                                = len(set(y_train_full.values.ravel()))
-
-#     return X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes
-
 
 def make_rand_sparse_dataset(
         n_rows=1000,
@@ -332,6 +294,44 @@ def test_helper(model_pars, data_pars, compute_pars):
 
     log('Saving model..')
     save(path= root + '/model_dir/')
+
+# def test_dataset_goodbooks(nrows=1000):
+#     from sklearn.preprocessing import LabelEncoder
+#     data_path = "./goodbooks_dataset"
+#     if not os.path.isdir(data_path):
+#         os.makedirs(data_path, exist_ok=True)
+    
+#         wget.download(
+#             "https://github.com/zygmuntz/goodbooks-10k/releases/download/v1.0/goodbooks-10k.zip",
+#             out=data_path
+#         )
+
+#         with zipfile.ZipFile(f"{data_path}/goodbooks-10k.zip") as zip_ref:
+#             zip_ref.extractall(data_path)
+#     df = pd.read_csv(data_path + "/ratings.csv")
+#     # Dense features
+#     coly = ['rating',  ]
+
+#     # Sparse features
+#     colcat = ['user_id', 'book_id' ]
+#     colnum = []
+#     return df, colnum, colcat, coly
+
+
+# def train_test_split2(df, coly):
+#     log3(df.dtypes)
+#     y = df[coly] ### If clonassificati
+#     X = df.drop(coly,  axis=1)
+#     log3('y', np.sum(y[y==1]) , X.head(3))
+#     ######### Split the df into train/test subsets
+#     X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021)
+#     X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021)
+
+#     #####
+#     # y = y.astype('uint8')
+#     num_classes                                = len(set(y_train_full.values.ravel()))
+
+#     return X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes
 
 
 if __name__ == "__main__":
