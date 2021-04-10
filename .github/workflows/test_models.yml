@@ -108,9 +108,9 @@ jobs:
       run: cd source/models && ipython torch_ease.py test
 
       
-    - name: python model_rec_ease.py test
-      continue-on-error: false
-      run:  cd source/models && ipython model_rec_ease.py test
+#     - name: python model_rec_ease.py test
+#       continue-on-error: false
+#       run:  cd source/models && ipython model_rec_ease.py test
 
 
     - name: python torch_rectorch.py test
