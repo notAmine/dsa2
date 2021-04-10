@@ -232,7 +232,7 @@ if __name__ == '__main__':
         'pars': 23,
         "batch_size" : 32,
         "n_train": 500, 
-        "n_test": 500
+        "n_test": 500,
 
         'sub-dict' :{ 'one' : {'twp': 2 } }
     }
