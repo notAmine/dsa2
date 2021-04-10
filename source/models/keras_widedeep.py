@@ -112,6 +112,66 @@ def WideDeep_sparse(model_pars2):
     return model
 
 
+def WideDeep_dense(model_pars2):
+        #n_wide_cross, n_wide, n_deep, n_feat=8, m_EMBEDDING=10, loss='mse', metric ='mean_squared_error'):
+        """
+           Dense Model of DeepWide
+        :param n_wide_cross:
+        :param n_wide:
+        :param n_deep:
+        :param n_feat:
+        :param m_EMBEDDING:
+        :param loss:
+        :param metric:
+        :return:
+        """
+
+        m = model_pars2
+        n_wide_cross = m.get('n_wide_cross', 2)
+        n_wide = m.get('n_wide', 2)
+        n_deep = m.get('n_deep', 2)
+        n_feat = m.get('n_feat', 2)
+        m_EMBEDDING = m.get('m_embedding', 2)
+        loss      = m.get('loss', 'binary_crossentropy')
+        optimizer = m.get('optimizer', 'adam')
+        metrics   = m.get('metrics', ['accuracy'])
+        dnn_hidden_units = m.get('hidden_units', '64,32,16')
+
+
+        #### Wide model with the functional API
+        col_wide_cross          = tf.keras.layers.Input(shape=(n_wide_cross,))
+        col_wide                = tf.keras.layers.Input(shape=(n_wide,))
+        merged_layer            = tf.keras.layers.concatenate([col_wide_cross, col_wide])
+        merged_layer            = tf.keras.layers.Dense(15, activation='relu')(merged_layer)
+        predictions             = tf.keras.layers.Dense(1)(merged_layer)
+        wide_model              = tf.keras.Model(inputs=[col_wide_cross, col_wide], outputs=predictions)
+
+        wide_model.compile(loss = loss, optimizer='adam', metrics= metrics)
+        #log2(wide_model.summary())
+
+        #### Deep model with the Functional API
+        deep_inputs             = tf.keras.layers.Input(shape=(n_deep,))
+        #embedding               = tf.keras.layers.Embedding(n_feat, m_EMBEDDING, input_length= n_deep)(deep_inputs)
+        embedding               = tf.keras.layers.Flatten()(deep_inputs)
+
+        merged_layer            = tf.keras.layers.Dense(15, activation='relu')(embedding)
+
+        embed_out               = tf.keras.layers.Dense(1)(merged_layer)
+        deep_model              = tf.keras.Model(inputs=deep_inputs, outputs=embed_out)
+        deep_model.compile(loss=loss,   optimizer='adam',  metrics= metrics)
+        log2(deep_model.summary())
+
+
+        #### Combine wide and deep into one model
+        merged_out = tf.keras.layers.concatenate([wide_model.output, deep_model.output])
+        merged_out = tf.keras.layers.Dense(1)(merged_out)
+        model      = tf.keras.Model(wide_model.input+[deep_model.input], merged_out)
+        model.compile(loss=loss,   optimizer='adam',  metrics= metrics)
+        #log2(model.summary())
+        log("Deep Model")
+        return model
+
+
 class Model(object):
     global model,session
     def __init__(self, model_pars=None,  data_pars=None, compute_pars=None,):
@@ -299,7 +359,6 @@ def get_dataset_split_for_model_pandastuple(Xtrain, ytrain=None, data_pars=None,
     return Xtuple_train, ytrain
 
 
-
 def get_dataset_split_for_model_petastorm(Xtrain, ytrain=None, pars:dict=None):
     """  Split data for moel input/
     Xtrain  ---> Split INTO  tuple PetaStorm Reader
@@ -412,7 +471,8 @@ class tf_FeatureColumns:
             return self.train_df_tf, None, None
 
         else:
-            self.train_data,self.train_label,shape = self.df_to_dataset_dense(self.train,target=target,shuffle=shuffle_train,batch_size=batch_size)
+            self.train_data,self.train_label,shape = self.df_to_dataset_dense(self.train,target=target,
+                                                                              shuffle=shuffle_train,batch_size=batch_size)
             return self.train_data, self.train_label, shape
 
 
@@ -489,15 +549,6 @@ class tf_FeatureColumns:
 def get_dataset_split_for_model_tfsparse(Xtrain, ytrain=None, pars:dict=None):
     """  Split data for moel input/
     Xtrain  ---> Split INTO  tuple of data  Xtuple= (df1, df2, df3) to fit model input.
-
-  File "D:\_devs\Python01\ana3\envs\py36\lib\site-packages\tensorflow\python\keras\engine\training.py", line 1064, in fit
-    steps_per_execution=self._steps_per_execution)
-  File "D:\_devs\Python01\ana3\envs\py36\lib\site-packages\tensorflow\python\keras\engine\data_adapter.py", line 1099, in __init__
-    adapter_cls = select_data_adapter(x, y)
-  File "D:\_devs\Python01\ana3\envs\py36\lib\site-packages\tensorflow\python\keras\engine\data_adapter.py", line 964, in select_data_adapter
-    _type_name(x), _type_name(y)))
-ValueError: Failed to find data adapter that can handle input: (<class 'tuple'> containing values of types {"<class 'tensorflow.python.data.ops.dataset_ops.BatchDataset'>"}), <class 'NoneType'>
-
 
     :param Xtrain:
     :param coldataloader_received:
@@ -622,7 +673,7 @@ def test(config='',     n_sample = 100):
     test_helper( m['model_pars'], m['data_pars'], m['compute_pars'])
 
 
-    #################################################################################
+    log("##### Sparse Tests 2 ############################################### ")
     path  = "ztmp/parquets/"
     path2 = "ztmp/parquets/f01.parquet"
     os.makedirs(path, exist_ok=True)
@@ -637,12 +688,13 @@ def test(config='',     n_sample = 100):
     m['data_pars']['train']     = {'X_train':  path2,
                                    'X_test':   path2}
     m['data_pars']['predict']   = {'X':        path2 }
+
     m['data_pars']['data_pars'] = {
-        'colcat_unique' : colcat_unique,
         'colcat'        : colcat,
         'colnum'        : colnum,
+        'coly'          : coly,
+        'colcat_unique' : colcat_unique,
         'colembed_dict' : colembed_dict,
-        'coly'          : coly
     }
     test_helper( m['model_pars'], m['data_pars'], m['compute_pars'])
 
@@ -907,67 +959,6 @@ def zz_get_dataset(data_pars=None, task_type="train", **kw):
 
 ####################################################################################################################
 ####################################################################################################################
-def WideDeep_dense(model_pars2):
-        #n_wide_cross, n_wide, n_deep, n_feat=8, m_EMBEDDING=10, loss='mse', metric ='mean_squared_error'):
-        """
-           Dense Model of DeepWide
-        :param n_wide_cross: 
-        :param n_wide: 
-        :param n_deep: 
-        :param n_feat: 
-        :param m_EMBEDDING: 
-        :param loss: 
-        :param metric: 
-        :return: 
-        """
-    
-        m = model_pars2
-        n_wide_cross = m.get('n_wide_cross', 2)
-        n_wide = m.get('n_wide', 2)
-        n_deep = m.get('n_deep', 2)
-        n_feat = m.get('n_feat', 2)
-        m_EMBEDDING = m.get('m_embedding', 2)
-        loss      = m.get('loss', 'binary_crossentropy')
-        optimizer = m.get('optimizer', 'adam')
-        metrics   = m.get('metrics', ['accuracy'])
-        dnn_hidden_units = m.get('hidden_units', '64,32,16')
-
-
-        #### Wide model with the functional API
-        col_wide_cross          = tf.keras.layers.Input(shape=(n_wide_cross,))
-        col_wide                = tf.keras.layers.Input(shape=(n_wide,))
-        merged_layer            = tf.keras.layers.concatenate([col_wide_cross, col_wide])
-        merged_layer            = tf.keras.layers.Dense(15, activation='relu')(merged_layer)
-        predictions             = tf.keras.layers.Dense(1)(merged_layer)
-        wide_model              = tf.keras.Model(inputs=[col_wide_cross, col_wide], outputs=predictions)
-
-        wide_model.compile(loss = loss, optimizer='adam', metrics= metrics)
-        #log2(wide_model.summary())
-
-        #### Deep model with the Functional API
-        deep_inputs             = tf.keras.layers.Input(shape=(n_deep,))
-        #embedding               = tf.keras.layers.Embedding(n_feat, m_EMBEDDING, input_length= n_deep)(deep_inputs)
-        embedding               = tf.keras.layers.Flatten()(deep_inputs)
-
-        merged_layer            = tf.keras.layers.Dense(15, activation='relu')(embedding)
-
-        embed_out               = tf.keras.layers.Dense(1)(merged_layer)
-        deep_model              = tf.keras.Model(inputs=deep_inputs, outputs=embed_out)
-        deep_model.compile(loss=loss,   optimizer='adam',  metrics= metrics)
-        log2(deep_model.summary())
-
-
-        #### Combine wide and deep into one model
-        merged_out = tf.keras.layers.concatenate([wide_model.output, deep_model.output])
-        merged_out = tf.keras.layers.Dense(1)(merged_out)
-        model      = tf.keras.Model(wide_model.input+[deep_model.input], merged_out)
-        model.compile(loss=loss,   optimizer='adam',  metrics= metrics)
-        #log2(model.summary())
-        log("Deep Model")
-        return model
-
-
-
 
 
 
