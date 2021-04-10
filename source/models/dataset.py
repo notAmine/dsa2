@@ -16,7 +16,44 @@ def pack_features_vector(features, labels):
     return features, labels
 
 
+
+
+
+def eval_dict(src, dst={}):
+    import pandas as pd
+    for key, value in src.items():
+        if isinstance(value, dict):
+            node = dst.setdefault(key, {})
+            eval_dict(value, node)
+        else:
+            if "@lazy" not in key :
+               dst[key] = value
+            else :
+                key2 = key.split(":")[-1]
+                if 'pandas.read_csv' in key :
+                    dst[key2] = pd.read_csv(value)
+                elif 'pandas.read_parquet' in key :
+                    dst[key2] = pd.read_parquet(value)
+    return dst
+
+
+
 class dictEval(object):
+    '''
+    https://www.tutorialspoint.com/How-to-recursively-iterate-a-nested-Python-dictionary
+
+    https://stackoverflow.com/questions/45335445/recursively-replace-dictionary-values-with-matching-key
+
+def replace_item(obj, key, replace_value):
+    for k, v in obj.items():
+        if isinstance(v, dict):
+            obj[k] = replace_item(v, key, replace_value)
+    if key in obj:
+        obj[key] = replace_value
+    return obj
+
+
+    '''
     global dst
     import glob
 
@@ -26,12 +63,12 @@ class dictEval(object):
     def reset(self):
         self.dst = {}
 
-    def eval_dict(self,src):
-        global dst
+    def eval_dict(self,src, dst={}):
         for key, value in src.items():
             if isinstance(value, dict):
-                # node = dst.setdefault(key, {})
-                self.dst[key]  = self.eval_dict(value)
+                node     = dst.setdefault(key, {})
+                dst[key] = self.eval_dict(value, node)
+
             else:
                 if ":@lazy" not in key :
                     dst[key] = value
@@ -40,17 +77,15 @@ class dictEval(object):
                 ###########################################################################################
                 key2           = key.split(':@lazy')[0]
                 path_pattern   = value
-                # ext    = value.split('.')[-1]
-                # coly = src.get('target','y')
 
-                ###########################################################
                 if 'tf:' in key :
                     #log('TF is HEre')
-                    return self.tf_dataset_create(key2,path_pattern,)
+                    dst[key2] = self.tf_dataset_create(key2,path_pattern,)
 
-                ###########################################################
                 if 'pandas:' in key :
-                    return self.pandas_create(key2, path_pattern, )
+                    dst[key2] = self.pandas_create(key2, path_pattern, )
+
+        return dst
 
 
     def tf_dataset_create(self, key2, path_pattern, batch_size=32, **kw):
