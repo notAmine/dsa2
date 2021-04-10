@@ -105,7 +105,7 @@ jobs:
 
     - name: python torch_ease.py test
       continue-on-error: false
-      run: cd source/models && ipython torch_ease.py test_sparse
+      run: cd source/models && ipython torch_ease.py test
 
       
     - name: python model_rec_ease.py test
