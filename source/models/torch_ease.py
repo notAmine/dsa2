@@ -78,7 +78,7 @@ class Model(object):
 
         # n_samples = data_pars["n_sample"]
         # train_df = data_pars["df"].iloc[:n_samples]
-        train_df = get_dataset3(data_pars=data_pars, task_type="train")
+        train_df = get_dataset(data_pars=data_pars, task_type="train")
         # self.args = model_pars2
         self.model = TorchEASE(
             train_df, user_col="user_id", item_col="book_id", score_col="rating", reg=250.0
@@ -110,7 +110,7 @@ def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
         # Xpred = data_pars["df"]
         # colcat = data_pars["cols_input_type"]["colcat"]
         # Xpred = data_pars["predict"]["X"]
-        Xpred = get_dataset3(data_pars=data_pars, task_type="predict")
+        Xpred = get_dataset(data_pars=data_pars, task_type="predict")
 
     ypred = model.model.predict_all(Xpred)
 
@@ -189,7 +189,7 @@ def train_test_split2(df, coly):
 
 
 
-def get_dataset3(data_pars=None, task_type="train", **kwargs):
+def get_dataset(data_pars=None, task_type="train", **kwargs):
 
     if task_type == "train":
         n_samples = data_pars["n_sample"]
