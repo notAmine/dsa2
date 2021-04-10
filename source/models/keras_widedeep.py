@@ -370,17 +370,18 @@ class tf_FeatureColumns:
         return data,None,shape
 
 
-    def data_to_tensorflow(self,df, target,model='sparse',shuffle_train=False,shuffle_test=False,shuffle_val=False,batch_size=32,
+    def data_to_tensorflow_split(self,df, target,model='sparse',shuffle_train=False,shuffle_test=False,shuffle_val=False,batch_size=32,
                            test_split=0.2, colnum=[], colcat=[]):
 
         for c in colcat:
             df[c] =  df[c].astype(str)
-        #df = pd.get_dummies(df)
+
         if test_split is not None :
             train_df,test_df = train_test_split(df,test_size=test_split)
             train_df,val_df  = train_test_split(train_df,test_size=0.1)
             log('Files Splitted')
             self.train,self.val,self.test = train_df,val_df,test_df
+
         if model=='sparse':
             self.train_df_tf = self.df_to_dataset(self.train,target=target,shuffle=shuffle_train, batch_size=batch_size)
             self.test_df_tf  = self.df_to_dataset(self.test,target=target, shuffle=shuffle_test,  batch_size=batch_size)
@@ -395,6 +396,26 @@ class tf_FeatureColumns:
             self.val_data,self.val_label,_ = self.df_to_dataset_dense(self.val,target=target,shuffle=shuffle_train,batch_size=batch_size)
 
             return self.train_data,self.train_label,self.test_data,self.test_label,self.val_data,self.val_label,shape
+
+
+    def data_to_tensorflow(self,df, target,model='sparse',shuffle_train=False,shuffle_test=False,shuffle_val=False,batch_size=32,
+                           colnum=[], colcat:list=[]):
+
+        for c in colcat:
+            df[c] =  df[c].astype(str)  ### TF wants String for category
+
+        self.train = df
+
+        if model=='sparse':
+            self.train_df_tf = self.df_to_dataset(self.train,target=target,shuffle=shuffle_train, batch_size=batch_size)
+            log('Datasets Converted to Tensorflow')
+            return self.train_df_tf, None, None
+
+        else:
+            self.train_data,self.train_label,shape = self.df_to_dataset_dense(self.train,target=target,shuffle=shuffle_train,batch_size=batch_size)
+            return self.train_data, self.train_label, shape
+
+
     ################## To PLUG INTO  model
     def numeric_columns(self,columnsName):
         for header in columnsName:
@@ -491,7 +512,7 @@ ValueError: Failed to find data adapter that can handle input: (<class 'tuple'> 
         log3('Xtrain laoded', Xtrain)
 
     if isinstance(Xtrain, tf.data.Dataset) :
-       train_df = Xtrain
+       train_tfdata = Xtrain
 
     else :
         colnum   = pars['data_pars']['colnum']
@@ -500,11 +521,12 @@ ValueError: Failed to find data adapter that can handle input: (<class 'tuple'> 
         # colembed = pars['data_pars']['colembed_dict']
         assert isinstance(Xtrain, pd.DataFrame), 'Xtrain not dataframe'
 
-        prepare  = tf_FeatureColumns()
-        train_df, test_df, val_df  = prepare.data_to_tensorflow(Xtrain, model='sparse', target= coly,
-                                                                colcat=colcat, colnum=colnum)
+        prepare          = tf_FeatureColumns()
+        train_tfdata,_,_ = prepare.data_to_tensorflow(Xtrain, model='sparse', target= coly,
+                                                  colcat=colcat, colnum=colnum)
+        log3(train_tfdata)
 
-    return train_df
+    return train_tfdata
 
 
 
@@ -576,7 +598,7 @@ def test(config='',     n_sample = 100):
     log("##### Sparse Tests  ############################################### ")
     prepare = tf_FeatureColumns()
     model_type = 'sparse'
-    train_df, test_df, val_df = prepare.data_to_tensorflow(df, model=model_type, target='y',
+    train_df, test_df, val_df = prepare.data_to_tensorflow_split(df, model=model_type, target='y',
                                 colcat=colcat, colnum=colnum)
 
     ### Unique values
