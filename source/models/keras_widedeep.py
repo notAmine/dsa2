@@ -163,7 +163,6 @@ def fit(data_pars=None, compute_pars=None, out_pars=None):
 
     else :
         log2('Fitting Dense input...')
-
         Xtrain,Ytrain = get_dataset_split_for_model_pandastuple(Xtrain, Ytrain, data_pars)
         Xy_train      = tf.data.Dataset.zip(((Xtrain,Xtrain,Xtrain), Ytrain)).batch(batch_size)
 
@@ -470,6 +469,15 @@ def get_dataset_split_for_model_tfsparse(Xtrain, ytrain=None, pars:dict=None):
     """  Split data for moel input/
     Xtrain  ---> Split INTO  tuple of data  Xtuple= (df1, df2, df3) to fit model input.
 
+  File "D:\_devs\Python01\ana3\envs\py36\lib\site-packages\tensorflow\python\keras\engine\training.py", line 1064, in fit
+    steps_per_execution=self._steps_per_execution)
+  File "D:\_devs\Python01\ana3\envs\py36\lib\site-packages\tensorflow\python\keras\engine\data_adapter.py", line 1099, in __init__
+    adapter_cls = select_data_adapter(x, y)
+  File "D:\_devs\Python01\ana3\envs\py36\lib\site-packages\tensorflow\python\keras\engine\data_adapter.py", line 964, in select_data_adapter
+    _type_name(x), _type_name(y)))
+ValueError: Failed to find data adapter that can handle input: (<class 'tuple'> containing values of types {"<class 'tensorflow.python.data.ops.dataset_ops.BatchDataset'>"}), <class 'NoneType'>
+
+
     :param Xtrain:
     :param coldataloader_received:
     :param colmodel_ref:
@@ -480,6 +488,7 @@ def get_dataset_split_for_model_tfsparse(Xtrain, ytrain=None, pars:dict=None):
     if isinstance(Xtrain, str) :
         from utilmy import pd_read_file
         Xtrain  = pd_read_file(Xtrain)  ## in Memory
+        log3('Xtrain laoded', Xtrain)
 
     if isinstance(Xtrain, tf.data.Dataset) :
        train_df = Xtrain
@@ -488,11 +497,12 @@ def get_dataset_split_for_model_tfsparse(Xtrain, ytrain=None, pars:dict=None):
         colnum   = pars['data_pars']['colnum']
         colcat   = pars['data_pars']['colcat']
         coly     = pars['data_pars']['coly']
-        colembed = pars['data_pars']['colembed_dict']
+        # colembed = pars['data_pars']['colembed_dict']
+        assert isinstance(Xtrain, pd.DataFrame), 'Xtrain not dataframe'
 
         prepare  = tf_FeatureColumns()
-        train_df = prepare.data_to_tensorflow(Xtrain, model='sparse', target= coly,
-                                           colcat=colcat, colnum=colnum)
+        train_df, test_df, val_df  = prepare.data_to_tensorflow(Xtrain, model='sparse', target= coly,
+                                                                colcat=colcat, colnum=colnum)
 
     return train_df
 
@@ -510,7 +520,6 @@ def test(config='',     n_sample = 100):
     colnum, colcat, coly, colembed = d['colnum'], d['colcat'], d['coly'], d['colembed']
 
 
-    ##########################################################################
     #### Big dict  ##########################################################
     cols_input_type_1 = []
     def post_process_fun(y): return int(y)
@@ -540,7 +549,7 @@ def test(config='',     n_sample = 100):
         'data_pars' :{
         },
 
-        'download_pars' : None,
+        'download_pars'   : None,
         'cols_input_type' : cols_input_type_1,
         ### family of columns for MODEL  ##################
          'cols_model_group': [ 'colnum_bin',   'colcat_bin', ]
@@ -592,7 +601,8 @@ def test(config='',     n_sample = 100):
 
 
     #################################################################################
-    path = "ztmp/parquets/"
+    path  = "ztmp/parquets/"
+    path2 = "ztmp/parquets/f01.parquet"
     os.makedirs(path, exist_ok=True)
     df.to_parquet( path + "/f01.parquet")
     colcat_unique = {  col: list(df[col].unique())  for col in colcat }
@@ -602,15 +612,15 @@ def test(config='',     n_sample = 100):
     m['model_pars']['model_pars'] = { 'loss' : 'binary_crossentropy','optimizer':'adam',
                                       'metric': ['accuracy'],'hidden_units': '64,32,16'}
 
-    m['data_pars']['train']     = {'X_train':  path + "/f01.parquet",
-                                   'X_test':   path+ "/f01.parquet"}
-    m['data_pars']['predict']   = {'X':        path+ "/f01.parquet" }
+    m['data_pars']['train']     = {'X_train':  path2,
+                                   'X_test':   path2}
+    m['data_pars']['predict']   = {'X':        path2 }
     m['data_pars']['data_pars'] = {
         'colcat_unique' : colcat_unique,
         'colcat'        : colcat,
         'colnum'        : colnum,
         'colembed_dict' : colembed_dict,
-        'coly' : coly +"/*"
+        'coly'          : coly
     }
     test_helper( m['model_pars'], m['data_pars'], m['compute_pars'])
 
