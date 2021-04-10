@@ -14,7 +14,7 @@ except Exception as e : verbosity = 2
 #raise Exception(f"{e}")
 
 def log(*s):
-    print(*s, flush=True)
+    if verbosity >= 1 : print(*s, flush=True)
 
 def log2(*s):
     if verbosity >= 2 : print(*s, flush=True)
@@ -443,7 +443,7 @@ def benchmark_helper(train_df, test_df):
 
     test_helper( m['model_pars'], m['data_pars'], m['compute_pars'])
 
-    
+
 ####################################################################################################################
 if __name__ == '__main__':
     import fire
