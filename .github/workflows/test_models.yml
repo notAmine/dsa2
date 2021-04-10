@@ -103,7 +103,7 @@ jobs:
     #  run: chmod -R 777 . && ztest/run_models.sh   # 2>&1 | tee   /home/runner/work/mlmodels/mlmodels_store/log_import/log_optim.py
 
 
-    - name: python torch_ease.py test_sparse
+    - name: python torch_ease.py test
       continue-on-error: false
       run: cd source/models && ipython torch_ease.py test_sparse
 
