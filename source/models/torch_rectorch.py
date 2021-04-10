@@ -54,7 +54,7 @@ import_path      = thisfile_dirpath + "/repo/TorchEASE/"
 sys.path.append(import_path)
 
 ##### Import from src/core_models/
-from main.EASE import TorchEASE
+# from main.EASE import TorchEASE
 
 from rectorch.data import Dataset
 from rectorch.samplers import SparseDummySampler
@@ -84,27 +84,28 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     global model, session
     session = None  # Session type for compute
 
-    df = data_pars.get('df')
-    train_set_df = data_pars.get('train').get('df')
-    val_set_df = data_pars.get('eval').get('df')
-    test_set_df = data_pars.get('predict').get('df')
+    # df = data_pars.get('df')
+    # train_set_df = data_pars.get('train').get('df')
+    # val_set_df = data_pars.get('eval').get('df')
+    # test_set_df = data_pars.get('predict').get('df')
 
-    ds = Dataset(
-        uids=np.unique(df.iloc[:,0]).astype(np.int32),
-        iids=np.unique(df.iloc[:,1]).astype(np.int32),
-        train_set=train_set_df,
-        valid_set=val_set_df,
-        test_set=test_set_df
-    )
+    # ds = Dataset(
+    #     uids=np.unique(df.iloc[:,0]).astype(np.int32),
+    #     iids=np.unique(df.iloc[:,1]).astype(np.int32),
+    #     train_set=train_set_df,
+    #     valid_set=val_set_df,
+    #     test_set=test_set_df
+    # )
 
-    train_sampler = SparseDummySampler(
-        data=ds,
-        mode='train',
-        batch_size=128,
-        shuffle=True
-    )
+    # train_sampler = SparseDummySampler(
+    #     data=ds,
+    #     mode='train',
+    #     batch_size=128,
+    #     shuffle=True
+    # )
 
-    data_pars['train']['train_sampler'] = train_sampler
+    # data_pars['train']['train_sampler'] = train_sampler
+    train_sampler = get_dataset(data_pars, task_type="train")
     model.model.train(train_sampler)
 
 
@@ -112,20 +113,59 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
 def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     global model, session
 
-    train_sampler = data_pars['train']['train_sampler']
-    test_te = train_sampler.data_te
+    # train_sampler = data_pars['train']['train_sampler']
+    # test_te = train_sampler.data_te
 
-    test_uids = np.random.choice(train_sampler.data.unique_uid, 500)
-    uid_to_internal_rectorch_id = lambda uid: train_sampler.data.u2id[uid]
-    id_mapper = np.vectorize(uid_to_internal_rectorch_id)
-    test_mapped_ids = id_mapper(test_uids)
-
+    # test_uids = np.random.choice(train_sampler.data.unique_uid, 500)
+    # uid_to_internal_rectorch_id = lambda uid: train_sampler.data.u2id[uid]
+    # id_mapper = np.vectorize(uid_to_internal_rectorch_id)
+    # test_mapped_ids = id_mapper(test_uids)
+    test_mapped_ids, test_te = get_dataset(data_pars, task_type="predict")
     log("Predicting...")
     
     ypred = model.model.predict(test_mapped_ids, test_te, False)
 
     return ypred
 
+def get_dataset(data_pars=None, task_type="train"):
+
+
+    if task_type == "train":
+        df = data_pars.get('df')
+        train_set_df = data_pars.get('train').get('df')
+        val_set_df = data_pars.get('eval').get('df')
+        test_set_df = data_pars.get('predict').get('df')
+
+        ds = Dataset(
+            uids=np.unique(df.iloc[:,0]).astype(np.int32),
+            iids=np.unique(df.iloc[:,1]).astype(np.int32),
+            train_set=train_set_df,
+            valid_set=val_set_df,
+            test_set=test_set_df
+        )
+
+        train_sampler = SparseDummySampler(
+            data=ds,
+            mode='train',
+            batch_size=128,
+            shuffle=True
+        )
+
+        data_pars['train']['train_sampler'] = train_sampler
+
+        return train_sampler
+    elif task_type == "predict":
+        train_sampler = data_pars['train']['train_sampler']
+        test_te = train_sampler.data_te
+
+        test_uids = np.random.choice(train_sampler.data.unique_uid, 500)
+        uid_to_internal_rectorch_id = lambda uid: train_sampler.data.u2id[uid]
+        id_mapper = np.vectorize(uid_to_internal_rectorch_id)
+        test_mapped_ids = id_mapper(test_uids)
+
+        return test_mapped_ids, test_te
+    else:
+        raise Exception(f"Task {task_type} is not supported")
 
 def save(path=None, info=None):
     """ Custom saving
@@ -158,43 +198,43 @@ def load_info(path=""):
 ####################################################################################################
 ############ Test  #################################################################################
 
-def test_dataset_goodbooks(nrows=1000):
-    from sklearn.preprocessing import LabelEncoder
-    data_path = "./goodbooks_dataset"
-    if not os.path.isdir(data_path):
-        os.makedirs(data_path, exist_ok=True)
+# def test_dataset_goodbooks(nrows=1000):
+#     from sklearn.preprocessing import LabelEncoder
+#     data_path = "./goodbooks_dataset"
+#     if not os.path.isdir(data_path):
+#         os.makedirs(data_path, exist_ok=True)
     
-        wget.download(
-            "https://github.com/zygmuntz/goodbooks-10k/releases/download/v1.0/goodbooks-10k.zip",
-            out=data_path
-        )
+#         wget.download(
+#             "https://github.com/zygmuntz/goodbooks-10k/releases/download/v1.0/goodbooks-10k.zip",
+#             out=data_path
+#         )
 
-        with zipfile.ZipFile(f"{data_path}/goodbooks-10k.zip") as zip_ref:
-            zip_ref.extractall(data_path)
-    df = pd.read_csv(data_path + "/ratings.csv")
-    # Dense features
-    coly = ['rating',  ]
+#         with zipfile.ZipFile(f"{data_path}/goodbooks-10k.zip") as zip_ref:
+#             zip_ref.extractall(data_path)
+#     df = pd.read_csv(data_path + "/ratings.csv")
+#     # Dense features
+#     coly = ['rating',  ]
 
-    # Sparse features
-    colcat = ['user_id', 'book_id' ]
-    colnum = []
-    return df, colnum, colcat, coly
+#     # Sparse features
+#     colcat = ['user_id', 'book_id' ]
+#     colnum = []
+#     return df, colnum, colcat, coly
 
 
-def train_test_split2(df, coly):
-    log3(df.dtypes)
-    y = df[coly] ### If clonassificati
-    X = df.drop(coly,  axis=1)
-    log3('y', np.sum(y[y==1]) , X.head(3))
-    ######### Split the df into train/test subsets
-    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021)
-    X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021)
+# def train_test_split2(df, coly):
+#     log3(df.dtypes)
+#     y = df[coly] ### If clonassificati
+#     X = df.drop(coly,  axis=1)
+#     log3('y', np.sum(y[y==1]) , X.head(3))
+#     ######### Split the df into train/test subsets
+#     X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021)
+#     X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021)
 
-    #####
-    # y = y.astype('uint8')
-    num_classes                                = len(set(y_train_full.values.ravel()))
+#     #####
+#     # y = y.astype('uint8')
+#     num_classes                                = len(set(y_train_full.values.ravel()))
 
-    return X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes
+#     return X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes
 
 
 def make_rand_sparse_dataset(
