@@ -479,7 +479,7 @@ def get_dataset_split_for_model_tfsparse(Xtrain, ytrain=None, pars:dict=None):
 
     if isinstance(Xtrain, str) :
         from utilmy import pd_read_file
-        Xtrain  = pd_read_file(Xtrain)
+        Xtrain  = pd_read_file(Xtrain)  ## in Memory
 
     if isinstance(Xtrain, tf.data.Dataset) :
        train_df = Xtrain
@@ -489,6 +489,7 @@ def get_dataset_split_for_model_tfsparse(Xtrain, ytrain=None, pars:dict=None):
         colcat   = pars['data_pars']['colcat']
         coly     = pars['data_pars']['coly']
         colembed = pars['data_pars']['colembed_dict']
+
         prepare  = tf_FeatureColumns()
         train_df = prepare.data_to_tensorflow(Xtrain, model='sparse', target= coly,
                                            colcat=colcat, colnum=colnum)
@@ -500,7 +501,7 @@ def get_dataset_split_for_model_tfsparse(Xtrain, ytrain=None, pars:dict=None):
 
 ########################################################################################################################
 ########################################################################################################################
-def test(config=''):
+def test(config='',     n_sample = 100):
     """ ACTUAL DICT
     """
     global model, session
@@ -510,9 +511,8 @@ def test(config=''):
 
 
     ##########################################################################
-    #### Matching Big dict  ##################################################
+    #### Big dict  ##########################################################
     cols_input_type_1 = []
-    n_sample = 100
     def post_process_fun(y): return int(y)
     def pre_process_fun(y):  return int(y)
 
@@ -530,36 +530,36 @@ def test(config=''):
 
             ],
             }
-        },
+    },
 
     'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
                       'compute_pars': { 'epochs' : 1}
-                    },
+    },
 
     'data_pars': { 'n_sample' : n_sample,
-
         'data_pars' :{
         },
 
         'download_pars' : None,
         'cols_input_type' : cols_input_type_1,
-        ### family of columns for MODEL  #########################################################
+        ### family of columns for MODEL  ##################
          'cols_model_group': [ 'colnum_bin',   'colcat_bin', ]
 
-        ####### ACTUAL data pipeline #############################################################
-        ,'train':   {} #{'X_train': train_df,'Y_train':train_label, 'X_test':  val_df,'Y_test':val_label }
-        ,'val':     {}  #{  'X':  val_df ,'Y':val_label }
-        ,'predict': {}
-
-
-        ### Filter data rows   ##################################################################
+        ### Filter data rows   ###########################
         ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
 
         ### Added continuous & sparse features groups ###
         'cols_model_type2': {
             'colcontinuous':   colnum ,
             'colsparse' :     colcat,
-        },
+        }
+
+
+        ####### ACTUAL data Values #############################################################
+        ,'train':   {}  #{'X_train': train_df,'Y_train':train_label, 'X_test':  val_df,'Y_test':val_label }
+        ,'val':     {}  #{  'X':  val_df ,'Y':val_label }
+        ,'predict': {}
+
         }
     }
 
@@ -567,7 +567,7 @@ def test(config=''):
     log("##### Sparse Tests  ############################################### ")
     prepare = tf_FeatureColumns()
     model_type = 'sparse'
-    train_df, test_df, val_df = prepare.data_to_tensorflow(df, model=model_type, target='y', 
+    train_df, test_df, val_df = prepare.data_to_tensorflow(df, model=model_type, target='y',
                                 colcat=colcat, colnum=colnum)
 
     ### Unique values
@@ -588,8 +588,34 @@ def test(config=''):
         'colembed_dict' : colembed_dict,
         'coly' : coly
     }
-
     test_helper( m['model_pars'], m['data_pars'], m['compute_pars'])
+
+
+    #################################################################################
+    path = "ztmp/parquets/f01.parquet"
+    os.makedirs(path, exist_ok=True)
+    df.to_parquet( path + "/f01.parquet")
+    colcat_unique = {  col: list(df[col].unique())  for col in colcat }
+    colembed_dict = {col: 2 + int(np.log(df[col].nunique()))  for col in colembed }
+
+    ##### Dict update
+    m['model_pars']['model_pars'] = { 'loss' : 'binary_crossentropy','optimizer':'adam',
+                                      'metric': ['accuracy'],'hidden_units': '64,32,16'}
+
+    m['data_pars']['train']     = {'X_train':  path + "/f01.parquet",
+                                   'X_test':   path+ "/f01.parquet"}
+    m['data_pars']['predict']   = {'X':        path+ "/f01.parquet" }
+    m['data_pars']['data_pars'] = {
+        'colcat_unique' : colcat_unique,
+        'colcat'        : colcat,
+        'colnum'        : colnum,
+        'colembed_dict' : colembed_dict,
+        'coly' : coly +"/*"
+    }
+    test_helper( m['model_pars'], m['data_pars'], m['compute_pars'])
+
+
+
 
 
     """
