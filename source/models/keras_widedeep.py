@@ -266,7 +266,7 @@ def get_dataset_split(data_pars=None, task_type="train", **kw):
 
     if task_type == "train":
         d                             = data_pars[task_type]
-        Xtrain, ytrain, Xtest, ytest  = d["X_train"],d["Y_train"],d["X_test"],d["Y_test"]
+        Xtrain, ytrain, Xtest, ytest  = d["X_train"], d.get("Y_train", None), d["X_test"], d.get("Y_test", None)
         return Xtrain, ytrain, Xtest,ytest
 
 
@@ -369,6 +369,7 @@ class tf_FeatureColumns:
         if labels:
             return data,labels,shape
         return data,None,shape
+
 
     def data_to_tensorflow(self,df, target,model='sparse',shuffle_train=False,shuffle_test=False,shuffle_val=False,batch_size=32,
                            test_split=0.2, colnum=[], colcat=[]):
@@ -474,16 +475,23 @@ def get_dataset_split_for_model_tfsparse(Xtrain, ytrain=None, pars:dict=None):
     :param colmodel_ref:
     :return:
     """
-    colnum   = pars['cols_model_type']['colnum']
-    colcat   = pars['cols_model_type']['colcat']
-    coly     = pars['cols_model_type']['coly']
-    colembed = pars['cols_model_type']['colembed']
+    colnum   = pars['data_pars']['colnum']
+    colcat   = pars['data_pars']['colcat']
+    coly     = pars['data_pars']['coly']
+    colembed = pars['data_pars']['colembed_dict']
 
-    if isinstance(Xtrain, str) : Xtrain  = pd.read_parquet(Xtrain)
+    log3("Xtrain type", Xtrain)
 
-    prepare  = tf_FeatureColumns()
-    train_df = prepare.data_to_tensorflow(Xtrain, model='sparse', target= coly,
+    if isinstance(Xtrain, str) :
+        Xtrain  = pd.read_parquet(Xtrain)
+
+    if not isinstance(Xtrain, tf.data.Dataset) :
+      prepare  = tf_FeatureColumns()
+      train_df = prepare.data_to_tensorflow(Xtrain, model='sparse', target= coly,
                                          colcat=colcat, colnum=colnum)
+    else :
+       train_df = Xtrain
+
     return train_df
 
 
@@ -576,7 +584,8 @@ def test(config=''):
         'colcat_unique' : colcat_unique,
         'colcat'        : colcat,
         'colnum'        : colnum,
-        'colembed_dict' : colembed_dict
+        'colembed_dict' : colembed_dict,
+        'coly' : coly
     }
 
     test_helper( m['model_pars'], m['data_pars'], m['compute_pars'])
