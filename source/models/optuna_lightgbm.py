@@ -325,115 +325,115 @@ def test_helper(model_pars, data_pars, compute_pars):
     # log('Model Snapshot')
     # model_summary()
 
-# def benchmark():
-#     global model
-#     try:
-#         from pmlb import fetch_data, classification_dataset_names
-#     except:
-#         log("Installing pmlb...")
-#         os.system("pip install pmlb")
-#         from pmlb import fetch_data, classification_dataset_names
+def benchmark():
+    global model
+    try:
+        from pmlb import fetch_data, classification_dataset_names
+    except:
+        log("Installing pmlb...")
+        os.system("pip install pmlb")
+        from pmlb import fetch_data, classification_dataset_names
 
 
-#     for classification_dataset in classification_dataset_names:
-#         df = fetch_data(classification_dataset, return_X_y=False)
-#         train_df, test_df = train_test_split(df)
-#         log("\n\n")
-#         log(f"\t\t######################## {classification_dataset} ########################\n")
-#         benchmark_helper(train_df, test_df)
-#         log(f"\t\t######################## !! END !! ########################\n")
+    for classification_dataset in classification_dataset_names:
+        df = fetch_data(classification_dataset, return_X_y=False)
+        train_df, test_df = train_test_split(df)
+        log("\n\n")
+        log(f"\t\t######################## {classification_dataset} ########################\n")
+        benchmark_helper(train_df, test_df)
+        log(f"\t\t######################## !! END !! ########################\n")
 
         
 
-# def benchmark_helper(train_df, test_df):
-#     global model, session
-#     # plmb has no meta data available with the datasets
-#     # to get dynamicaly, but it keeps seperate datatypes for cat/num (float64/int64)
-#     colcat = train_df.iloc[:,:-1].select_dtypes(["int64"]).head(1).columns.to_list()
-#     colnum = train_df.iloc[:,:-1].select_dtypes(["float64"]).head(1).columns.to_list()
-#     coly = train_df.columns.to_list()[-1]
-#     #### Matching Big dict  ##################################################
-#     cols_input_type_1 = []
-#     n_sample = 100
-#     def post_process_fun(y):
-#         return int(y)
+def benchmark_helper(train_df, test_df):
+    global model, session
+    # plmb has no meta data available with the datasets
+    # to get dynamicaly, but it keeps seperate datatypes for cat/num (float64/int64)
+    colcat = train_df.iloc[:,:-1].select_dtypes(["int64"]).head(1).columns.to_list()
+    colnum = train_df.iloc[:,:-1].select_dtypes(["float64"]).head(1).columns.to_list()
+    coly = train_df.columns.to_list()[-1]
+    #### Matching Big dict  ##################################################
+    cols_input_type_1 = []
+    n_sample = 100
+    def post_process_fun(y):
+        return int(y)
 
-#     def pre_process_fun(y):
-#         return int(y)
+    def pre_process_fun(y):
+        return int(y)
 
-#     m = {
-#     'model_pars': {
+    m = {
+    'model_pars': {
         
-#         'objective' : 'binary',
-#          'model_class' :  "optuna_lightgbm.py::LGBMClassifier"
-#          ,'model_pars' : {}
-#         , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
-#         , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
-#             ### Pipeline for data processing ##############################
-#             'pipe_list': [  #### coly target prorcessing
-#             {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
-#             {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
-#             {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+        'objective' : 'binary',
+         'model_class' :  "optuna_lightgbm.py::LGBMClassifier"
+         ,'model_pars' : {}
+        , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
+        , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
+            ### Pipeline for data processing ##############################
+            'pipe_list': [  #### coly target prorcessing
+            {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+            {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+            {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
 
-#             ],
-#             }
-#         },
+            ],
+            }
+        },
 
-#     'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
-#                       'compute_pars': { 'epochs' : 1}
-#                     },
+    'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
+                      'compute_pars': { 'epochs' : 1}
+                    },
 
-#     'data_pars': { 'n_sample' : n_sample,
+    'data_pars': { 'n_sample' : n_sample,
 
-#         'data_pars' :{
-#         },
+        'data_pars' :{
+        },
 
-#         'download_pars' : None,
-#         'cols_input_type' : cols_input_type_1,
-#         ### family of columns for MODEL  #########################################################
-#          'cols_model_group': [ 'colnum_bin',   'colcat_bin', ]
-#         ,'cols_model_group_custom' :  { 'colnum' : colnum,
-#                                         'colcat' : colcat,
-#                                         'coly' : coly  }
-#         ####### ACTUAL data pipeline #############################################################
-#         ,'train':   {} #{'X_train': train_df,'Y_train':train_label, 'X_test':  val_df,'Y_test':val_label }
-#         ,'val':     {}  #{  'X':  val_df ,'Y':val_label }
-#         ,'predict': {}
-
-
-#         ### Filter data rows   ##################################################################
-#         ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
-
-#         ### Added continuous & sparse features groups ###
-#         'cols_model_type2': {
-#             'colcontinuous':   colnum ,
-#             'colsparse' :     colcat,
-#         },
-#         }
-#     }
+        'download_pars' : None,
+        'cols_input_type' : cols_input_type_1,
+        ### family of columns for MODEL  #########################################################
+         'cols_model_group': [ 'colnum_bin',   'colcat_bin', ]
+        ,'cols_model_group_custom' :  { 'colnum' : colnum,
+                                        'colcat' : colcat,
+                                        'coly' : coly  }
+        ####### ACTUAL data pipeline #############################################################
+        ,'train':   {} #{'X_train': train_df,'Y_train':train_label, 'X_test':  val_df,'Y_test':val_label }
+        ,'val':     {}  #{  'X':  val_df ,'Y':val_label }
+        ,'predict': {}
 
 
-#     log("##### Sparse Tests  ############################################### ")
-#     ##### Dict update
-#     m['model_pars']['model_pars'] = {  }
+        ### Filter data rows   ##################################################################
+        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+
+        ### Added continuous & sparse features groups ###
+        'cols_model_type2': {
+            'colcontinuous':   colnum ,
+            'colsparse' :     colcat,
+        },
+        }
+    }
+
+
+    log("##### Sparse Tests  ############################################### ")
+    ##### Dict update
+    m['model_pars']['model_pars'] = {  }
  
-#     # test_df, val_df = train_test_split(val_df, test_size=0.5)
+    # test_df, val_df = train_test_split(val_df, test_size=0.5)
 
-#     m['data_pars']['train']     = {
-#         'Xtrain': train_df[colcat+colnum], 
-#         'ytrain': train_df[coly],
-#         'Xtest':  test_df[colnum+colcat],
-#         'ytest': test_df[coly]
-#     }
-#     m['data_pars']['predict']   = {'X':       test_df }
-#     m['data_pars']['data_pars'] = {
-#         # 'colcat_unique' : colcat_unique,
-#         'colcat'        : colcat,
-#         'colnum'        : colnum,
-#         # 'colembed_dict' : colembed_dict
-#     }
+    m['data_pars']['train']     = {
+        'Xtrain': train_df[colcat+colnum], 
+        'ytrain': train_df[coly],
+        'Xtest':  test_df[colnum+colcat],
+        'ytest': test_df[coly]
+    }
+    m['data_pars']['predict']   = {'X':       test_df }
+    m['data_pars']['data_pars'] = {
+        # 'colcat_unique' : colcat_unique,
+        'colcat'        : colcat,
+        'colnum'        : colnum,
+        # 'colembed_dict' : colembed_dict
+    }
 
-#     test_helper( m['model_pars'], m['data_pars'], m['compute_pars'])
+    test_helper( m['model_pars'], m['data_pars'], m['compute_pars'])
 
 # def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
 #     """
