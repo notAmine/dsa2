@@ -68,7 +68,8 @@ matrixprofile-ts  ### Use for tfresh
 ### util
 wget
 pmlb==1.0.1.post3
-utilmy==0.1.16174530
+#utilmy==0.1.16174530
+utilmy
 adatasets
 
 #########################################
