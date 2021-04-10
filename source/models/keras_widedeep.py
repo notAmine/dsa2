@@ -165,11 +165,11 @@ def fit(data_pars=None, compute_pars=None, out_pars=None):
         log2('Fitting Dense input...')
 
         Xtrain,Ytrain = get_dataset_split_for_model_pandastuple(Xtrain, Ytrain, data_pars)
-        Xtest,Ytest   = get_dataset_split_for_model_pandastuple(Xtest,  Ytest,  data_pars)
+        Xy_train      = tf.data.Dataset.zip(((Xtrain,Xtrain,Xtrain), Ytrain)).batch(batch_size)
 
+        Xtest,Ytest   = get_dataset_split_for_model_pandastuple(Xtest,  Ytest,  data_pars)
+        Xy_val        = tf.data.Dataset.zip(((Xtest,Xtest,Xtest), Ytest)).batch(batch_size)
         #log(next(Xtrain_tuple.make_initializable_iterator())[0].numpy)
-        Xy_train = tf.data.Dataset.zip(((Xtrain,Xtrain,Xtrain), Ytrain)).batch(batch_size)
-        Xy_val   = tf.data.Dataset.zip(((Xtest,Xtest,Xtest), Ytest)).batch(batch_size)
 
         hist     = model.model.fit(Xy_train, validation_data=Xy_val, **cpars)
         model.history = hist
@@ -592,7 +592,7 @@ def test(config='',     n_sample = 100):
 
 
     #################################################################################
-    path = "ztmp/parquets/f01.parquet"
+    path = "ztmp/parquets/"
     os.makedirs(path, exist_ok=True)
     df.to_parquet( path + "/f01.parquet")
     colcat_unique = {  col: list(df[col].unique())  for col in colcat }
