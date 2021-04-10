@@ -13,9 +13,8 @@ pip install Keras==2.4.3
 import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
 
 ####################################################################################################
-try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
-except Exception as e : verbosity = 2
-#raise Exception(f"{e}")
+from utilmy import global_verbosity, os_makedirs, pd_read_file
+verbosity = global_verbosity(__file__,"/../../config.json", 3 )
 
 def log(*s):
     print(*s, flush=True)
@@ -26,9 +25,6 @@ def log2(*s):
 def log3(*s):
     if verbosity >= 3 : print(*s, flush=True)
 
-def os_makedirs(dir_or_file):
-    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
-    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
 
 ####################################################################################################
 global model, session
@@ -342,8 +338,8 @@ def get_dataset_split_for_model_pandastuple(Xtrain, ytrain=None, data_pars=None,
     colmodel_ref             = THISMODEL_COLGROUPS
 
     ### Into RAM
-    if isinstance(Xtrain, str) : Xtrain = pd.read_parquet(Xtrain)
-    if isinstance(Xtrain, str) : ytrain = pd.read_parquet(ytrain)
+    if isinstance(Xtrain, str) : Xtrain = pd_read_file(Xtrain, verbose=False)
+    if isinstance(Xtrain, str) : ytrain = pd_read_file(ytrain, verbose=False)
 
 
     if len(colmodel_ref) <= 1 :   ## No split
@@ -559,7 +555,7 @@ def get_dataset_split_for_model_tfsparse(Xtrain, ytrain=None, pars:dict=None):
 
     if isinstance(Xtrain, str) :
         from utilmy import pd_read_file
-        Xtrain  = pd_read_file(Xtrain)  ## in Memory
+        Xtrain  = pd_read_file(Xtrain, verbose=False)  ## in Memory
         log3('Xtrain laoded', Xtrain)
 
     if isinstance(Xtrain, tf.data.Dataset) :
