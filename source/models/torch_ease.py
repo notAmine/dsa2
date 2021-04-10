@@ -44,10 +44,6 @@ def reset():
 from pathlib import Path
 from collections import namedtuple
 
-# torch.manual_seed(0)
-# np.random.seed(0)
-# torch.set_deterministic(True)
-# from torch.utils import data
 import torch
 from torch import nn
 from torch import optim
@@ -61,9 +57,6 @@ sys.path.append(import_path)
 ##### Import from src/core_models/
 from main.EASE import TorchEASE
 
-# from rectorch.data import Dataset
-# from rectorch.samplers import SparseDummySampler
-# from rectorch.models.mf import EASE
 ##### pkg
 path_pkg =  thisfile_dirpath + "/repo/TorchEASE/"
 
@@ -96,10 +89,6 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     global model, session
     session = None  # Session type for compute
 
-    # X_train, target_errors_train, dataset_obj, attributes = get_dataset(
-    #     data_pars, task_type='train'
-    # )
-
     model.model.fit()
 
 
@@ -107,9 +96,6 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
 def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     global model, session
     if Xpred is None:
-        # Xpred = data_pars["df"]
-        # colcat = data_pars["cols_input_type"]["colcat"]
-        # Xpred = data_pars["predict"]["X"]
         Xpred = get_dataset(data_pars=data_pars, task_type="predict")
 
     ypred = model.model.predict_all(Xpred)

@@ -84,27 +84,6 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     global model, session
     session = None  # Session type for compute
 
-    # df = data_pars.get('df')
-    # train_set_df = data_pars.get('train').get('df')
-    # val_set_df = data_pars.get('eval').get('df')
-    # test_set_df = data_pars.get('predict').get('df')
-
-    # ds = Dataset(
-    #     uids=np.unique(df.iloc[:,0]).astype(np.int32),
-    #     iids=np.unique(df.iloc[:,1]).astype(np.int32),
-    #     train_set=train_set_df,
-    #     valid_set=val_set_df,
-    #     test_set=test_set_df
-    # )
-
-    # train_sampler = SparseDummySampler(
-    #     data=ds,
-    #     mode='train',
-    #     batch_size=128,
-    #     shuffle=True
-    # )
-
-    # data_pars['train']['train_sampler'] = train_sampler
     train_sampler = get_dataset(data_pars, task_type="train")
     model.model.train(train_sampler)
 
@@ -113,13 +92,6 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
 def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
     global model, session
 
-    # train_sampler = data_pars['train']['train_sampler']
-    # test_te = train_sampler.data_te
-
-    # test_uids = np.random.choice(train_sampler.data.unique_uid, 500)
-    # uid_to_internal_rectorch_id = lambda uid: train_sampler.data.u2id[uid]
-    # id_mapper = np.vectorize(uid_to_internal_rectorch_id)
-    # test_mapped_ids = id_mapper(test_uids)
     test_mapped_ids, test_te = get_dataset(data_pars, task_type="predict")
     log("Predicting...")
     
