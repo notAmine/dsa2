@@ -475,22 +475,23 @@ def get_dataset_split_for_model_tfsparse(Xtrain, ytrain=None, pars:dict=None):
     :param colmodel_ref:
     :return:
     """
-    colnum   = pars['data_pars']['colnum']
-    colcat   = pars['data_pars']['colcat']
-    coly     = pars['data_pars']['coly']
-    colembed = pars['data_pars']['colembed_dict']
-
     log3("Xtrain type", Xtrain)
 
     if isinstance(Xtrain, str) :
-        Xtrain  = pd.read_parquet(Xtrain)
+        from utilmy import pd_read_file
+        Xtrain  = pd_read_file(Xtrain)
 
-    if not isinstance(Xtrain, tf.data.Dataset) :
-      prepare  = tf_FeatureColumns()
-      train_df = prepare.data_to_tensorflow(Xtrain, model='sparse', target= coly,
-                                         colcat=colcat, colnum=colnum)
-    else :
+    if isinstance(Xtrain, tf.data.Dataset) :
        train_df = Xtrain
+
+    else :
+        colnum   = pars['data_pars']['colnum']
+        colcat   = pars['data_pars']['colcat']
+        coly     = pars['data_pars']['coly']
+        colembed = pars['data_pars']['colembed_dict']
+        prepare  = tf_FeatureColumns()
+        train_df = prepare.data_to_tensorflow(Xtrain, model='sparse', target= coly,
+                                           colcat=colcat, colnum=colnum)
 
     return train_df
 
