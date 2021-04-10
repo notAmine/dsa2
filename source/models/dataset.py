@@ -23,6 +23,9 @@ class dictEval(object):
     def __init__(self):
         self.dst = {}
 
+    def reset(self):
+        self.dst = {}
+
     def eval_dict(self,src):
         global dst
         for key, value in src.items():
@@ -30,83 +33,54 @@ class dictEval(object):
                 # node = dst.setdefault(key, {})
                 self.dst[key]  = self.eval_dict(value)
             else:
-                if "@lazy" not in key :
+                if ":@lazy" not in key :
                     dst[key] = value
                     continue
 
                 ###########################################################################################
-                key2   = key.split(':')[-1]
-                ext    = value.split('.')[-1]
-                path   = value
-                coly = src.get('target','y')
+                key2           = key.split(':@lazy')[0]
+                path_pattern   = value
+                # ext    = value.split('.')[-1]
+                # coly = src.get('target','y')
 
-                ###########################################################################################
+                ###########################################################
                 if 'tf:' in key :
                     #log('TF is HEre')
-                    return self.tf_dataset_create(key2,path, coly,)
+                    return self.tf_dataset_create(key2,path_pattern,)
 
-                ###########################################################################################
+                ###########################################################
                 if 'pandas:' in key :
-                    return self.pandas_create(key2, path, coly)
+                    return self.pandas_create(key2, path_pattern, )
 
 
-    def tf_dataset_create(self, key2, path, coly):
-        import glob
-        flist = glob.glob(path + "/*")
+    def tf_dataset_create(self, key2, path_pattern, batch_size=32, **kw):
+        """
+          https://www.tensorflow.org/api_docs/python/tf/data/experimental/make_csv_dataset
+                tf.data.experimental.make_csv_dataset(
+            file_pattern, batch_size, column_names=None, column_defaults=None,
+            label_name=None, select_columns=None, field_delim=',',
+            use_quote_delim=True, na_value='', header=True, num_epochs=None,
+            shuffle=True, shuffle_buffer_size=10000, shuffle_seed=None,
+            prefetch_buffer_size=None, num_parallel_reads=None, sloppy=False,
+            num_rows_for_inference=100, compression_type=None, ignore_errors=False
+        )
 
-        if ext == 'zip':
-            zf        = zipfile.ZipFile(path)
-            fileNames = zf.namelist()
-            for idx,file in enumerate(fileNames):
+        :return:
+        """
+        # import glob
+        # flist = glob.glob(path_pattern + "/*")
 
-                if file.split('.')[-1] in ['csv','txt']:
-                    file = 'datasets/'+file
-                    try:
-                        dataset = tf.data.experimental.make_csv_dataset(file, label_name=coly, batch_size=32, ignore_errors=True)
-                        dataset = dataset.map(pack_features_vector)
-                        dst[key2+'_'+str(idx)] = dataset.repeat()
-                    except:
-                        pass
-
-        elif ext in ['csv','txt']:
-                    dataset = tf.data.experimental.make_csv_dataset(path, label_name=coly, batch_size=32, ignore_errors=True)
-                    dataset = dataset.map(pack_features_vector)
-                    dst[key2] = dataset.repeat()
-
-        elif ext == 'parquet':
-                filename = path.split('.')[0] + '.csv'
-                pd.read_parquet(path).to_csv(filename)
-                pd.read_parquet(path).to_csv(filename)
-
-                dataset = tf.data.experimental.make_csv_dataset(filename, label_name=coly, batch_size=32, ignore_errors=True)
-                dataset = dataset.map(pack_features_vector)
-                dst[key2] = dataset.repeat()
+        dataset = tf.data.experimental.make_csv_dataset(path_pattern,  batch_size=batch_size, ignore_errors=True)
+        dataset = dataset.map(pack_features_vector)
+        dst[key2] = dataset.repeat()
 
 
-    def pandas_create(self, key2, path, coly, ):
+    def pandas_create(self, key2, path, ):
         import glob
         # flist = glob.glob(path)
         dst[key2] = pd_read_file(path)
 
-        """    
-        if ext == 'zip':
-            zf = zipfile.ZipFile(value)
-            fileNames = zf.namelist()
-            for idx,file in enumerate(fileNames):
 
-                if file.split('.')[-1] in ['csv','txt']:
-                    file = 'datasets/'+file
-                    dst[key2+'_'+str(idx)] = pd.read_csv(file)
-
-
-
-        elif ext in ['csv','txt']:
-                dst[key2] = pd.read_csv(value)
-
-        elif ext == 'parquet':
-                dst[key2] = pd.read_parquet(value)
-        return dst
-        """
 
 
 def log(*s):
@@ -181,33 +155,44 @@ def pd_read_file(path_glob="*.pkl", ignore_index=True,  cols=None,
 
 
 if __name__ == '__main__':
-
     root = ""
 
     ## pip install adataset
     from adatasets import test_dataset_classification_fake
     df, p = test_dataset_classification_fake(nrows=100)
+
     df.to_parquet(root + 'datasets/parquet/f01.parquet' )
     df.to_parquet(root + 'datasets/parquet/f02.parquet' )
-
-    df.to_parquet(root + 'datasets/csv/f01.csv' )
-    df.to_parquet(root + 'datasets/csv/f02.csv' )
+    parquet_path = root + 'datasets/parquet/f*.parquet'
 
 
-    # parquet_file = 'datasets/petfinder_mini.parquet'
-    # txt_file = '/home/tushargoel/Desktop/sample.txt'
+    df[ [p['coly']] ].to_parquet(root + 'datasets/parquet/label_01.parquet' )
+    df[ [p['coly']] ].to_parquet(root + 'datasets/parquet/label_01.parquet' )
+    parquet_path_y = root + 'datasets/parquet/label*.parquet'
 
 
-    parquet_path = root + 'datasets/parquet/*.parquet'
+    df.to_csv(root + 'datasets/csv/f01.csv' )
+    df.to_csv(root + 'datasets/csv/f02.csv' )
     csv_path     = root + 'datasets/petfinder-mini/*.csv'
+
+
+    df.to_csv(root + 'datasets/csv/f01.csv', compression='gzip' )
+    df.to_csv(root + 'datasets/csv/f02.csv', compression='gzip' )
     zip_path     = root + 'datasets/zip/*.zip'
+
+
 
     data_pars = {
 
         ### ModelTarget-Keyname : Path
-        '@lazy_tf:Xtrain'  : parquet_path, #CSV file extraction #Tensorflow Dataset
-        '@lazy_tf:Xtest'   : zip_path,     #zip File Extraction
-        '@lazy_pandas:Xval': csv_path,     #Pandas
+        'Xtrain:@lazy_tf'  : parquet_path, #CSV file extraction #Tensorflow Dataset
+        'Xtest:@lazy_tf'   : zip_path,     #zip File Extraction
+        'Xval:@lazy_pandas': csv_path,     #Pandas
+
+
+        'ytrain:@lazy_tf' : parquet_path_y,     #Pandas
+        'ytest:@lazy_tf ' : parquet_path_y,     #Pandas
+
 
         'pars': 23,
         "batch_size" : 32,
@@ -223,8 +208,6 @@ if __name__ == '__main__':
     data_pars2 = test.eval_dict(data_pars)
 
 
-
-
     from tensorflow.keras import layers
     model = tf.keras.Sequential([
         layers.Flatten(),
@@ -232,27 +215,84 @@ if __name__ == '__main__':
         layers.Dense(32, activation='elu'),
         layers.Dense(1,activation='sigmoid') 
         ])
+
+
     model.compile(optimizer='adam',
                 loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
                 metrics=['accuracy'])    
-    model.fit(dst['Xtrain'],
+    model.fit(data_pars['Xtrain'],
             steps_per_epoch=1,
             epochs=30,
             verbose=1
             )
+
+
+
+
+
+"""    
+if ext == 'zip':
+    zf = zipfile.ZipFile(value)
+    fileNames = zf.namelist()
+    for idx,file in enumerate(fileNames):
+
+        if file.split('.')[-1] in ['csv','txt']:
+            file = 'datasets/'+file
+            dst[key2+'_'+str(idx)] = pd.read_csv(file)
+
+
+
+elif ext in ['csv','txt']:
+        dst[key2] = pd.read_csv(value)
+
+elif ext == 'parquet':
+        dst[key2] = pd.read_parquet(value)
+return dst
+"""
+
+"""
+if ext == 'zip':
+    zf        = zipfile.ZipFile(path_pattern)
+    fileNames = zf.namelist()
+    for idx,file in enumerate(fileNames):
+
+        if file.split('.')[-1] in ['csv','txt']:
+            file = 'datasets/'+file
+            try:
+                dataset = tf.data.experimental.make_csv_dataset(file, label_name=coly, batch_size=32, ignore_errors=True)
+                dataset = dataset.map(pack_features_vector)
+                dst[key2+'_'+str(idx)] = dataset.repeat()
+            except:
+                pass
+
+elif ext in ['csv','txt']:
+            dataset = tf.data.experimental.make_csv_dataset(path_pattern, label_name=coly, batch_size=32, ignore_errors=True)
+            dataset = dataset.map(pack_features_vector)
+            dst[key2] = dataset.repeat()
+
+elif ext == 'parquet':
+        filename = path_pattern.split('.')[0] + '.csv'
+        pd.read_parquet(path_pattern).to_csv(filename)
+        pd.read_parquet(path_pattern).to_csv(filename)
+
+        dataset = tf.data.experimental.make_csv_dataset(filename, label_name=coly, batch_size=32, ignore_errors=True)
+        dataset = dataset.map(pack_features_vector)
+        dst[key2] = dataset.repeat()
+"""
+
 
 """
     dst = {}
     dataset_url = 'http://storage.googleapis.com/download.tensorflow.org/data/petfinder-mini.zip'
     csv_file    = 'datasets/petfinder-mini/petfinder-mini.csv'
     zip_file = 'datasets/petfinder_mini.zip'
-"""
+
 
 
     #tf.keras.utils.get_file('petfinder_mini.zip', dataset_url,extract=True, cache_dir='.')
 
     #Uncomment This File for preprocessing the CSV File
-    '''df = pd.read_csv('datasets/petfinder-mini/petfinder-mini.csv')
+df = pd.read_csv('datasets/petfinder-mini/petfinder-mini.csv')
 
     col = ['Type', 'Breed1', 'Gender', 'Color1', 'Color2', 'MaturitySize',
         'FurLength', 'Vaccinated', 'Sterilized', 'Health',
@@ -260,4 +300,8 @@ if __name__ == '__main__':
 
     df.drop(['Description'],axis=1,inplace=True)
     df[col] = df[col].astype(str).apply(LabelEncoder().fit_transform)
-    df.to_csv('datasets/petfinder-mini/petfinder-mini.csv')'''
+    df.to_csv('datasets/petfinder-mini/petfinder-mini.csv')
+
+"""
+
+
