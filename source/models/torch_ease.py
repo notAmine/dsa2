@@ -179,10 +179,18 @@ def get_dataset(data_pars=None, task_type="train", **kwargs):
 
     if task_type == "train":
         n_samples = data_pars["n_sample"]
-        return data_pars["df"].iloc[:n_samples]
+        return pd.DataFrame(
+            data=np.hstack(
+                (data_pars["data_flow"][task_type]["Xtrain"],
+                data_pars["data_flow"][task_type]["ytrain"])
+            ),
+            columns=["user_id", "book_id", "rating"]
+        ).iloc[:n_samples]
+        
+        # return data_pars["df"].iloc[:n_samples]
 
     elif task_type == "predict":
-        df_pred =  data_pars[task_type]["X"]
+        df_pred =  data_pars["data_flow"][task_type]["X"]
         return df_pred
 
     else:
@@ -195,61 +203,110 @@ def test(n_sample          = 1000):
     #### Matching Big dict  ##################################################
     def post_process_fun(y): return int(y)
     def pre_process_fun(y):  return int(y)
-
-    m = {'model_pars': {
-        'model_class':  "model_vaem.py::EASE"
-        ,'model_pars' : {
-            'original_dim':       len( colcat + colnum),
-            'class_num':             2,
-
-        }
+    m = {
+    'model_pars': {
+         'model_class' :  "torch_ease.py::EASE"
+         ,'model_pars' : {  }
         , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
         , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
-
-        ### Pipeline for data processing ##############################
-        'pipe_list': [  #### coly target prorcessing
+            ### Pipeline for data processing ##############################
+            'pipe_list': [  #### coly target prorcessing
             {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
             {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
             {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
-        ],
-        }
-        },
+
+            ],
+            }
+    },
 
     'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
-                      'compute_pars' : {'epochs': 1 },
-                    },
+                      'compute_pars': { 'epochs' : 1}
+    },
 
-    'data_pars': { 
-        'n_sample' : n_sample,
-        'download_pars' : None,
+    'data_pars': { 'n_sample' : n_sample,
+        'data_pars' :{
+        },
+
+        'download_pars'   : None,
+        # 'cols_input_type' : cols_input_type_1,
+        ### family of columns for MODEL  ##################
+         'cols_model_group': [ 'colnum_bin',   'colcat_bin', ]
+
+        ### Filter data rows   ###########################
+        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+
+        ### Added continuous & sparse features groups ###
         'cols_input_type' : {
             'colcat' : colcat,
             'colnum' : colnum,
             'coly'  :  coly,
-        },
-        ### family of columns for MODEL  #########################################################
-        'cols_model_group': [ 'colnum_bin',   'colcat_bin',  ],
-
-        ### Added continuous & sparse features groups ###
-        'cols_model_type2': {
-            'colcontinuous':   colnum ,
-            'colsparse' : colcat,
         }
 
-        ### Filter data rows   ##################################################################
-        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
 
-
-        ###################################################
-        'df' : df
-        ,'train':   {'Xtrain': X_train,  'ytrain': y_train, 'Xtest':  X_valid,  'ytest':  y_valid}
-        ,'eval':    {'X': X_valid,  'y': y_valid}
-        ,'predict': {'X': X_valid}
-
-        ,'task_type' : 'train', 'data_type': 'ram'
+        ####### ACTUAL data Values #############################################################
+        ,'data_flow' : {    
+            'train':   {'Xtrain': X_train,  'ytrain': y_train}#, 'Xtest':  X_valid,  'ytest':  y_valid}  #{'X_train': train_df,'Y_train':train_label, 'X_test':  val_df,'Y_test':val_label }
+            ,'val':     {'X': X_valid,  'y': y_valid}  #{  'X':  val_df ,'Y':val_label }
+            ,'predict': {'X': X_valid}
+        
+        },
 
         }
     }
+    # m = {'model_pars': {
+    #     'model_class':  "torch_ease.py::EASE"
+    #     ,'model_pars' : {
+    #         'original_dim':       len( colcat + colnum),
+    #         'class_num':             2,
+
+    #     }
+    #     , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
+    #     , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
+
+    #     ### Pipeline for data processing ##############################
+    #     'pipe_list': [  #### coly target prorcessing
+    #         {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+    #         {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+    #         {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+    #     ],
+    #     }
+    #     },
+
+    # 'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
+    #                   'compute_pars' : {'epochs': 1 },
+    #                 },
+
+    # 'data_pars': { 
+    #     'n_sample' : n_sample,
+    #     'download_pars' : None,
+    #     'cols_input_type' : {
+    #         'colcat' : colcat,
+    #         'colnum' : colnum,
+    #         'coly'  :  coly,
+    #     },
+    #     ### family of columns for MODEL  #########################################################
+    #     'cols_model_group': [ 'colnum_bin',   'colcat_bin',  ],
+
+    #     ### Added continuous & sparse features groups ###
+    #     'cols_model_type2': {
+    #         'colcontinuous':   colnum ,
+    #         'colsparse' : colcat,
+    #     }
+
+    #     ### Filter data rows   ##################################################################
+    #     ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+
+
+    #     ###################################################
+    #     'df' : df
+    #     ,'train':   {'Xtrain': X_train,  'ytrain': y_train, 'Xtest':  X_valid,  'ytest':  y_valid}
+    #     ,'eval':    {'X': X_valid,  'y': y_valid}
+    #     ,'predict': {'X': X_valid}
+
+    #     ,'task_type' : 'train', 'data_type': 'ram'
+
+    #     }
+    # }
 
     ###  Tester #########################################################
     test_helper(m['model_pars'], m['data_pars'], m['compute_pars'])
