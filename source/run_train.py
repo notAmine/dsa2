@@ -143,9 +143,36 @@ def train(model_dict, dfX, cols_family, post_process_fun):
                           'yval'   : dfX[coly].iloc[ival:],
                           }
 
+    """
+    ##### Lazy Dict mechanism
+    m = {'Xtrain'  : model_path + "/Xtrain/" ,
+          'ytrain' : model_path + "/ytrain/",
+          'Xtest'  : model_path + "/Xtest/",
+          'ytest'  : model_path + "/ytest/",
+    
+          'Xval'   : model_path + "/Xval/",
+          'yval'   : model_path + "/yval/",
+          }
+
+    dfX[colsX].iloc[:itrain, :].to_parquet(m['Xtrain']  + "/file_01.parquet" )
+    dfX[coly].iloc[:itrain].to_parquet(    m['ytrain']  + "/file_01.parquet" )
+
+    dfX[colsX].iloc[itrain:ival, :].to_parquet(m['Xval'] + "/file_01.parquet" )
+    dfX[coly].iloc[itrain:ival].to_parquet(   m['yval']  + "/file_01.parquet" )
+
+    dfX[colsX].iloc[ival:, :].to_parquet(    m['Xval'] + "/file_01.parquet" )
+    dfX[coly].iloc[ival:].to_parquet(       m['yval']  + "/file_01.parquet"  )
+    
+    
+    data_pars['data_type'] = 'pandas'  ### Tf dataset, pytorch    
+    data_pars['train'] = m
+    """
+
+
+
     log("#### Init, Train ############################################################")
     # from config_model import map_model    
-    modelx = map_model(model_name)    
+    modelx = map_model(mo,el_name)
     log2(modelx)
     modelx.reset()
     ###  data_pars_ref has NO data.
