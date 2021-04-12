@@ -258,7 +258,7 @@ if __name__ == '__main__':
                 loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
                 metrics=['accuracy'])    
     model.fit(dst['Xtrain'],
-            steps_per_epoch=20,
+            steps_per_epoch=1,
             epochs=30,
             verbose=1
             )

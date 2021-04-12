@@ -6,6 +6,7 @@ import tensorflow as tf
 from petastorm import make_batch_reader
 import numpy as np
 
+tf.reset_default_graph()
 def pack_features_vector(features, labels):
     """Pack the features into a single array."""
 
@@ -39,14 +40,13 @@ def get_dataset_split_for_model_petastorm(Xtrain, ytrain=None, pars:dict=None):
     train_ds = make_petastorm_dataset(train_reader) \
             .apply(tf.data.experimental.unbatch()) \
             .batch(BATCH_SIZE) \
-            .map(lambda x: [tf.reshape(list(getattr(x, col) for col in all_cols),[-1,12]),tf.reshape(x.y,[-1,1])])
+            .map(lambda x: [tf.reshape(list(getattr(x, col) for col in all_cols),[32,12]),x.y])
     #train_ds = train_ds.map(pack_features_vector)
     train_ds = train_ds.make_one_shot_iterator()
     #print(f'Train Dataset: {train_ds}')
-    
-    tensor = np.array(train_ds.get_next())
-    print(tensor)
-    return tensor   
+    while True:
+        tensor = train_ds.get_next()
+        yield tensor
     #print(train_ds)   
         
 
@@ -70,7 +70,9 @@ tensor = get_dataset_split_for_model_petastorm('datasets/parquet/f01.parquet')
 
 from tensorflow.keras import layers
 model = tf.keras.Sequential([
-    layers.Dense(32, activation='elu'),
+    layers.Dense(32,input_shape=(12,),activation='relu'),
+    layers.Flatten(),
+    layers.Dense(256, activation='elu'),
     layers.Dense(32, activation='elu'),
     layers.Dense(1,activation='sigmoid') 
     ])
@@ -79,8 +81,8 @@ model = tf.keras.Sequential([
 model.compile(optimizer='adam',
             loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
             metrics=['accuracy'])    
-model.fit(tensor,
-        batch_size=32,
+model.fit_generator(tensor,
+        steps_per_epoch=31,
         epochs=30,
         verbose=1
         )

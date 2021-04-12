@@ -198,7 +198,7 @@ if __name__ == '__main__':
     from adatasets import test_dataset_classification_fake
     df, p = test_dataset_classification_fake(nrows=100)
     print(df.columns)
-    df = df.astype('float')
+    df = df.astype('float64')
     df.to_parquet(root+ 'datasets/parquet/f01.parquet')
     df.to_parquet(root + 'datasets/parquet/f02.parquet' )
     parquet_path = root + 'datasets/parquet/f*.parquet'
@@ -258,7 +258,7 @@ if __name__ == '__main__':
                 loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
                 metrics=['accuracy'])    
     model.fit(dst['Xtrain'],
-            steps_per_epoch=20,
+            steps_per_epoch=1,
             epochs=30,
             verbose=1
             )

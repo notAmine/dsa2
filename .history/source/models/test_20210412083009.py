@@ -5,13 +5,15 @@ import os
 import tensorflow as tf 
 from petastorm import make_batch_reader
 import numpy as np
+tf.compat.v1.enable_eager_execution()
 
 def pack_features_vector(features, labels):
     """Pack the features into a single array."""
 
-    #print(f'Features: {features}')
-    print(dir(features))
-    features = tf.stack(list(features), axis=1)
+    print(f'Features: {features}')
+    '''with tf.compat.v1.Session() as sess:
+        print(sess.run(features))'''
+    #features = tf.stack(list(features.numpy()), axis=1)
     return features, labels
 
 def get_dataset_split_for_model_petastorm(Xtrain, ytrain=None, pars:dict=None):
@@ -34,19 +36,18 @@ def get_dataset_split_for_model_petastorm(Xtrain, ytrain=None, pars:dict=None):
     file_path = '/C:/Users/TusharGoel/Desktop/Upwork/project4/dsa2/'+ dataset_url_train
     file = "file://" + file_path
     BATCH_SIZE = 32
-    train_reader = make_batch_reader(file)
+    reader = make_batch_reader(file)
+   
+    dataset = make_petastorm_dataset(reader)
+    iterator = dataset.make_one_shot_iterator()
+    tensor = iterator.get_next()
     #yield tensor
-    train_ds = make_petastorm_dataset(train_reader) \
+    '''train_ds = make_petastorm_dataset(train_reader) \
             .apply(tf.data.experimental.unbatch()) \
             .batch(BATCH_SIZE) \
-            .map(lambda x: [tf.reshape(list(getattr(x, col) for col in all_cols),[-1,12]),tf.reshape(x.y,[-1,1])])
-    #train_ds = train_ds.map(pack_features_vector)
-    train_ds = train_ds.make_one_shot_iterator()
-    #print(f'Train Dataset: {train_ds}')
-    
-    tensor = np.array(train_ds.get_next())
-    print(tensor)
-    return tensor   
+            .map(lambda x: (list(tf.reshape(getattr(x, col),[32,]) for col in all_cols),x.y))'''
+    '''print(f'Train Dataset: {train_ds}')
+    train_ds = train_ds.map(pack_features_vector)'''
     #print(train_ds)   
         
 
@@ -64,13 +65,14 @@ def get_dataset_split_for_model_petastorm(Xtrain, ytrain=None, pars:dict=None):
     train_dataset = train_dataset.map(pack_features_vector)'''
     ###########################################################
     #train_dataset = train_dataset.batch(batch_size, drop_remainder=True)
-    
+    return tensor
 
 tensor = get_dataset_split_for_model_petastorm('datasets/parquet/f01.parquet')
 
 from tensorflow.keras import layers
 model = tf.keras.Sequential([
-    layers.Dense(32, activation='elu'),
+    layers.Flatten(),
+    layers.Dense(256, activation='elu'),
     layers.Dense(32, activation='elu'),
     layers.Dense(1,activation='sigmoid') 
     ])
@@ -79,7 +81,7 @@ model = tf.keras.Sequential([
 model.compile(optimizer='adam',
             loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
             metrics=['accuracy'])    
-model.fit(tensor,
+model.fit_generator(tensor,
         batch_size=32,
         epochs=30,
         verbose=1

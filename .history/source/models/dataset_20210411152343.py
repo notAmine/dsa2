@@ -107,7 +107,6 @@ def replace_item(obj, key, replace_value):
         print(f'Path Pattern Observed: {path_pattern}')
         dataset = tf.data.experimental.make_csv_dataset(path_pattern,label_name='y',  batch_size=batch_size, ignore_errors=True)
         dataset = dataset.map(pack_features_vector)
-        print(dataset)
         dst[key2] = dataset.repeat()
 
 
@@ -198,7 +197,7 @@ if __name__ == '__main__':
     from adatasets import test_dataset_classification_fake
     df, p = test_dataset_classification_fake(nrows=100)
     print(df.columns)
-    df = df.astype('float')
+    df = df.astype('float64')
     df.to_parquet(root+ 'datasets/parquet/f01.parquet')
     df.to_parquet(root + 'datasets/parquet/f02.parquet' )
     parquet_path = root + 'datasets/parquet/f*.parquet'
@@ -227,8 +226,8 @@ if __name__ == '__main__':
         'Xval:@lazy_pandas': csv_path,     #Pandas
 
 
-        #'ytrain:@lazy_tf' : parquet_path_y,     #Pandas
-        #'ytest:@lazy_tf ' : parquet_path_y,     #Pandas
+        'ytrain:@lazy_tf' : parquet_path_y,     #Pandas
+        'ytest:@lazy_tf ' : parquet_path_y,     #Pandas
 
 
         'pars': 23,
@@ -258,7 +257,7 @@ if __name__ == '__main__':
                 loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
                 metrics=['accuracy'])    
     model.fit(dst['Xtrain'],
-            steps_per_epoch=20,
+            steps_per_epoch=1,
             epochs=30,
             verbose=1
             )

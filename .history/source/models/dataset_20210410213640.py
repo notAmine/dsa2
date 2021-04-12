@@ -107,7 +107,6 @@ def replace_item(obj, key, replace_value):
         print(f'Path Pattern Observed: {path_pattern}')
         dataset = tf.data.experimental.make_csv_dataset(path_pattern,label_name='y',  batch_size=batch_size, ignore_errors=True)
         dataset = dataset.map(pack_features_vector)
-        print(dataset)
         dst[key2] = dataset.repeat()
 
 
@@ -159,7 +158,7 @@ def pd_read_file(path_glob="*.pkl", ignore_index=True,  cols=None,
 
   if verbose : log(n_file,  n_file // n_pool )
   for j in range(0, m_job ) :
-      log("Pool", j)
+      log("Pool", j, end=",")
       job_list =[]
       for i in range(n_pool):
          if n_pool*j + i >= n_file  : break
@@ -198,7 +197,7 @@ if __name__ == '__main__':
     from adatasets import test_dataset_classification_fake
     df, p = test_dataset_classification_fake(nrows=100)
     print(df.columns)
-    df = df.astype('float')
+    df = df.astype('int32')
     df.to_parquet(root+ 'datasets/parquet/f01.parquet')
     df.to_parquet(root + 'datasets/parquet/f02.parquet' )
     parquet_path = root + 'datasets/parquet/f*.parquet'
@@ -208,14 +207,14 @@ if __name__ == '__main__':
     parquet_path_y = root + 'datasets/parquet/label*.parquet'
 
 
-    df.to_csv(root + 'datasets/csv/f01.csv',index=False )
-    df.to_csv(root + 'datasets/csv/f02.csv' ,index=False)
+    df.to_csv(root + 'datasets/csv/f01.csv' )
+    df.to_csv(root + 'datasets/csv/f02.csv' )
     csv_path     = root + 'datasets/csv/f01.csv'
 
 
-    df.to_csv(root + 'datasets/zip/f01.zip', compression='gzip' )
-    df.to_csv(root + 'datasets/zip/f02.zip', compression='gzip' )
-    zip_path     = root + 'datasets/zip/*.zip'
+    #df.to_csv(root + 'datasets/csv/f01.csv', compression='gzip' )
+    #df.to_csv(root + 'datasets/csv/f02.csv', compression='gzip' )
+    #zip_path     = root + 'datasets/zip/*.zip''''
 
 
 
@@ -227,8 +226,8 @@ if __name__ == '__main__':
         'Xval:@lazy_pandas': csv_path,     #Pandas
 
 
-        #'ytrain:@lazy_tf' : parquet_path_y,     #Pandas
-        #'ytest:@lazy_tf ' : parquet_path_y,     #Pandas
+        'ytrain:@lazy_tf' : parquet_path_y,     #Pandas
+        'ytest:@lazy_tf ' : parquet_path_y,     #Pandas
 
 
         'pars': 23,
@@ -258,7 +257,7 @@ if __name__ == '__main__':
                 loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
                 metrics=['accuracy'])    
     model.fit(dst['Xtrain'],
-            steps_per_epoch=20,
+            steps_per_epoch=1,
             epochs=30,
             verbose=1
             )

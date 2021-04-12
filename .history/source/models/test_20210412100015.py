@@ -79,8 +79,8 @@ model = tf.keras.Sequential([
 model.compile(optimizer='adam',
             loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
             metrics=['accuracy'])    
-model.fit(tensor,
-        batch_size=32,
+model.fit_generator(tensor,
+        steps_per_epoch=31,
         epochs=30,
         verbose=1
         )
