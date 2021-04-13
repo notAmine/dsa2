@@ -81,6 +81,8 @@ class Model(object):
         model_pars2.update(self.compute_pars['compute_pars'])
         model_pars2.update(self.compute_pars['compute_extra'])
         model_pars2.update(self.data_pars)
+        model_pars2.update(self.data_pars['data_pars'])
+
         model_pars2.update(self.global_pars)
 
     
@@ -401,21 +403,79 @@ def load_info(path=""):
 
 
 
-def test2(nrows=1000):
+def test(nrows=1000):
     """
     """
     global model, session
-    m = {'model_pars': {
-            # Specify the model
-            'model_class':  "torch_tabular.py::RVAE",
-            'model_pars' : {
-                "activation":'relu', "outlier_model":'RVAE', "AVI":False, "alpha_prior":0.95,
-                "embedding_size":50, "is_one_hot":False, "latent_dim":20, "layer_size":400,
-            }
-        },
+    # m = {'model_pars': {
+    #         # Specify the model
+    #         'model_class':  "torch_tabular.py::RVAE",
+    #         'model_pars' : {
+    #             "activation":'relu', "outlier_model":'RVAE', "AVI":False, "alpha_prior":0.95,
+    #             "embedding_size":50, "is_one_hot":False, "latent_dim":20, "layer_size":400,
+    #         }
+    #     },
 
-        'compute_pars': {
-            'compute_extra' :{
+    #     'compute_pars': {
+    #         'compute_extra' :{
+    #             "log_interval":50,
+    #             "save_on":True,
+    #             "verbose_metrics_epoch":True,
+    #             "verbose_metrics_feature_epoch":False
+    #         },
+
+    #         'compute_pars' :{
+    #             "cuda_on":False, "number_epochs":1, "l2_reg":0.0, "lr":0.001, "seqvae_bprop":False, "seqvae_steps":4,
+    #             "seqvae_two_stage":False, "std_gauss_nll":2.0, "steps_2stage":4, "inference_type":'vae',
+    #             "batch_size":150,
+    #         },
+
+    #         'metric_list': ['accuracy_score', 'average_precision_score'],
+
+    #     },
+    #     'data_pars': {
+    #         'data_pars' :{
+    #             # Raw dataset, pre preprocessing
+    #             "dataset_path" : path_pkg + "/data_simple/Adult/",
+    #             "batch_size":150,   ### Mini Batch from data
+    #             # Needed by getdataset
+    #             "clean" : False,
+    #             "data_path":   path_pkg + '/data_simple/Adult/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
+    #         }
+
+    #     },
+        
+    #     'global_pars' :{
+    #         "data_path":   path_pkg + '/data_simple/Adult/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
+    #         "output_path": path_pkg + '/outputs_experiments_i/Adult/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/RVAE_CVI',
+
+    #     }
+        
+    # }
+    #### Matching Big dict  ##################################################
+    def post_process_fun(y): return int(y)
+    def pre_process_fun(y):  return int(y)
+    m = {
+    'model_pars': {
+         'model_class' :  "torch_tabular.py::RVAE"
+         ,'model_pars' : { 
+             "activation":'relu', "outlier_model":'RVAE', "AVI":False, "alpha_prior":0.95,
+                "embedding_size":50, "is_one_hot":False, "latent_dim":20, "layer_size":400,
+          }
+        , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
+        , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
+            ### Pipeline for data processing ##############################
+            'pipe_list': [  #### coly target prorcessing
+            {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+            {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+            {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+
+            ],
+            }
+    },
+
+    'compute_pars': { 
+        'compute_extra' :{
                 "log_interval":50,
                 "save_on":True,
                 "verbose_metrics_epoch":True,
@@ -429,28 +489,43 @@ def test2(nrows=1000):
             },
 
             'metric_list': ['accuracy_score', 'average_precision_score'],
+    },
 
+    'data_pars': { 'n_sample' : nrows,
+  
+        'download_pars'   : None,
+        # 'cols_input_type' : cols_input_type_1,
+        ### family of columns for MODEL  ##################
+         'cols_model_group': [ 'colnum_bin',   'colcat_bin', ]
+
+        ### Filter data rows   ###########################
+        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+
+        ### Added continuous & sparse features groups ###
+        'cols_model_type2': {
         },
-        'data_pars': {
-            'data_pars' :{
+
+        'data_pars' :{
                 # Raw dataset, pre preprocessing
                 "dataset_path" : path_pkg + "/data_simple/Adult/",
                 "batch_size":150,   ### Mini Batch from data
                 # Needed by getdataset
                 "clean" : False,
                 "data_path":   path_pkg + '/data_simple/Adult/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
-            }
+        }
+        ####### ACTUAL data Values #############################################################
+        ,'train':   {}
+        ,'val':     {}
+        ,'predict': {}
 
         },
-        
+
         'global_pars' :{
-            "data_path":   path_pkg + '/data_simple/Adult/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
+            # "data_path":   path_pkg + '/data_simple/Adult/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/',
             "output_path": path_pkg + '/outputs_experiments_i/Adult/gaussian_m0s5_categorical_alpha0.0/5pc_rows_20pc_cols_run_1/RVAE_CVI',
 
         }
-        
     }
-
     #### Preprocess the dataset
     dataset_path = m['data_pars']['data_pars']['dataset_path']
     print("\n\nDATASET : ", dataset_path)
