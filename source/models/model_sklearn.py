@@ -8,9 +8,9 @@
 import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
 
 ####################################################################################################
-try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
-except Exception as e : verbosity = 2
-#raise Exception(f"{e}")
+from utilmy import global_verbosity, os_makedirs
+
+verbosity = global_verbosity(__file__, "/../../config.json" ,default= 5)
 
 def log(*s):
     print(*s, flush=True)
@@ -20,10 +20,6 @@ def log2(*s):
 
 def log3(*s):
     if verbosity >= 3 : print(*s, flush=True)
-
-def os_makedirs(dir_or_file):
-    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
-    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
 
 ####################################################################################################
 global model, session
@@ -117,30 +113,6 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
         model.model.fit(Xtrain, ytrain, eval_set=[(Xtest, ytest)], **compute_pars.get("compute_pars", {}))
     else:
         model.model.fit(Xtrain, ytrain, **compute_pars.get("compute_pars", {}))
-
-
-def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
-    """
-       Return metrics of the model when fitted.
-    """
-    global model, session
-    data_pars['train'] = True
-    Xval, yval = get_dataset(data_pars, task_type="eval")
-    ypred = predict(Xval, data_pars, compute_pars, out_pars)
-
-    # log(data_pars)
-    mpars = compute_pars.get("metrics_pars", {'metric_name': 'mae'})
-
-    scorer = {
-        "rmse": sklearn.metrics.mean_squared_error,
-        "mae": sklearn.metrics.mean_absolute_error
-    }[mpars['metric_name']]
-
-    mpars2 = mpars.get("metrics_pars", {})  ##Specific to score
-    score_val = scorer(yval, ypred, **mpars2)
-    ddict = [{"metric_val": score_val, 'metric_name': mpars['metric_name']}]
-
-    return ddict
 
 
 def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
@@ -332,7 +304,6 @@ def test(n_sample          = 1000):
     def post_process_fun(y): return int(y)
     def pre_process_fun(y):  return int(y)
 
-
     m = {
     'model_pars': {
         'model_class':  "model_sklearn.py::LightGBM"
@@ -361,23 +332,22 @@ def test(n_sample          = 1000):
         'download_pars' : None,
         'cols_input_type' : cols_input_type_1,
         ### family of columns for MODEL  #########################################################
-        'cols_model_group': [ 'colnum_bin',   'colcat_bin',
-                            ]
+        'cols_model_group': [ 'colnum_bin',   'colcat_bin', ]
 
         ,'cols_model_group_custom' :  { 'colnum' : colnum,
                                         'colcat' : colcat,
                                         'coly' : coly
-                            }
+                                      }
         ###################################################  
-        ,'train': {'Xtrain': X_train, 'ytrain': y_train,
-                   'Xtest': X_valid,  'ytest':  y_valid},
-                'eval': {'X': X_valid,  'y': y_valid},
-                'predict': {'X': X_valid}
+        ,'train': {'Xtrain':    X_train, 'ytrain': y_train,
+                   'Xtest':     X_valid,  'ytest':  y_valid},
+                   'eval':    {'X': X_valid,  'y': y_valid},
+                   'predict': {'X': X_valid}
 
         ### Filter data rows   ##################################################################
         ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
 
-        
+
         ### Added continuous & sparse features groups ###
         'cols_model_type2': {
             'colcontinuous':   colnum ,
@@ -389,7 +359,6 @@ def test(n_sample          = 1000):
     ##### Running loop
     """https://github.com/manujosephv/pytorch_tabular/blob/main/tests/test_mdn.py
     
-
     """
     ll = [
         ('torch_tabular.py::CategoryEmbeddingModelConfig', 
@@ -487,6 +456,33 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+def zz_eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
+    """
+       Return metrics of the model when fitted.
+    """
+    global model, session
+    data_pars['train'] = True
+    Xval, yval = get_dataset(data_pars, task_type="eval")
+    ypred = predict(Xval, data_pars, compute_pars, out_pars)
+
+    # log(data_pars)
+    mpars = compute_pars.get("metrics_pars", {'metric_name': 'mae'})
+
+    scorer = {
+        "rmse": sklearn.metrics.mean_squared_error,
+        "mae": sklearn.metrics.mean_absolute_error
+    }[mpars['metric_name']]
+
+    mpars2 = mpars.get("metrics_pars", {})  ##Specific to score
+    score_val = scorer(yval, ypred, **mpars2)
+    ddict = [{"metric_val": score_val, 'metric_name': mpars['metric_name']}]
+
+    return ddict
 
 
 def zz_preprocess(prepro_pars):
