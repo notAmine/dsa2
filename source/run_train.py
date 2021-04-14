@@ -100,6 +100,7 @@ def map_model(model_name):
 
     return modelx
 
+
 def train(model_dict, dfX, cols_family, post_process_fun):
     """  Train the model using model_dict, save model, save prediction
     :param model_dict:  dict containing params
@@ -143,7 +144,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
                            'Xval'   : dfX[colsX].iloc[ival:, :],
                            'yval'   : dfX[coly].iloc[ival:],
                          }
-    
+
     """
     #### TODO : Lazy Dict to have large dataset
     ##### Lazy Dict mechanism : Only path
