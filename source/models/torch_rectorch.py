@@ -94,7 +94,7 @@ def predict(Xpred=None, data_pars=None, compute_pars={}, out_pars={}, **kw):
 
     test_mapped_ids, test_te = get_dataset(data_pars, task_type="predict")
     log("Predicting...")
-    
+    print("model shape : ", model.model.model.shape)
     ypred = model.model.predict(test_mapped_ids, test_te, False)
 
     return ypred
@@ -103,10 +103,17 @@ def get_dataset(data_pars=None, task_type="train"):
 
 
     if task_type == "train":
-        df = data_pars.get('df')
+        # df = data_pars.get('df')
         train_set_df = data_pars.get('train').get('df')
-        val_set_df = data_pars.get('eval').get('df')
+        val_set_df = data_pars.get('val').get('df')
         test_set_df = data_pars.get('predict').get('df')
+        batch_size = data_pars.get('data_pars').get('batch_size')
+
+        df = pd.concat((
+            train_set_df,
+            val_set_df,
+            test_set_df
+        ))
 
         ds = Dataset(
             uids=np.unique(df.iloc[:,0]).astype(np.int32),
@@ -119,7 +126,7 @@ def get_dataset(data_pars=None, task_type="train"):
         train_sampler = SparseDummySampler(
             data=ds,
             mode='train',
-            batch_size=128,
+            batch_size=batch_size,
             shuffle=True
         )
 
@@ -127,6 +134,7 @@ def get_dataset(data_pars=None, task_type="train"):
 
         return train_sampler
     elif task_type == "predict":
+
         train_sampler = data_pars['train']['train_sampler']
         test_te = train_sampler.data_te
 
@@ -190,62 +198,127 @@ def make_rand_sparse_dataset(
     
     
 
-    return df, train_df, val_df, test_df 
+    return train_df, val_df, test_df 
 
 
 def test(n_sample          = 1000):
-    df, train_df, val_df, test_df = make_rand_sparse_dataset(n_rows= n_sample)
+    train_df, val_df, test_df = make_rand_sparse_dataset(n_rows= n_sample)
 
     #### Matching Big dict  ##################################################
     def post_process_fun(y): return int(y)
     def pre_process_fun(y):  return int(y)
 
-    m = {'model_pars': {
-        'model_class':  "torch_rectorch.py::EASE"
-        ,'model_pars' : {
-                'lam' : 100.
-        }
-        , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
-        , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
+    # m = {'model_pars': {
+    #     'model_class':  "torch_rectorch.py::EASE"
+    #     ,'model_pars' : {
+    #             'lam' : 100.
+    #     }
+    #     , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
+    #     , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
 
-        ### Pipeline for data processing ##############################
-        'pipe_list': [  #### coly target prorcessing
-            {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
-            {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
-            {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
-        ],
-        }
-        },
+    #     ### Pipeline for data processing ##############################
+    #     'pipe_list': [  #### coly target prorcessing
+    #         {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+    #         {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+    #         {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+    #     ],
+    #     }
+    #     },
 
-    'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
-                      'compute_pars' : {'epochs': 1 },
-                    },
+    # 'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score'],
+    #                   'compute_pars' : {'epochs': 1 },
+    #                 },
 
-    'data_pars': { 
-        'n_sample' : n_sample,
+    # 'data_pars': { 
+    #     'n_sample' : n_sample,
         
      
 
-        ### Added continuous & sparse features groups ###
-        'cols_model_type': {
-            'uid':   0 ,
-            'iid' : 1,
+    #     ### Added continuous & sparse features groups ###
+    #     'cols_model_type': {
+    #         'uid':   0 ,
+    #         'iid' : 1,
+    #     }
+
+    #     ### Filter data rows   ##################################################################
+    #     ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 }
+
+
+    #     ###################################################
+    #     # ,'df' : df
+    #     ,'train':   {'df': train_df, 'train_sampler' : None}
+    #     ,'eval':    {'df': val_df}
+    #     ,'predict': {'df': test_df}
+
+
+    #     }
+    # }
+    m = {
+    'model_pars': {
+        'model_class' :  "torch_rectorch.py::EASE"
+        ,'model_pars' : { 
+            'lam' : 100.
         }
+        , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
+        , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
+            ### Pipeline for data processing ##############################
+            'pipe_list': [  #### coly target prorcessing
+            {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+            {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+            {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
 
-        ### Filter data rows   ##################################################################
-        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 }
+            ],
+            }
+    },
 
+    'compute_pars': { 
+        'compute_extra' :{
+             
+            },
 
-        ###################################################
-        ,'df' : df
+        'compute_pars' :{
+            'metric_list': ['accuracy_score','average_precision_score'],
+            'compute_pars' : {'epochs': 1 },
+        },
+
+    },
+
+    'data_pars': { 'n_sample' : n_sample,
+  
+        'download_pars'   : None,
+        # 'cols_input_type' : cols_input_type_1,
+        ### family of columns for MODEL  ##################
+         'cols_model_group': [ 'colnum_bin',   'colcat_bin', ]
+
+        ### Filter data rows   ###########################
+        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+
+        ### Added continuous & sparse features groups ###
+        'cols_model_type2': {
+        },
+
+        'data_pars' :{
+                'cols_model_type': {
+                    'uid':   0 ,
+                    'iid' : 1,
+                },
+                # Raw dataset, pre preprocessing
+                "dataset_path" : "",
+                "batch_size":128,   ### Mini Batch from data
+                # Needed by getdataset
+                "clean" : False,
+                "data_path": "",
+        }
+        ####### ACTUAL data Values #############################################################
         ,'train':   {'df': train_df, 'train_sampler' : None}
-        ,'eval':    {'df': val_df}
+        ,'val':     {'df': val_df}
         ,'predict': {'df': test_df}
 
+    },
 
-        }
+    'global_pars' :{
     }
-
+    }
     ###  Tester #########################################################
     test_helper(m['model_pars'], m['data_pars'], m['compute_pars'])
 
