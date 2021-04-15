@@ -14,9 +14,7 @@ python  titanic_classifier.py  predict
 """
 import warnings, copy, os, sys
 warnings.filterwarnings("ignore")
-
 DO_PROFILE = True
-
 
 ####################################################################################
 ###### Path ########################################################################
@@ -339,8 +337,7 @@ except : pass
 if __name__ == "__main__":
     if DO_PROFILE :
         from pyinstrument import Profiler
-        profiler = Profiler()
-        profiler.start()
+        profiler = Profiler() ; profiler.start()
 
 
     d = { "data_profile": data_profile,  "train" : train, "predict" : predict, "config" : config_default }
