@@ -335,18 +335,15 @@ except : pass
 ###########################################################################################################
 ###########################################################################################################
 if __name__ == "__main__":
-    if DO_PROFILE :
-        from pyinstrument import Profiler
-        profiler = Profiler() ; profiler.start()
+    from pyinstrument import Profiler;  profiler = Profiler() ; profiler.start()
 
 
     d = { "data_profile": data_profile,  "train" : train, "predict" : predict, "config" : config_default }
     import fire
     fire.Fire(d)
 
-    if DO_PROFILE :
-        profiler.stop()
-        print(profiler.output_text(unicode=True, color=True))
+
+    profiler.stop() ; print(profiler.output_text(unicode=True, color=True))
 
 
 
