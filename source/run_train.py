@@ -10,24 +10,24 @@ import warnings,sys, os, json, importlib, copy
 warnings.filterwarnings('ignore')
 
 ####################################################################################################
-#### Add path for python import
-sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
-root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
-print(root)
-
-####################################################################################################
-try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../config.json", mode='r'))['verbosity'])
-except Exception as e : verbosity = 4
-#raise Exception(f"{e}")
+from utilmy import global_verbosity, os_makedirs
+verbosity = global_verbosity(__file__, "/../config.json" ,default= 5)
 
 def log(*s):
-    print(*s, flush=True)
+    if verbosity >= 1 : print(*s, flush=True)
 
 def log2(*s):
     if verbosity >= 2 : print(*s, flush=True)
 
 def log3(*s):
     if verbosity >= 3 : print(*s, flush=True)
+
+
+####################################################################################################
+#### Add path for python import
+sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
+root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
+log(root)
 
 
 ####################################################################################################
