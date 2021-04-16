@@ -114,15 +114,15 @@ class Model(object):
 
         else:
             model_class = model_pars.get('model_class', 'WideDeep_sparse')
-            if 'sparse' in model_class  :
+            if 'dense' not in model_class  :
                 cpars = model_pars['model_pars']
                 cpars.update(data_pars)
                 #cpars = { **cpars, **data_pars['data_pars'] }
                 #pprint.pprint(cpars)
                 self.model = WideDeep_sparse(cpars)
-            else :
-                cpars = model_pars['model_pars']
-                self.model = zz_WideDeep_dense(cpars)
+            # else :
+            #    cpars = model_pars['model_pars']
+            #    self.model = zz_WideDeep_dense(cpars)
 
 
 #####################################################################################################
@@ -156,7 +156,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None):
     Xtest = Xtest.rename(columns=rename_col_dict)
 
     ### Coupling Data X Model Input
-    if 'sparse' in  model.model_pars['model_class'] :
+    if 'dense' not in  model.model_pars['model_class'] :
         log2('Fitting Sparse input...')
         Xy_train = get_dataset_split_for_model_tfsparse(Xtrain, Ytrain, data_pars)
         Xy_val   = get_dataset_split_for_model_tfsparse(Xtest,  Ytest,  data_pars)
@@ -164,6 +164,8 @@ def fit(data_pars=None, compute_pars=None, out_pars=None):
         hist   = model.model.fit(Xy_train, validation_data=Xy_val, **cpars)
         model.history = hist
 
+
+    """ 
     else :
         log2('Fitting Dense input...')
 
@@ -182,7 +184,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None):
 
         hist     = model.model.fit(Xy_train, validation_data=Xy_val, **cpars)
         model.history = hist
-
+    """
 
 
 def predict(Xpred=None,data_pars=None, compute_pars=None, out_pars=None):
@@ -201,11 +203,12 @@ def predict(Xpred=None,data_pars=None, compute_pars=None, out_pars=None):
     Xpred = Xpred.rename(columns=rename_col_dict)
 
 
-    if 'sparse' in  model.model_pars['model_class'] :
+    if 'dense' not in  model.model_pars['model_class'] :
         Xpred       = get_dataset_split_for_model_tfsparse(Xpred, None, data_pars)
         ypred_proba = model.model.predict(Xpred)
         ypred       = [  1 if t > 0.5 else 0 for t in ypred_proba ]
 
+    """
     else :
         Xpred,_  = get_dataset_split_for_model_pandastuple(Xpred, None, data_pars)
         Xpred = pd.concat(Xpred, axis=1)
@@ -213,7 +216,7 @@ def predict(Xpred=None,data_pars=None, compute_pars=None, out_pars=None):
         testdata = tf.data.Dataset.zip(((Xpred, Xpred, Xpred),)).batch(32)
         ypred_proba = model.model.predict(testdata)
         ypred       = [  1 if t > 0.5 else 0 for t in ypred_proba ]
-
+    """
     ################################################################
     if compute_pars.get("probability", False):
         return ypred, ypred_proba
