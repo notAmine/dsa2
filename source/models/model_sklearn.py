@@ -1,14 +1,12 @@
 # pylint: disable=C0321,C0103,C0301,E1305,E1121,C0302,C0330,C0111,W0613,W0611,R1705
 # -*- coding: utf-8 -*-
 """
-
-
-
 """
 import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
 
 ####################################################################################################
 from utilmy import global_verbosity, os_makedirs
+
 verbosity = global_verbosity(__file__, "/../../config.json" ,default= 5)
 
 def log(*s):
@@ -40,36 +38,6 @@ from sklearn.cluster import *
 from sklearn.tree import *
 from lightgbm import LGBMModel, LGBMRegressor, LGBMClassifier
 
-
-try :
-    #### All are Un-supervised Model
-    from pyod.models.abod  import *
-    from pyod.models.auto_encoder import *
-    from pyod.models.cblof import *
-    from pyod.models.cof import *
-    from pyod.models.combination import *
-    from pyod.models.copod import *
-    from pyod.models.feature_bagging import *
-    from pyod.models.hbos import *
-    from pyod.models.iforest import *
-    from pyod.models.knn import *
-    from pyod.models.lmdd import *
-    from pyod.models.loda import *
-    from pyod.models.lof import *
-    from pyod.models.loci import *
-    from pyod.models.lscp import *
-    from pyod.models.mad import *
-    from pyod.models.mcd import *
-    from pyod.models.mo_gaal import *
-    from pyod.models.ocsvm import *
-    from pyod.models.pca import *
-    from pyod.models.sod import *
-    from pyod.models.so_gaal import *
-    from pyod.models.sos import *
-    from pyod.models.vae import *
-    from pyod.models.xgbod import *
-except :
-    print("cannot import pyod")
 
 
 def model_automl():
@@ -105,7 +73,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
     global model, session
     session = None  # Session type for compute
-    Xtrain, ytrain, Xtest, ytest = get_dataset(data_pars, task_type="train")
+    Xtrain, ytrain, Xtest, ytest = get_dataset2(data_pars, task_type="train")
     log(Xtrain.shape, model.model)
 
     if "LGBM" in model.model_pars['model_class']:
@@ -123,10 +91,10 @@ def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
 
     ypred = model.model.predict(Xpred)
     #ypred = post_process_fun(ypred)
-    
-    ypred_proba = None  ### No proba    
+
+    ypred_proba = None  ### No proba
     if compute_pars.get("probability", False):
-         ypred_proba = model.model.predict_proba(Xpred) 
+         ypred_proba = model.model.predict_proba(Xpred)
     return ypred, ypred_proba
 
 
@@ -170,23 +138,20 @@ THISMODEL_COLGROUPS = []
 def get_dataset_split_for_model_pandastuple(Xtrain, ytrain=None, data_pars=None, ):
     """  Split data for moel input/
     Xtrain  ---> Split INTO  tuple of data  Xtuple= (df1, df2, df3) to fit model input.
-
     :param Xtrain:
     :param coldataloader_received:
     :param colmodel_ref:
     :return:
     """
     from utilmy import pd_read_file
-    coldataloader_received,  = data_pars.get('cols_model_type2', {})
-    colmodel_ref             = THISMODEL_COLGROUPS
+    coldataloader_received  = data_pars.get('cols_model_type2', {})
+    colmodel_ref            = THISMODEL_COLGROUPS
 
     ### Into RAM
-    if isinstance(Xtrain, str) : Xtrain = pd_read_file(Xtrain, verbose=False)
-    if isinstance(ytrain, str) : ytrain = pd_read_file(ytrain, verbose=False)
-
-
+    if isinstance(Xtrain, str) : Xtrain = pd_read_file(Xtrain + "*", verbose=False)
+    if isinstance(ytrain, str) : ytrain = pd_read_file(ytrain + "*", verbose=False)
     if len(colmodel_ref) <= 1 :   ## No split
-        return Xtrain
+        return Xtrain, ytrain
 
     ### Split the pandas columns into different pieces  ######################
     Xtuple_train = []
@@ -225,21 +190,21 @@ def get_dataset2(data_pars=None, task_type="train", **kw):
     data_pars[task_type] = None    ### Save memory
 
     if task_type == "predict":
-        d = get_dataset_split_for_model(d, data_pars )
+        d["X"], = get_dataset_split_for_model(d, data_pars )
         return d["X"]
 
     if task_type == "eval":
-        d = get_dataset_split_for_model(d, data_pars )
+        d["X"],d["y"] = get_dataset_split_for_model(d, data_pars )
         return d["X"], d["y"]
 
     if task_type == "train":
-        d = get_dataset_split_for_model(d, data_pars )
+        d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"] = get_dataset_split_for_model(d, data_pars )
         return d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
 
 
 def get_dataset(data_pars=None, task_type="train", **kw):
     """
-      "ram"  : 
+      "ram"  :
       "file" :
     """
     # log(data_pars)
@@ -297,7 +262,7 @@ def test(n_sample          = 1000):
     df, d = test_dataset_classification_fake(nrows= n_sample)
     colnum, colcat, coly = d['colnum'], d['colcat'], d['coly']
     X,y, X_train, X_valid, y_train, y_valid, X_test,  y_test, num_classes  = pd_train_test_split2(df, coly)
-  
+
     cols_input_type_1 = []
     #### Matching Big dict  ##################################################
     def post_process_fun(y): return int(y)
@@ -306,7 +271,7 @@ def test(n_sample          = 1000):
     m = {
     'model_pars': {
         'model_class':  "model_sklearn.py::LightGBM"
-        ,'model_pars' : {  }  
+        ,'model_pars' : {  }
         , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
         , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
             ### Pipeline for data processing ##############################
@@ -337,7 +302,7 @@ def test(n_sample          = 1000):
                                         'colcat' : colcat,
                                         'coly' : coly
                                       }
-        ###################################################  
+        ###################################################
         ,'train': {'Xtrain':    X_train, 'ytrain': y_train,
                    'Xtest':     X_valid,  'ytest':  y_valid},
                    'eval':    {'X': X_valid,  'y': y_valid},
@@ -350,7 +315,7 @@ def test(n_sample          = 1000):
         ### Added continuous & sparse features groups ###
         'cols_model_type2': {
             'colcontinuous':   colnum ,
-            'colsparse' : colcat, 
+            'colsparse' : colcat,
         },
         }
     }
@@ -360,11 +325,11 @@ def test(n_sample          = 1000):
     
     """
     ll = [
-        ('torch_tabular.py::CategoryEmbeddingModelConfig', 
+        ('torch_tabular.py::CategoryEmbeddingModelConfig',
             {   'task': "classification",
                 'metrics' : ["f1","accuracy"],
                 'metrics_params' : [{"num_classes":num_classes},{}]
-            }  
+            }
         ),
     ]
     for cfg in ll:
@@ -419,9 +384,7 @@ def test2():
     from pyod.models.sos import *
     from pyod.models.vae import *
     from pyod.models.xgbod import *
-
     https://pyod.readthedocs.io/en/latest/pyod.html
-
     :return:
     """
     global model
