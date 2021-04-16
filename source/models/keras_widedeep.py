@@ -62,13 +62,13 @@ def WideDeep_sparse(model_pars2):
         # Numeric Columns creation
         # colnum = ['PhotoAmt', 'Fee', 'Age']
 
-        colnum  = model_pars2['cols_input_type']['colnum']
+        colnum  = model_pars2['data_pars']['colnum']
         prepare.numeric_columns(colnum)
 
         #### Categorical Columns
-        colcat = model_pars2['cols_input_type']['colcat']
+        colcat = model_pars2['data_pars']['colcat']
         # colcat = ['Type', 'Color1', 'Color2', 'Gender', 'MaturitySize','FurLength', 'Vaccinated', 'Sterilized', 'Health','Breed1']
-        colcat_unique = model_pars2['cols_input_type']['colcat_unique']
+        colcat_unique = model_pars2['data_pars']['colcat_unique']
         prepare.categorical_columns(colcat, colcat_unique)
 
         ##### Bucketized Columns
@@ -76,7 +76,7 @@ def WideDeep_sparse(model_pars2):
         #prepare.bucketized_columns(bucket_cols)
 
         ##### Embedding Columns
-        colembed_dict = model_pars2['cols_input_type']['colembed_dict']
+        colembed_dict = model_pars2['data_pars']['colembed_dict']
         prepare.embeddings_columns(colembed_dict)
         #embeddingCol = {'Breed1':8}
 
@@ -532,9 +532,9 @@ def get_dataset_split_for_model_tfsparse(Xtrain, ytrain=None, pars:dict=None):
        train_tfdata = Xtrain
 
     else :
-        colnum   = pars['cols_input_type']['colnum']
-        colcat   = pars['cols_input_type']['colcat']
-        coly     = pars['cols_input_type']['coly']
+        colnum   = pars['data_pars']['colnum']
+        colcat   = pars['data_pars']['colcat']
+        coly     = pars['data_pars']['coly']
         # colembed = pars['data_pars']['colembed_dict']
         assert isinstance(Xtrain, pd.DataFrame), 'Xtrain not dataframe'
 
