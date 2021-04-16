@@ -118,15 +118,15 @@ class Model(object):
 
         else:
             model_class = model_pars.get('model_class', 'WideDeep_sparse')        
-            if 'sparse' in model_class  :
-                cpars = model_pars['model_pars']
-                cpars.update(data_pars)
-                #cpars = { **cpars, **data_pars['data_pars'] }
-                #pprint.pprint(cpars)
-                self.model = WideDeep_sparse(cpars)
-            else : 
-                cpars = model_pars['model_pars']
-                self.model = WideDeep_dense(cpars)
+            #if 'sparse' in model_class  :
+            cpars = model_pars['model_pars']
+            cpars.update(data_pars)
+            #cpars = { **cpars, **data_pars['data_pars'] }
+            #pprint.pprint(cpars)
+            self.model = WideDeep_sparse(cpars)
+            #else : 
+            #    cpars = model_pars['model_pars']
+            #    self.model = WideDeep_dense(cpars)
 
 
 #####################################################################################################
