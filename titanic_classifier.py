@@ -5,7 +5,6 @@
   python titanic_classifier.py  train      --config  config1
   python titanic_classifier.py  predict    --config  config1
 
-python  titanic_classifier.py  data_profile
 python  titanic_classifier.py  preprocess  --nsample 100
 python  titanic_classifier.py  train       --nsample 200
 python  titanic_classifier.py  predict
