@@ -165,7 +165,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     dfX[[coly]].iloc[itrain:ival].to_parquet(    m['ytest']  + "/file_01.parquet" )
 
     dfX[colsX].iloc[ival:, :].to_parquet(   m['Xval']  + "/file_01.parquet" )
-    dfX[[coly]].iloc[ival:].to_parquet(       m['yval']  + "/file_01.parquet"  )
+    dfX[[coly]].iloc[ival:].to_parquet(     m['yval']  + "/file_01.parquet"  )
         
     
     #### date_type :  'ram', 'pandas', tf_data,  torch_data,
@@ -178,7 +178,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     modelx = map_model(model_name)
     log2(modelx)
     modelx.reset()
-    ###  data_pars_ref has NO data.
+    ###  data_pars_ref has NO data, only string params
     modelx.init(model_pars, data_pars= data_pars_ref, compute_pars=compute_pars)
 
     ### Using Actual daa in data_pars['train']
@@ -350,8 +350,6 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
         dfXy.to_parquet(path_check_out     + "/dfX.parquet")      # train input data 
         dfXytest.to_parquet(path_check_out + "/dfXtest.parquet")  # Test input data 
 
-        #dfXy.to_csv(path_check_out + "/dfX.csv")  # train input data generate csv
-        #dfXytest.to_csv(path_check_out + "/dfXtest.csv")  # Test input data  generate csv
         log("######### Finish #############################################################", )
 
 

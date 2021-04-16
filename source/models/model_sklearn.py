@@ -74,7 +74,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     global model, session
     session = None  # Session type for compute
     Xtrain, ytrain, Xtest, ytest = get_dataset2(data_pars, task_type="train")
-    log(Xtrain.shape, model.model)
+    log2(Xtrain.shape, model.model)
 
     if "LGBM" in model.model_pars['model_class']:
         model.model.fit(Xtrain, ytrain, eval_set=[(Xtest, ytest)], **compute_pars.get("compute_pars", {}))
@@ -86,13 +86,18 @@ def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     global model, session
 
     if Xpred is None:
-        data_pars['train'] = False
         Xpred = get_dataset(data_pars, task_type="predict")
+    else :
+        if data_pars.get('type', 'pandas') in ['pandas', 'ram']:
+            Xpred = get_dataset_split_for_model_pandastuple(Xpred, ytrain=None, data_pars= data_pars, )
+        else :
+            raise Exception("not implemented")
 
+    log3('Xpred', Xpred)
     ypred = model.model.predict(Xpred)
-    #ypred = post_process_fun(ypred)
 
-    ypred_proba = None  ### No proba
+    ##### Probability  ################################
+    ypred_proba = None
     if compute_pars.get("probability", False):
          ypred_proba = model.model.predict_proba(Xpred)
     return ypred, ypred_proba
@@ -144,12 +149,15 @@ def get_dataset_split_for_model_pandastuple(Xtrain, ytrain=None, data_pars=None,
     :return:
     """
     from utilmy import pd_read_file
-    coldataloader_received  = data_pars.get('cols_model_type2', {})
-    colmodel_ref            = THISMODEL_COLGROUPS
+    coldataloader_received  = data_pars.get('cols_model_type2', {})   ### column defined in Data
+    colmodel_ref            = THISMODEL_COLGROUPS   ### Column defined here
 
     ### Into RAM
     if isinstance(Xtrain, str) : Xtrain = pd_read_file(Xtrain + "*", verbose=False)
     if isinstance(ytrain, str) : ytrain = pd_read_file(ytrain + "*", verbose=False)
+
+
+    ##########################################################################
     if len(colmodel_ref) <= 1 :   ## No split
         return Xtrain, ytrain
 
@@ -163,43 +171,29 @@ def get_dataset_split_for_model_pandastuple(Xtrain, ytrain=None, data_pars=None,
     return Xtuple_train, ytrain
 
 
-def get_dataset_split_for_model(d, data_pars):
-     if 'Xtrain' in d and 'ytrain' in d and 'Xtest' in d  and 'ytest' in d:
-         Xtrain, ytrain = get_dataset_split_for_model_pandastuple(d['Xtrain'], d['ytrain'],  data_pars)
-         Xtest, ytest   = get_dataset_split_for_model_pandastuple(d['Xtest'], d['ytest'],    data_pars)
-         return Xtrain, ytrain, Xtest, ytest
-
-     if 'X' in d and 'y' in d :
-         Xtrain, ytrain = get_dataset_split_for_model_pandastuple(d['X'], d['y'],  data_pars)
-         return Xtrain, ytrain
-
-     if 'X'  in d :
-         Xtrain, _ = get_dataset_split_for_model_pandastuple(d['X'], None,  data_pars)
-         return Xtrain, None
-
-
-
 def get_dataset2(data_pars=None, task_type="train", **kw):
     """
-      "ram"  :
-      "file" :
+       Raw Data (Path)   --->  Input Object (ie Pandas, ...) for Model training
     """
-    # log(data_pars)
-    data_type            = data_pars.get('type', 'ram')
+    log3('data_pars', data_pars)
+    data_type            = data_pars.get('type', 'pandas')
     d                    = data_pars[task_type]
     data_pars[task_type] = None    ### Save memory
 
-    if task_type == "predict":
-        d["X"], = get_dataset_split_for_model(d, data_pars )
-        return d["X"]
+    if data_type in [ 'pandas', 'ram'] :
+        if task_type == "predict":
+            Xtrain, _ = get_dataset_split_for_model_pandastuple(d['X'], None,  data_pars)
+            return Xtrain
 
-    if task_type == "eval":
-        d["X"],d["y"] = get_dataset_split_for_model(d, data_pars )
-        return d["X"], d["y"]
+        if task_type == "eval":
+            Xtrain, ytrain = get_dataset_split_for_model_pandastuple(d['X'], d['y'],  data_pars)
+            return Xtrain, ytrain
 
-    if task_type == "train":
-        d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"] = get_dataset_split_for_model(d, data_pars )
-        return d["Xtrain"], d["ytrain"], d["Xtest"], d["ytest"]
+        if task_type == "train":
+            Xtrain, ytrain = get_dataset_split_for_model_pandastuple(d['Xtrain'], d['ytrain'],  data_pars)
+            Xtest, ytest   = get_dataset_split_for_model_pandastuple(d['Xtest'],  d['ytest'],   data_pars)
+            return Xtrain, ytrain, Xtest, ytest
+
 
 
 def get_dataset(data_pars=None, task_type="train", **kw):
@@ -228,8 +222,6 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
     elif data_type == "file":
         raise Exception(f' {data_type} data_type Not implemented ')
-
-    raise Exception(f' Requires  Xtrain", "Xtest", "ytrain", "ytest" ')
 
 
 def get_params_sklearn(deep=False):
@@ -287,10 +279,10 @@ def test(n_sample          = 1000):
 
             ],
             }
-        },
+    },
 
     'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score']
-                    },
+     },
 
     'data_pars': { 'n_sample' : n_sample,
         'download_pars' : None,
@@ -321,9 +313,6 @@ def test(n_sample          = 1000):
     }
 
     ##### Running loop
-    """https://github.com/manujosephv/pytorch_tabular/blob/main/tests/test_mdn.py
-    
-    """
     ll = [
         ('torch_tabular.py::CategoryEmbeddingModelConfig',
             {   'task': "classification",
@@ -333,7 +322,6 @@ def test(n_sample          = 1000):
         ),
     ]
     for cfg in ll:
-        log("******************************************** New Model ********************************************")
         log(f"******************************************** {cfg[0]} ********************************************")
         reset()
         # Set the ModelConfig
@@ -356,66 +344,38 @@ def test(n_sample          = 1000):
         reset()
 
 
-
-def test2():
-    """
-        from pyod.models.abod  import *
-    from pyod.models.auto_encoder import *
-    from pyod.models.cblof import *
-    from pyod.models.cof import *
-    from pyod.models.combination import *
-    from pyod.models.copod import *
-    from pyod.models.feature_bagging import *
-    from pyod.models.hbos import *
-    from pyod.models.iforest import *
-    from pyod.models.knn import *
-    from pyod.models.lmdd import *
-    from pyod.models.loda import *
-    from pyod.models.lof import *
-    from pyod.models.loci import *
-    from pyod.models.lscp import *
-    from pyod.models.mad import *
-    from pyod.models.mcd import *
-    from pyod.models.mo_gaal import *
-    from pyod.models.ocsvm import *
-    from pyod.models.pca import *
-    from pyod.models.sod import *
-    from pyod.models.so_gaal import *
-    from pyod.models.sos import *
-    from pyod.models.vae import *
-    from pyod.models.xgbod import *
-    https://pyod.readthedocs.io/en/latest/pyod.html
-    :return:
-    """
-    global model
-    try:
-        from pmlb import fetch_data, classification_dataset_names
-    except:
-        log("Installing pmlb...")
-        os.system("pip install pmlb")
-        log("Pmlb Installed")
-        from pmlb import fetch_data, classification_dataset_names
-
-
-    ####
-    m = template_dict()
-    ll= [ 'PCA', 'SO_GAAL', 'VAE', 'HBOS' ]
-
-    for dataset in classification_dataset_names :
-      for modeli in  ll:
-         m['model_class'] = modeli
-
-
-
-
-
-
-
-
 if __name__ == "__main__":
     import fire
     fire.Fire()
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+def get_dataset_split_for_model(d, data_pars):
+     if 'Xtrain' in d and 'ytrain' in d and 'Xtest' in d  and 'ytest' in d:
+         Xtrain, ytrain = get_dataset_split_for_model_pandastuple(d['Xtrain'], d['ytrain'],  data_pars)
+         Xtest, ytest   = get_dataset_split_for_model_pandastuple(d['Xtest'], d['ytest'],    data_pars)
+         return Xtrain, ytrain, Xtest, ytest
+
+     if 'X' in d and 'y' in d :
+         Xtrain, ytrain = get_dataset_split_for_model_pandastuple(d['X'], d['y'],  data_pars)
+         return Xtrain, ytrain
+
+     if 'X'  in d :
+         Xtrain, _ = get_dataset_split_for_model_pandastuple(d['X'], None,  data_pars)
+         return Xtrain, None
+"""
 
 
 
