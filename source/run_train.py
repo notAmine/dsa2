@@ -148,26 +148,24 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     """
     #### TODO : Lazy Dict to have large dataset
     ##### Lazy Dict mechanism : Only path
-    m = {'Xtrain'  : model_path + "/train/Xtrain/" ,
-          'ytrain' : model_path + "/train/ytrain/",
-          'Xtest'  : model_path + "/train/Xtest/",
-          'ytest'  : model_path + "/train/ytest/",
+    m = {'Xtrain'  : model_path + "train/Xtrain/" ,
+          'ytrain' : model_path + "train/ytrain/",
+          'Xtest'  : model_path + "train/Xtest/",
+          'ytest'  : model_path + "train/ytest/",
     
-          'Xval'   : model_path + "/train/Xval/",
-          'yval'   : model_path + "/train/yval/",
+          'Xval'   : model_path + "train/Xval/",
+          'yval'   : model_path + "train/yval/",
           }
-          
     for key, path in m.items() :
-       os.makedirs(path, exist=True)      
-
+       os.makedirs(path, exist_ok =True)   
     dfX[colsX].iloc[:itrain, :].to_parquet(m['Xtrain']  + "/file_01.parquet" )
-    dfX[coly].iloc[:itrain].to_parquet(    m['ytrain']  + "/file_01.parquet" )
+    dfX[[coly]].iloc[:itrain].to_parquet(    m['ytrain']  + "/file_01.parquet" )
 
-    dfX[colsX].iloc[itrain:ival, :].to_parquet(m['Xval']  + "/file_01.parquet" )
-    dfX[coly].iloc[itrain:ival].to_parquet(    m['yval']  + "/file_01.parquet" )
+    dfX[colsX].iloc[itrain:ival, :].to_parquet(m['Xtest']  + "/file_01.parquet" )
+    dfX[[coly]].iloc[itrain:ival].to_parquet(    m['ytest']  + "/file_01.parquet" )
 
     dfX[colsX].iloc[ival:, :].to_parquet(   m['Xval']  + "/file_01.parquet" )
-    dfX[coly].iloc[ival:].to_parquet(       m['yval']  + "/file_01.parquet"  )
+    dfX[[coly]].iloc[ival:].to_parquet(       m['yval']  + "/file_01.parquet"  )
         
     
     #### date_type :  'ram', 'pandas', tf_data,  torch_data,
