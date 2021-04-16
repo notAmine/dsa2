@@ -337,11 +337,8 @@ except : pass
 if __name__ == "__main__":
     from pyinstrument import Profiler;  profiler = Profiler() ; profiler.start()
 
-
-    d = { "data_profile": data_profile,  "train" : train, "predict" : predict, "config" : config_default }
     import fire
-    fire.Fire(d)
-
+    fire.Fire()
 
     profiler.stop() ; print(profiler.output_text(unicode=True, color=True))
 
