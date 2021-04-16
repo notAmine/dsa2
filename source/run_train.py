@@ -194,7 +194,8 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
     dfX[coly]            = dfX[coly].apply(lambda  x : post_process_fun(x) )
     dfX[coly + '_pred']  = dfX[coly + '_pred'].apply(lambda  x : post_process_fun(x) )
-
+    log2("Prediction    : ",  dfX[[ coly, coly + '_pred' ]] )
+    
     if ypred_proba is None :  ### No proba
         ypred_proba_val = None
 
@@ -206,10 +207,10 @@ def train(model_dict, dfX, cols_family, post_process_fun):
         from util_feature import np_conv_to_one_col
         ypred_proba_val      = ypred_proba[ival:,:]
         dfX[coly + '_proba'] = np_conv_to_one_col(ypred_proba, ";")  ### merge into string "p1,p2,p3,p4"
-        log(dfX.head(3).T)
 
-    log2("Actual    : ",  dfX[coly ])
-    log2("Prediction: ",  dfX[coly + '_pred'])
+    if coly + '_proba' in dfX.columns :
+        log2('y_proba', dfX[ coly + '_proba'  ])
+
 
     log("#### Metrics ################################################################")
     from util_feature import  metrics_eval
@@ -345,10 +346,11 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
         colexport = [cols['colid'], cols['coly'], cols['coly'] + "_pred"]
         if cols['coly'] + '_proba' in  dfXy.columns :
             colexport.append( cols['coly'] + '_proba' )
-        dfXy[colexport].to_csv(path_check_out + "/pred_check.csv", sep="\t")  # Only results
-
-        dfXy.to_parquet(path_check_out + "/dfX.parquet")  # train input data generate parquet
-        dfXytest.to_parquet(path_check_out + "/dfXtest.parquet")  # Test input data  generate parquet
+        dfXy[colexport].sample(n=100).to_csv(path_check_out + "/pred_check_sample.csv", sep="\t")  # Only results
+        dfXy[colexport].to_parquet(path_check_out + "/pred_check.parquet")  # Only results
+        
+        dfXy.to_parquet(path_check_out     + "/dfX.parquet")      # train input data 
+        dfXytest.to_parquet(path_check_out + "/dfXtest.parquet")  # Test input data 
 
         #dfXy.to_csv(path_check_out + "/dfX.csv")  # train input data generate csv
         #dfXytest.to_csv(path_check_out + "/dfXtest.csv")  # Test input data  generate csv
