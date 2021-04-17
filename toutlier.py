@@ -53,38 +53,7 @@ def global_pars_update(model_dict,  data_name, config_name,
 
     model_dict[ "global_pars"] = m
     return model_dict
-    """print("config_name", config_name)
-    root_repo2    =  os.path.abspath(os.getcwd()).replace("\\", "/")  ; print(root_repo)
-    #### Actual 
-    dir_data     = dir_data3   if dir_data is  None else dir_data
-    dir_input_tr = dir_input3_tr  if dir_input_tr is  None else dir_input_tr 
-    dir_input_te = dir_input3_te  if dir_input_te is  None else dir_input_te 
-    print("dir_data_input", dir_input_tr)
-    ########################################################################
-    m                      = {}
-    m['config_path']       = THIS_FILEPATH
-    m['config_name']       = config_name
-    #### peoprocess input path
-    m['path_data_preprocess'] = dir_input_tr 
-    #### train input path
-    m['path_data_train']      = dir_input_tr 
-    m['path_data_test']       = dir_input_te 
-    #m['path_data_val']       = dir_data + f'/input/{data_name}/test/'
-    #### train output path
-    m['path_train_output']    = dir_data + f'/output/{data_name}/{config_name}/'
-    m['path_train_model']     = dir_data + f'/output/{data_name}/{config_name}/model/'
-    m['path_features_store']  = dir_data + f'/output/{data_name}/{config_name}/features_store/'
-    m['path_pipeline']        = dir_data + f'/output/{data_name}/{config_name}/pipeline/'
-    #### predict  input path
-    m['path_pred_data']       = dir_input_te 
-    m['path_pred_pipeline']   = dir_data + f'/output/{data_name}/{config_name}/pipeline/'
-    m['path_pred_model']      = dir_data + f'/output/{data_name}/{config_name}/model/'
-    #### predict  output path
-    m['path_pred_output']     = dir_data + f'/output/{data_name}/pred_{config_name}/'
-    #####  Generic
-    m['n_sample']             = model_dict['data_pars'].get('n_sample', 5000)
-    model_dict[ 'global_pars'] = m
-    return model_dict"""
+
 
 ####################################################################################
 config_default  = 'config1'   ### name of function which contains data configuration
@@ -164,11 +133,11 @@ def  config_template(path_model_out="") :
 
 
         ### Cross_feat = feat1 X feat2
-        {"uri": "source/prepro.py::pd_colcross",             "pars": {}, "cols_family": "colcross",   "cols_out": "colcross_pair",  "type": "cross"},
+        #{"uri": "source/prepro.py::pd_colcross",             "pars": {}, "cols_family": "colcross",   "cols_out": "colcross_pair",  "type": "cross"},
 
 
         #### Example of Custom processor
-        {"uri":  THIS_FILEPATH + "::pd_col_myfun",   "pars": {}, "cols_family": "colnum",   "cols_out": "col_myfun",  "type": "" },
+        #{"uri":  THIS_FILEPATH + "::pd_col_myfun",   "pars": {}, "cols_family": "colnum",   "cols_out": "col_myfun",  "type": "" },
 
         ],
                }
@@ -193,7 +162,7 @@ def  config_template(path_model_out="") :
                                 "colcat_bin",
                                 # "coltext",
                                 # "coldate",
-                                "colcross_pair",
+                                #"colcross_pair",
 
                                ### example of custom
                                "col_myfun"
@@ -325,37 +294,6 @@ def  train_test(nsample=100) :
                             )
         # sys.exit()
 
-def pd_col_myfun(df=None, col=None, pars={}):
-    """
-         Example of custom Processor
-    """
-    from source.util_feature import save, load
-    prefix = "col_myfun`"
-    if "path_pipeline" in pars :   #### Inference time LOAD previous pars
-        prepro   = load(pars["path_pipeline"] + f"/{prefix}_model.pkl" )
-        pars     = load(pars["path_pipeline"] + f"/{prefix}_pars.pkl" )
-        pars     = {} if pars is None else  pars
-    #### Do something #################################################################
-    df_new         = df[col]  ### Do nithi
-    df_new.columns = [  col + "_myfun"  for col in df.columns ]
-    cols_new       = list(df_new.columns)
-
-    prepro   = None
-    pars_new = None
-
-
-    ###################################################################################
-    if "path_features_store" in pars and "path_pipeline_export" in pars:
-       save(prepro,         pars["path_pipeline_export"] + f"/{prefix}_model.pkl" )
-       save(cols_new,       pars["path_pipeline_export"] + f"/{prefix}.pkl" )
-       save(pars_new,       pars["path_pipeline_export"] + f"/{prefix}_pars.pkl" )
-
-    col_pars = {"prefix" : prefix , "path" :   pars.get("path_pipeline_export", pars.get("path_pipeline", None)) }
-    col_pars["cols_new"] = {
-        "col_myfun" :  cols_new  ### list
-    }
-    return df_new, col_pars
-
 
 
 ########## Preprocess #############################################################
@@ -378,3 +316,42 @@ from core_run import predict
 if __name__ == "__main__":
     import fire
     fire.Fire()
+
+
+
+
+
+
+
+"""print("config_name", config_name)
+    root_repo2    =  os.path.abspath(os.getcwd()).replace("\\", "/")  ; print(root_repo)
+    #### Actual 
+    dir_data     = dir_data3   if dir_data is  None else dir_data
+    dir_input_tr = dir_input3_tr  if dir_input_tr is  None else dir_input_tr 
+    dir_input_te = dir_input3_te  if dir_input_te is  None else dir_input_te 
+    print("dir_data_input", dir_input_tr)
+    ########################################################################
+    m                      = {}
+    m['config_path']       = THIS_FILEPATH
+    m['config_name']       = config_name
+    #### peoprocess input path
+    m['path_data_preprocess'] = dir_input_tr 
+    #### train input path
+    m['path_data_train']      = dir_input_tr 
+    m['path_data_test']       = dir_input_te 
+    #m['path_data_val']       = dir_data + f'/input/{data_name}/test/'
+    #### train output path
+    m['path_train_output']    = dir_data + f'/output/{data_name}/{config_name}/'
+    m['path_train_model']     = dir_data + f'/output/{data_name}/{config_name}/model/'
+    m['path_features_store']  = dir_data + f'/output/{data_name}/{config_name}/features_store/'
+    m['path_pipeline']        = dir_data + f'/output/{data_name}/{config_name}/pipeline/'
+    #### predict  input path
+    m['path_pred_data']       = dir_input_te 
+    m['path_pred_pipeline']   = dir_data + f'/output/{data_name}/{config_name}/pipeline/'
+    m['path_pred_model']      = dir_data + f'/output/{data_name}/{config_name}/model/'
+    #### predict  output path
+    m['path_pred_output']     = dir_data + f'/output/{data_name}/pred_{config_name}/'
+    #####  Generic
+    m['n_sample']             = model_dict['data_pars'].get('n_sample', 5000)
+    model_dict[ 'global_pars'] = m
+    return model_dict"""
