@@ -112,6 +112,13 @@ jobs:
     #- name: run_all
     #  run: chmod -R 777 . && ztest/run_full.sh   # 2>&1 | tee   /home/runner/work/mlmodels/mlmodels_store/log_import/log_optim.py
 
+
+    - name: ipython example/test_keras_vaemdn.py  train
+      continue-on-error: true
+      run:  |
+            ipython example/test_keras_vaemdn.py  train
+
+
     - name: python toutlier.py  train_test
       # continue-on-error: true
       run:  |
