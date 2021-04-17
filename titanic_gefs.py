@@ -134,9 +134,6 @@ def config1() :
 
 
           ### Model Input :  Merge family of columns   #############################################
-          #  "colnum", "colnum_bin", "colnum_onehot", "colnum_binmap",  #### Colnum columns
-          #  "colcat", "colcat_bin", "colcat_onehot", "colcat_bin_map",  #### colcat columns
-          #  "colcross_single_onehot_select", "colcross_pair_onehot",  "colcross_pair",  #### colcross columns  "coldate", "coltext",
           "cols_model_group": [ "colnum_bin",
                                 "colcat_bin",
 
@@ -160,22 +157,6 @@ def config1() :
     return model_dict
 
 
-
-
-
-#####################################################################################
-########## Profile data #############################################################
-from core_run import  data_profile
-# def data_profile(path_data="", path_output="", n_sample= 5000):
-"""
-
-def data_profile(path_data="", path_output="", n_sample= 5000):
-   from source.run_feature_profile import run_profile
-   run_profile(path_data   = path_data,
-               path_output = path_output + "/profile/",
-               n_sample    = n_sample,
-              )
-"""
 
 
 
@@ -253,9 +234,10 @@ def predict(config=None, nsample=None):
 ###########################################################################################################
 ###########################################################################################################
 if __name__ == "__main__":
-    d = { "data_profile": data_profile,  "train" : train, "predict" : predict, "config" : config_default }
+    from pyinstrument import Profiler;  profiler = Profiler() ; profiler.start()
     import fire
-    fire.Fire(d)
+    fire.Fire()
+    profiler.stop() ; print(profiler.output_text(unicode=True, color=True))
     
 
 
