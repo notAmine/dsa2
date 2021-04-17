@@ -108,7 +108,7 @@ jobs:
     #  run: chmod -R 777 . && ztest/run_models.sh   # 2>&1 | tee   /home/runner/work/mlmodels/mlmodels_store/log_import/log_optim.py
 
 
-    ########### Keras TF #############################################################################
+    ########### Keras TF 2.4 #############################################################################
     - name: python keras_widedeep.py  test
       continue-on-error: true
       run:  |
@@ -124,14 +124,22 @@ jobs:
             echo "keras_widedeep_dense.py" >> file_check.txt
 
 
-    - name: python model_vaem.py test
-      continue-on-error: true
-      run:  cd source/models && ipython model_vaem.py test
-
 
     - name: python model_vaemdn.py test
       # continue-on-error: true
       run:  cd source/models && ipython model_vaemdn.py test2
+
+
+
+  ########### Keras TF 1.5 #############################################################################
+    - name: pip3 install tensorflow==1.5.1  keras==2.3.1
+      run: |
+        pip3 install tensorflow==1.5.1  keras==2.3.1 -y
+
+    - name: python model_vaem.py test
+      continue-on-error: true
+      run:  cd source/models && ipython model_vaem.py test
+
 
 
 
