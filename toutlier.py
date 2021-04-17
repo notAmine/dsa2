@@ -6,7 +6,6 @@ ipython toutlier.py  train_test
 import warnings, copy, os, sys, gc, time, glob
 warnings.filterwarnings('ignore')
 
-
 ####################################################################################
 ###### Path ########################################################################
 root_repo      =  os.path.abspath(os.getcwd()).replace("\\", "/")      ; print(root_repo)
@@ -72,18 +71,6 @@ cols_input_type_1 = {
     ,"colcross" : [ "Name", "Sex", "Ticket","Embarked","Pclass", "Age", "SibSp", ]
 }
 
-"""
-colnum  = ['ok']
-cols_input_type_1 = {
-     "coly"   :   "y"     ### isfraud 1/0
-    ,"colid"  :   "ip"
-    ,"colcat" :   [  ]
-    ,"colnum" :   colnum[:5]
-    ,"coldate"  : []
-    ,"colcross" : []
-}
-"""
-
 
 
 #### SHOULD BE OUTSIDE OF the config_template DUE TO Pickle iSSUE
@@ -97,132 +84,63 @@ def pre_process_fun(y):    ### Before the prediction is done
 #####################################################################################################
 #####################################################################################################
 def  config_template(path_model_out="") :
-    """
-    """
     config_name  = os_get_function_name()
     data_name    = "titanic"   ### in data/input/
     model_class  = 'HBOS'  ### ACTUAL Class name for model_sklearn.py
     n_sample     = 10000
 
-    model_dict = {"model_pars": {
-        ### LightGBM API model   #######################################
-         "model_class": model_class
-        ,"model_pars" : {"objective": "binary",
-                           "n_estimators": 10,
-                           "learning_rate":0.001,
-                           "boosting_type":"gbdt",     ### Model hyperparameters
-                           "early_stopping_rounds": 5
-                        }
+    model_dict = {
+        "model_pars": {
+             "model_class": model_class
+            ,"model_pars" : {"objective": "binary",
+                            }
 
-        , "post_process_fun" : post_process_fun   ### After prediction  ##########################################
-        , "pre_process_pars" : {"y_norm_fun" :  pre_process_fun ,  ### Before training  ##########################
-
-
-        ### Pipeline for data processing ##############################
-        "pipe_list": [
-        #### coly target prorcessing
-        {"uri": "source/prepro.py::pd_coly",                 "pars": {}, "cols_family": "coly",       "cols_out": "coly",           "type": "coly"         },
+            , "post_process_fun" : post_process_fun   ### After prediction  ##########################################
+            , "pre_process_pars" : {"y_norm_fun" :  pre_process_fun ,  ### Before training  ##########################
+                ### Pipeline for data processing ##############################
+                "pipe_list": [
+                #### coly target prorcessing
+                {"uri": "source/prepro.py::pd_coly",                 "pars": {}, "cols_family": "coly",       "cols_out": "coly",           "type": "coly"         },
 
 
-        {"uri": "source/prepro.py::pd_colnum_bin",           "pars": {}, "cols_family": "colnum",     "cols_out": "colnum_bin",     "type": ""             },
-        {"uri": "source/prepro.py::pd_colnum_binto_onehot",  "pars": {}, "cols_family": "colnum_bin", "cols_out": "colnum_onehot",  "type": ""             },
+                {"uri": "source/prepro.py::pd_colnum_bin",           "pars": {}, "cols_family": "colnum",     "cols_out": "colnum_bin",     "type": ""             },
+                {"uri": "source/prepro.py::pd_colnum_binto_onehot",  "pars": {}, "cols_family": "colnum_bin", "cols_out": "colnum_onehot",  "type": ""             },
 
-        #### catcol INTO integer,   colcat into OneHot
-        {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
-        {"uri": "source/prepro.py::pd_colcat_to_onehot",     "pars": {}, "cols_family": "colcat_bin", "cols_out": "colcat_onehot",  "type": ""             },
+                #### catcol INTO integer,   colcat into OneHot
+                {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
+                # {"uri": "source/prepro.py::pd_colcat_to_onehot",     "pars": {}, "cols_family": "colcat_bin", "cols_out": "colcat_onehot",  "type": ""             },
 
-
-        ### Cross_feat = feat1 X feat2
-        #{"uri": "source/prepro.py::pd_colcross",             "pars": {}, "cols_family": "colcross",   "cols_out": "colcross_pair",  "type": "cross"},
-
-
-        #### Example of Custom processor
-        #{"uri":  THIS_FILEPATH + "::pd_col_myfun",   "pars": {}, "cols_family": "colnum",   "cols_out": "col_myfun",  "type": "" },
-
-        ],
-               }
-        },
+              ],
+              }
+      },
 
       "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
-                        # ,"mlflow_pars" : {}   ### Not empty --> use mlflow
-                      },
+
+       },
 
       "data_pars": { "n_sample" : n_sample,
           "download_pars" : None,
-
           ### Raw data:  column input ##############################################################
           "cols_input_type" : cols_input_type_1,
 
 
           ### Model Input :  Merge family of columns   #############################################
-          #  "colnum", "colnum_bin", "colnum_onehot", "colnum_binmap",  #### Colnum columns
-          #  "colcat", "colcat_bin", "colcat_onehot", "colcat_bin_map",  #### colcat columns
-          #  "colcross_single_onehot_select", "colcross_pair_onehot",  "colcross_pair",  #### colcross columns  "coldate", "coltext",
           "cols_model_group": [ "colnum_bin",
                                 "colcat_bin",
-                                # "coltext",
-                                # "coldate",
-                                #"colcross_pair",
-
-                               ### example of custom
-                               "col_myfun"
                               ]
 
-      #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
-     ,'cols_model_type': {
-         'continuous'   : [ 'colnum',   ],
-         'sparse'       : [ 'colcat_bin', 'colnum_bin',  ],
-         'my_split_23'  : [ 'colnum_bin',   ],
-      }
+          #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
+         ,'cols_model_type': {
+             'continuous'   : [ 'colnum',   ],
+             'sparse'       : [ 'colcat_bin', 'colnum_bin',  ],
+             'my_split_23'  : [ 'colnum_bin',   ],
+          }
 
           ### Filter data rows   ##################################################################
          ,"filter_pars": { "ymax" : 2 ,"ymin" : -1 }
-
-         }
       }
 
-    """model_dict = {
-    'model_pars': {
-         ### API model   #######################################
-         'model_class': model_class
-        ,'model_pars' : { 'n_estimators': 10,}
-        ,'model_extra': {}
-        ,'post_process_fun' : post_process_fun                     ### After prediction  
-        ,'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  
-          "mode" : "run_preprocess",  # "load_preprocess"
-          ### Pipeline for data processing ##############################
-          'pipe_list': [
-              {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
-              {'uri': 'source/prepro.py::pd_colnum_normalize',           
-                 'pars': { 'pipe_list': [ 
-                                       {'name': 'quantile_cutoff'} ,
-                                       {'name': 'fillna', 'na_val' : 0.0 }, 
-                                       ]}, 
-                 'cols_family': 'colnum',     'cols_out': 'colnum_norm',     'type': ''             },
-              # {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
-              # {'uri': 'source/prepro.py::pd_colnum_binto_onehot',  'pars': {}, 'cols_family': 'colnum_bin', 'cols_out': 'colnum_onehot',  'type': ''             },
-              {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
-              # {'uri': 'source/prepro.py::pd_colcat_to_onehot',     'pars': {}, 'cols_family': 'colcat_bin', 'cols_out': 'colcat_onehot',  'type': ''             },
-              # {'uri': 'source/prepro.py::pd_colcross',             'pars': {}, 'cols_family': 'colcross',   'cols_out': 'colcross_pair',  'type': 'cross'},
-          ],
-        }
-    },
-    'compute_pars': { 'metric_list': ['accuracy_score','average_precision_score',
-                                      'f1_score',  'balanced_accuracy_score'   ],
-                      'probability': True,  ## Return proba
-                      'compute_pars' : {},
-                      'compute_extra': {}
-    },      
-    'data_pars': { 'n_sample' : n_sample,
-        'cols_input_type' : cols_input_type_1,
-        'cols_model_group': [ 'colnum_norm',
-                              'colcat_bin',
-                              # 'colcross_pair',
-                            ]
-        ### Filter data rows   ##################################################################
-       ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 }
-       }  
-    }"""
+    }
 
     ##### Filling Global parameters    ############################################################
     model_dict        = global_pars_update(model_dict, data_name, config_name )
@@ -258,7 +176,6 @@ def  train_test(nsample=100) :
 
         #( 'LGBMClassifier' , { 'n_estimators': 10,} ),
 
-
         #( 'ABOD'   , { 'contamination' :0.01,  'n_neighbors' :5, 'method' : 'fast'  } ),   ### Very Slow
 
         #( 'SOS'     , { 'contamination' :0.01, 'perplexity' :4.5, 'metric' : 'euclidean', n_jobs= 4 } ),  ### VERY SLOW
@@ -273,7 +190,7 @@ def  train_test(nsample=100) :
 
 
     dir_data3     = "C:/D/gitdev/fraud/mldev/ztmp/rpp_fraud/"
-    dir_data3     = root_repo  + "/ztmp/"    ###  a/adigcb301/ipsvols05/scoupon/test_code/fraud/mldev/ztmp
+    dir_data3     = root_repo  + "/ztmp/"
     dir_input3_tr = dir_data3 + f"/input/features/202011/{feat_name}/"
     dir_input3_te = dir_data3 + f"/input/features/202011/{feat_name}/"
 
@@ -286,14 +203,12 @@ def  train_test(nsample=100) :
         config_name = "config_" + m
         model_dict  = global_pars_update(model_dict, data_name, config_name)
 
-        run_train.run_train(config_name       =  "config1", #'config1',
-                            config_path       =  THIS_FILEPATH, # THIS_FILEPATH,
+        run_train.run_train(config_name       =  None, # "config1", #'config1',
+                            config_path       =  None, # THIS_FILEPATH, # THIS_FILEPATH,
                             n_sample          =  nsample,
                             model_dict        =  model_dict
                             # use_mlmflow     =  False
                             )
-        # sys.exit()
-
 
 
 ########## Preprocess #############################################################
