@@ -85,7 +85,7 @@ def config1() :
        used for titanic classification task
     """
     data_name    = "titanic"         ### in data/input/
-    model_class  = "model_gefs.py::Model"  ### ACTUAL Class name for model_sklearn.py
+    model_class  = "source/models/model_gefs.py::Model"  ### ACTUAL Class name for model_sklearn.py
     n_sample     = 1000
 
     def post_process_fun(y):   ### After prediction is done
@@ -112,11 +112,11 @@ def config1() :
 
 
         {"uri": "source/prepro.py::pd_colnum_bin",           "pars": {}, "cols_family": "colnum",     "cols_out": "colnum_bin",     "type": ""             },
-        {"uri": "source/prepro.py::pd_colnum_binto_onehot",  "pars": {}, "cols_family": "colnum_bin", "cols_out": "colnum_onehot",  "type": ""             },
+        # {"uri": "source/prepro.py::pd_colnum_binto_onehot",  "pars": {}, "cols_family": "colnum_bin", "cols_out": "colnum_onehot",  "type": ""             },
 
         #### catcol INTO integer,   colcat into OneHot
         {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
-        {"uri": "source/prepro.py::pd_colcat_to_onehot",     "pars": {}, "cols_family": "colcat_bin", "cols_out": "colcat_onehot",  "type": ""             },
+        #{"uri": "source/prepro.py::pd_colcat_to_onehot",     "pars": {}, "cols_family": "colcat_bin", "cols_out": "colcat_onehot",  "type": ""             },
 
         ],
                }
@@ -165,21 +165,6 @@ def config1() :
 ### def preprocess(config="", nsample=1000):
 from core_run import preprocess
 
-"""
-def preprocess(config=None, nsample=None):
-    config_name  = config  if config is not None else config_default
-    mdict        = globals()[config_name]()
-    m            = mdict["global_pars"]
-    print(mdict)
-
-    from source import run_preprocess
-    run_preprocess.run_preprocess(config_name   =  config_name,
-                                  config_path   =  m["config_path"],
-                                  n_sample      =  nsample if nsample is not None else m["n_sample"],
-
-                                  ### Optonal
-                                  mode          =  "run_preprocess")
-"""
 
 
 
@@ -187,21 +172,6 @@ def preprocess(config=None, nsample=None):
 ########## Train #################################################################
 # def train(config=None, nsample=None):
 from core_run import train
-"""
-
-
-    config_name  = config  if config is not None else config_default
-    mdict        = globals()[config_name]()
-    m            = mdict["global_pars"]
-    print(mdict)
-    
-    from source import run_train
-    run_train.run_train(config_name       =  config_name,
-                        config_path       =  m["config_path"],
-                        n_sample          =  nsample if nsample is not None else m["n_sample"]
-                        )
-"""
-
 
 
 
@@ -210,24 +180,6 @@ from core_run import train
 # predict(config="", nsample=10000)
 from core_run import predict
 
-"""
-def predict(config=None, nsample=None):
-    config_name  = config  if config is not None else config_default
-    mdict        = globals()[config_name]()
-    m            = mdict["global_pars"]
-
-
-    from source import run_inference
-    run_inference.run_predict(config_name = config_name,
-                              config_path = m["config_path"],
-                              n_sample    = nsample if nsample is not None else m["n_sample"],
-
-                              #### Optional
-                              path_data   = m["path_pred_data"],
-                              path_output = m["path_pred_output"],
-                              model_dict  = None
-                              )
-"""
 
 
 
