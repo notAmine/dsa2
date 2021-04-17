@@ -132,6 +132,12 @@ jobs:
             ipython example/test_mkeras_dense.py  predict
 
 
+    - name: python toutlier.py  run_batch
+      # continue-on-error: true
+      run:  |
+            python toutlier  run_batch
+
+
     - name: python   example/test_automl.py  train   
       continue-on-error: true
       run:  |
