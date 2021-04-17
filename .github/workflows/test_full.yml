@@ -133,7 +133,7 @@ jobs:
 
 
     - name: python   example/test_automl.py  train   
-      # continue-on-error: true
+      continue-on-error: true
       run:  |
             python   example/test_automl.py  train       --nsample 200
             python   example/test_automl.py  predict     --nsample 200 
