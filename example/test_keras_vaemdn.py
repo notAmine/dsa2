@@ -129,7 +129,7 @@ def config1() :
           ### family of columns used for model input  #########################################################
           "cols_model_group": [ "colnum_bin",  "colcat_bin"  ]
 
-        ,'cols_model_type2': {
+        ,'cols_model_type': {
             'colcontinuous':   colnum ,
             'colsparse' :      colcat,
         }
