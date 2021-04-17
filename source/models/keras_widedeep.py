@@ -120,9 +120,9 @@ class Model(object):
                 #cpars = { **cpars, **data_pars['data_pars'] }
                 #pprint.pprint(cpars)
                 self.model = WideDeep_sparse(cpars)
-            else :
-                cpars = model_pars['model_pars']
-                self.model = zz_WideDeep_dense(cpars)
+            #else :
+            #    cpars = model_pars['model_pars']
+            #    self.model = zz_WideDeep_dense(cpars)
 
 
 #####################################################################################################
@@ -787,6 +787,24 @@ def test_helper(model_pars, data_pars, compute_pars):
 if __name__ == '__main__':
     import fire
     fire.Fire()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
