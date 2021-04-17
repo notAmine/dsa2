@@ -113,6 +113,8 @@ jobs:
       continue-on-error: true
       run:  |
             cd source/models && ipython keras_widedeep.py  test
+            ipython keras_widedeep.py  train
+            ipython keras_widedeep.py  predict
             echo "keras_widedeep.py" >> file_check.txt
       ## ipython keras_widedeep.py  test2
 
@@ -121,6 +123,8 @@ jobs:
       # continue-on-error: true
       run:  |
             cd source/models && ipython keras_widedeep_dense.py  test
+            ipython keras_widedeep_dense.py  train
+            ipython keras_widedeep_dense.py  predict
             echo "keras_widedeep_dense.py" >> file_check.txt
 
 
