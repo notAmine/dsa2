@@ -6,9 +6,8 @@ python model_fraud.py
 import os, sys,copy, pathlib, pprint, json, pandas as pd, numpy as np, scipy as sci, sklearn
 
 ####################################################################################################
-try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../../config.json", mode='r'))['verbosity'])
-except Exception as e : verbosity = 2
-#raise Exception(f"{e}")
+from utilmy import global_verbosity, os_makedirs, pd_read_file
+verbosity = global_verbosity(__file__,"/../../config.json", 3 )
 
 def log(*s):
     print(*s, flush=True)
@@ -18,10 +17,6 @@ def log2(*s):
 
 def log3(*s):
     if verbosity >= 3 : print(*s, flush=True)
-
-def os_makedirs(dir_or_file):
-    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
-    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
 
 ####################################################################################################
 global model, session
@@ -303,6 +298,7 @@ if __name__ == "__main__":
 
 
 
+
 """
 class EnsembleDetector:
     def save(self, folder):
@@ -331,4 +327,4 @@ class EnsembleDetector:
             if 'AutoEncoder' in str(type(model)):
                 model.model_ = keras.models.load_model(Path(folder)/str(i))
         return ed
-"""s
+"""

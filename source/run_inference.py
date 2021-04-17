@@ -2,19 +2,15 @@
 """
 python source/run_inference.py  run_predict  --n_sample 1000  --config_name lightgbm  --path_model /data/output/a01_test/   --path_output /data/output/a01_test_pred/     --path_data_train /data/input/train/
 """
-import warnings,sys, json, gc, os, pandas as pd, importlib
+import warnings,sys, os, json, importlib, copy
 warnings.filterwarnings('ignore')
 
-#### Add path for python import
-sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
-
 ####################################################################################################
-try   : verbosity = int(json.load(open(os.path.dirname(os.path.abspath(__file__)) + "/../config.json", mode='r'))['verbosity'])
-except Exception as e : verbosity = 2
-#raise Exception(f"{e}")
+from utilmy import global_verbosity, os_makedirs
+verbosity = global_verbosity(__file__, "/../config.json" ,default= 5)
 
 def log(*s):
-    print(*s, flush=True)
+    if verbosity >= 1 : print(*s, flush=True)
 
 def log2(*s):
     if verbosity >= 2 : print(*s, flush=True)
@@ -22,17 +18,15 @@ def log2(*s):
 def log3(*s):
     if verbosity >= 3 : print(*s, flush=True)
 
-def os_makedirs(dir_or_file):
-    if os.path.isfile(dir_or_file) :os.makedirs(os.path.dirname(os.path.abspath(dir_or_file)), exist_ok=True)
-    else : os.makedirs(os.path.abspath(dir_or_file), exist_ok=True)
+
+####################################################################################################
+#### Add path for python import
+sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
+root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
+log(root)
 
 
 ####################################################################################################
-#### Root folder analysis
-root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
-log2(root)
-
-
 from util_feature import load, load_function_uri, load_dataset
 
 def model_dict_load(model_dict, config_path, config_name, verbose=True):
