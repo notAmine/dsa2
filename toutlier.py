@@ -10,7 +10,7 @@ warnings.filterwarnings('ignore')
 ###### Path ########################################################################
 root_repo      =  os.path.abspath(os.getcwd()).replace("\\", "/")      ; print(root_repo)
 THIS_FILEPATH  =  os.path.abspath(__file__)
-sys.path.append(root_repo + "/ml_dsa/")
+sys.path.append(root_repo )
 from source.util_feature import os_get_function_name
 
 
@@ -114,9 +114,10 @@ def  config_template(path_model_out="") :
               }
       },
 
-      "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
 
-       },
+      "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
+      },
+
 
       "data_pars": { "n_sample" : n_sample,
           "download_pars" : None,
@@ -229,44 +230,11 @@ from core_run import predict
 
 ####################################################################################
 if __name__ == "__main__":
+    from pyinstrument import Profiler;  profiler = Profiler() ; profiler.start()
     import fire
     fire.Fire()
+    profiler.stop() ; print(profiler.output_text(unicode=True, color=True))
 
 
 
 
-
-
-
-"""print("config_name", config_name)
-    root_repo2    =  os.path.abspath(os.getcwd()).replace("\\", "/")  ; print(root_repo)
-    #### Actual 
-    dir_data     = dir_data3   if dir_data is  None else dir_data
-    dir_input_tr = dir_input3_tr  if dir_input_tr is  None else dir_input_tr 
-    dir_input_te = dir_input3_te  if dir_input_te is  None else dir_input_te 
-    print("dir_data_input", dir_input_tr)
-    ########################################################################
-    m                      = {}
-    m['config_path']       = THIS_FILEPATH
-    m['config_name']       = config_name
-    #### peoprocess input path
-    m['path_data_preprocess'] = dir_input_tr 
-    #### train input path
-    m['path_data_train']      = dir_input_tr 
-    m['path_data_test']       = dir_input_te 
-    #m['path_data_val']       = dir_data + f'/input/{data_name}/test/'
-    #### train output path
-    m['path_train_output']    = dir_data + f'/output/{data_name}/{config_name}/'
-    m['path_train_model']     = dir_data + f'/output/{data_name}/{config_name}/model/'
-    m['path_features_store']  = dir_data + f'/output/{data_name}/{config_name}/features_store/'
-    m['path_pipeline']        = dir_data + f'/output/{data_name}/{config_name}/pipeline/'
-    #### predict  input path
-    m['path_pred_data']       = dir_input_te 
-    m['path_pred_pipeline']   = dir_data + f'/output/{data_name}/{config_name}/pipeline/'
-    m['path_pred_model']      = dir_data + f'/output/{data_name}/{config_name}/model/'
-    #### predict  output path
-    m['path_pred_output']     = dir_data + f'/output/{data_name}/pred_{config_name}/'
-    #####  Generic
-    m['n_sample']             = model_dict['data_pars'].get('n_sample', 5000)
-    model_dict[ 'global_pars'] = m
-    return model_dict"""
