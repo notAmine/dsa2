@@ -114,15 +114,15 @@ class Model(object):
 
         else:
             model_class = model_pars.get('model_class', 'WideDeep_sparse')
-            if 'dense' not in model_class  :
+            if 'sparse' in model_class  :
                 cpars = model_pars['model_pars']
                 cpars.update(data_pars)
                 #cpars = { **cpars, **data_pars['data_pars'] }
                 #pprint.pprint(cpars)
                 self.model = WideDeep_sparse(cpars)
-            # else :
-            #    cpars = model_pars['model_pars']
-            #    self.model = zz_WideDeep_dense(cpars)
+            else :
+                cpars = model_pars['model_pars']
+                self.model = zz_WideDeep_dense(cpars)
 
 
 #####################################################################################################
@@ -156,7 +156,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None):
     Xtest = Xtest.rename(columns=rename_col_dict)
 
     ### Coupling Data X Model Input
-    if 'dense' not in  model.model_pars['model_class'] :
+    if 'sparse' in  model.model_pars['model_class'] :
         log2('Fitting Sparse input...')
         Xy_train = get_dataset_split_for_model_tfsparse(Xtrain, Ytrain, data_pars)
         Xy_val   = get_dataset_split_for_model_tfsparse(Xtest,  Ytest,  data_pars)
@@ -164,8 +164,6 @@ def fit(data_pars=None, compute_pars=None, out_pars=None):
         hist   = model.model.fit(Xy_train, validation_data=Xy_val, **cpars)
         model.history = hist
 
-
-    """ 
     else :
         log2('Fitting Dense input...')
 
@@ -184,7 +182,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None):
 
         hist     = model.model.fit(Xy_train, validation_data=Xy_val, **cpars)
         model.history = hist
-    """
+
 
 
 def predict(Xpred=None,data_pars=None, compute_pars=None, out_pars=None):
@@ -203,12 +201,11 @@ def predict(Xpred=None,data_pars=None, compute_pars=None, out_pars=None):
     Xpred = Xpred.rename(columns=rename_col_dict)
 
 
-    if 'dense' not in  model.model_pars['model_class'] :
+    if 'sparse' in  model.model_pars['model_class'] :
         Xpred       = get_dataset_split_for_model_tfsparse(Xpred, None, data_pars)
         ypred_proba = model.model.predict(Xpred)
         ypred       = [  1 if t > 0.5 else 0 for t in ypred_proba ]
 
-    """
     else :
         Xpred,_  = get_dataset_split_for_model_pandastuple(Xpred, None, data_pars)
         Xpred = pd.concat(Xpred, axis=1)
@@ -216,7 +213,7 @@ def predict(Xpred=None,data_pars=None, compute_pars=None, out_pars=None):
         testdata = tf.data.Dataset.zip(((Xpred, Xpred, Xpred),)).batch(32)
         ypred_proba = model.model.predict(testdata)
         ypred       = [  1 if t > 0.5 else 0 for t in ypred_proba ]
-    """
+
     ################################################################
     if compute_pars.get("probability", False):
         return ypred, ypred_proba
@@ -239,8 +236,8 @@ def save(path=None, info=None):
     modelx.data_pars    = model.data_pars
     modelx.compute_pars = model.compute_pars
     # log('model', modelx.model)
-    #pickle.dump(modelx, open(f"{path}/model.pkl", mode='wb'))  #
-    #pickle.dump(info, open(f"{path}/info.pkl", mode='wb'))  #
+    pickle.dump(modelx, open(f"{path}/model.pkl", mode='wb'))  #
+    pickle.dump(info, open(f"{path}/info.pkl", mode='wb'))  #
     log('Model Saved', path)
 
 
@@ -396,6 +393,17 @@ class tf_FeatureColumns:
             return data,labels,shape
         return data,None,shape
 
+
+    def split_sparse_data(self,df,shuffle_train=False,shuffle_test=False,shuffle_val=False,batch_size=32,test_split=0.2, colnum=[], colcat=[]):
+        for c in colcat:
+            df[c] =  df[c].astype(str)
+
+        if test_split is not None :
+            train_df,test_df = train_test_split(df,test_size=test_split)
+            train_df,val_df  = train_test_split(train_df,test_size=0.1)
+            log('Files Splitted')
+            self.train,self.val,self.test = train_df,val_df,test_df
+            return self.train, self.val, self.test
 
     def data_to_tensorflow_split(self,df, target,model='sparse',shuffle_train=False,shuffle_test=False,shuffle_val=False,batch_size=32,
                            test_split=0.2, colnum=[], colcat=[]):
@@ -622,8 +630,9 @@ def test(config='',     n_sample = 100):
     log("##### Sparse Tests  ############################################### ")
     prepare = tf_FeatureColumns()
     model_type = 'sparse'
-    train_df, test_df, val_df = prepare.data_to_tensorflow_split(df, model=model_type, target='y',
-                                colcat=colcat, colnum=colnum)
+    # train_df, test_df, val_df = prepare.data_to_tensorflow_split(df, model=model_type, target='y',
+    #                             colcat=colcat, colnum=colnum)
+    train_df, test_df, val_df = prepare.split_sparse_data(df, colcat=colcat, colnum=colnum)
 
     ### Unique values
     colcat_unique = {  col: list(df[col].unique())  for col in colcat }
@@ -634,7 +643,7 @@ def test(config='',     n_sample = 100):
     m['model_pars']['model_pars'] = { 'loss' : 'binary_crossentropy','optimizer':'adam',
                                       'metric': ['accuracy'],'hidden_units': '64,32,16'}
 
-    m['data_pars']['train']     = {'X_train': train_df, 'X_test':  val_df}
+    m['data_pars']['train']     = {'Xtrain': train_df, 'Xtest':  val_df}
     m['data_pars']['predict']   = {'X':       test_df }
     m['data_pars']['data_pars'] = {
         'colcat_unique' : colcat_unique,
@@ -658,9 +667,9 @@ def test(config='',     n_sample = 100):
     m['model_pars']['model_pars'] = { 'loss' : 'binary_crossentropy','optimizer':'adam',
                                       'metric': ['accuracy'],'hidden_units': '64,32,16'}
 
-    m['data_pars']['train']     = {'X_train':  path2,
-                                   'X_test':   path2}
-    m['data_pars']['predict']   = {'X':        path2 }
+    m['data_pars']['train']     = {'Xtrain':  train_df,
+                                   'Xtest':   val_df}
+    m['data_pars']['predict']   = {'X':        test_df }
 
     m['data_pars']['data_pars'] = {
         'colcat'        : colcat,

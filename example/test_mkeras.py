@@ -98,8 +98,8 @@ def config1() :
         ### Pipeline for data processing ##############################
         "pipe_list": [
           {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
-          #{'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
-          #{'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+          {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+          {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
           #### neeed to 0-1 Normalize the input
 
         ],
@@ -203,4 +203,3 @@ if __name__ == "__main__":
     d = { "train" : train, "predict" : predict, "config" : config_default }
     import fire
     fire.Fire(d)
-
