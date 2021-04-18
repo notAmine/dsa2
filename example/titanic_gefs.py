@@ -70,13 +70,12 @@ config_default   = "config1"    ### name of function which contains data configu
 cols_input_type_1 = {
      "coly"   :   "Survived"
     ,"colid"  :   "PassengerId"
-    ,"colcat" :   ["Sex", "Embarked" ]
-    ,"colnum" :   ["Pclass", "Age","SibSp", "Parch","Fare"]
+    ,"colcat" :   ["Sex", "Embarked", "Pclass", ]
+    ,"colnum" :   [ "Age","SibSp", "Parch","Fare"]
     ,"coltext" :  []
     ,"coldate" :  []
-    ,"colcross" : [ "Name", "Sex", "Ticket","Embarked","Pclass", "Age", "SibSp", ]
+    ,"colcross" : [  ]
 }
-
 
 
 colcat = cols_input_type_1['colcat']
@@ -117,7 +116,7 @@ def config1() :
             "pipe_list": [
             {"uri": "source/prepro.py::pd_coly",                 "pars": {}, "cols_family": "coly",       "cols_out": "coly",           "type": "coly"         },
 
-            {"uri": "source/prepro.py::pd_colnum_bin",           "pars": {}, "cols_family": "colnum",     "cols_out": "colnum_bin",     "type": ""             },
+            # {"uri": "source/prepro.py::pd_colnum_bin",           "pars": {}, "cols_family": "colnum",     "cols_out": "colnum_bin",     "type": ""             },
             # {"uri": "source/prepro.py::pd_colnum_binto_onehot",  "pars": {}, "cols_family": "colnum_bin", "cols_out": "colnum_onehot",  "type": ""             },
 
             {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
@@ -138,8 +137,8 @@ def config1() :
         "cols_input_type" : cols_input_type_1,
 
           ### Model Input :  Merge family of columns
-          "cols_model_group": [ "colnum_bin",
-                                "colcat_bin",  ]
+          "cols_model_group": [ "colnum",
+                                "colcat",  ]
 
           #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
           ,'cols_model_type': {
