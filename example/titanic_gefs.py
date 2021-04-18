@@ -135,11 +135,7 @@ def config1() :
           "download_pars" : None,
 
         ### Raw data:  column input
-        "cols_input_type" : {
-            "colnum" : colnum,
-            "colcat" : colcat,
-            "coly"   : coly
-        },
+        "cols_input_type" : cols_input_type_1,
 
           ### Model Input :  Merge family of columns
           "cols_model_group": [ "colnum_bin",
