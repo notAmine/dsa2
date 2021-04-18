@@ -134,7 +134,7 @@ jobs:
     ########### Keras TF 1.5 #############################################################################
     - name: pip3 install tensorflow==1.5.1  keras==2.3.1
       run: |
-        pip3 install tensorflow==1.5.1  keras==2.3.1 -y
+        pip3 install tensorflow==1.5.1  keras==2.3.1
 
     - name: python model_vaem.py test
       continue-on-error: true
