@@ -273,7 +273,9 @@ def test(n_sample = 100):
 
     def pre_process_fun(y):    ### Before the prediction is done
         return  int(y)
-
+      
+    ### Unique values
+    colcat_unique = {  col: list(df[col].unique())  for col in colcat }
 
     m = {
     'model_pars': {
@@ -317,6 +319,7 @@ def test(n_sample = 100):
         },
         ### family of columns for MODEL  ##################
          'cols_model_group': [ 'colnum_bin',   'colcat_bin', ]
+
 
         ### Filter data rows   ###########################
         ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
@@ -489,11 +492,6 @@ if __name__ == "__main__":
     # test()
 
 
-
-
-
-
-
 """
 def test_dataset_classi_fake(nrows=500):
     from sklearn import datasets as sklearn_datasets
@@ -529,6 +527,7 @@ def test_dataset_classi_fake(nrows=500):
 """
 python model_gef.py test_model
     def learncats(data, classcol=None, continuous_ids=[]):
+
             Learns the number of categories in each variable and standardizes the data.
             Parameters
             ----------
@@ -544,6 +543,7 @@ python model_gef.py test_model
             ncat: numpy m
                 The number of categories of each variable. One if the variable is
                 continuous.
+
         data = data.copy()
         ncat = np.ones(data.shape[1])
         if not classcol:
