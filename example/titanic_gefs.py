@@ -78,6 +78,16 @@ cols_input_type_1 = {
 }
 
 
+
+colcat = cols_input_type_1['colcat']
+colnum = cols_input_type_1['colnum']
+coly   = cols_input_type_1['coly']
+
+# colcat_unique = {  col: list(df[col].unique())  for col in colcat }
+colcat_unique = {  'Sex': 2, 'Embarked': 2 }   ### nbf unique values
+
+
+
 ####################################################################################
 def config1() :
     """
@@ -85,7 +95,7 @@ def config1() :
        used for titanic classification task
     """
     data_name    = "titanic"         ### in data/input/
-    model_class  = "source/models/model_gefs.py::Model"  ### ACTUAL Class name for model_sklearn.py
+    model_class  = "source/models/model_gefs.py::RandomForest"  ### ACTUAL Class name for model_sklearn.py
     n_sample     = 1000
 
     def post_process_fun(y):   ### After prediction is done
@@ -95,59 +105,73 @@ def config1() :
         return  int(y)
 
 
-    model_dict = {"model_pars": {
-        ### LightGBM API model   #######################################
+    model_dict = {
+    "model_pars": {
          "model_class": model_class
         ,"model_pars" : {'cat': 10, 'n_estimators': 5
                         }
 
         , "post_process_fun" : post_process_fun   ### After prediction  ##########################################
         , "pre_process_pars" : {"y_norm_fun" :  pre_process_fun ,  ### Before training  ##########################
+            ### Pipeline for data processing ##############################
+            "pipe_list": [
+            {"uri": "source/prepro.py::pd_coly",                 "pars": {}, "cols_family": "coly",       "cols_out": "coly",           "type": "coly"         },
 
+            {"uri": "source/prepro.py::pd_colnum_bin",           "pars": {}, "cols_family": "colnum",     "cols_out": "colnum_bin",     "type": ""             },
+            # {"uri": "source/prepro.py::pd_colnum_binto_onehot",  "pars": {}, "cols_family": "colnum_bin", "cols_out": "colnum_onehot",  "type": ""             },
 
-        ### Pipeline for data processing ##############################
-        "pipe_list": [
-        #### coly target prorcessing
-        {"uri": "source/prepro.py::pd_coly",                 "pars": {}, "cols_family": "coly",       "cols_out": "coly",           "type": "coly"         },
+            {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
+            #{"uri": "source/prepro.py::pd_colcat_to_onehot",     "pars": {}, "cols_family": "colcat_bin", "cols_out": "colcat_onehot",  "type": ""             },
 
+            ],
+        }
+      },
 
-        {"uri": "source/prepro.py::pd_colnum_bin",           "pars": {}, "cols_family": "colnum",     "cols_out": "colnum_bin",     "type": ""             },
-        # {"uri": "source/prepro.py::pd_colnum_binto_onehot",  "pars": {}, "cols_family": "colnum_bin", "cols_out": "colnum_onehot",  "type": ""             },
-
-        #### catcol INTO integer,   colcat into OneHot
-        {"uri": "source/prepro.py::pd_colcat_bin",           "pars": {}, "cols_family": "colcat",     "cols_out": "colcat_bin",     "type": ""             },
-        #{"uri": "source/prepro.py::pd_colcat_to_onehot",     "pars": {}, "cols_family": "colcat_bin", "cols_out": "colcat_onehot",  "type": ""             },
-
-        ],
-               }
-        },
-
-      "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
+    "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
                         # ,"mlflow_pars" : {}   ### Not empty --> use mlflow
                       },
 
-      "data_pars": { "n_sample" : n_sample,
+    "data_pars": { "n_sample" : n_sample,
           "download_pars" : None,
 
-          ### Raw data:  column input ##############################################################
-          "cols_input_type" : cols_input_type_1,
+        ### Raw data:  column input
+        "cols_input_type" : {
+            "colnum" : colnum,
+            "colcat" : colcat,
+            "coly"   : coly
+        },
 
-
-          ### Model Input :  Merge family of columns   #############################################
+          ### Model Input :  Merge family of columns
           "cols_model_group": [ "colnum_bin",
-                                "colcat_bin",
+                                "colcat_bin",  ]
 
-                              ]
+          #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
+          ,'cols_model_type': {
+             #'continuous'   : [ 'colnum',   ],
+             #'sparse'       : [ 'colcat_bin', 'colnum_bin',  ],
+             #'my_split_23'  : [ 'colnum_bin',   ],
+          },
 
-      #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
-     ,'cols_model_type': {
-         'continuous'   : [ 'colnum',   ],
-         'sparse'       : [ 'colcat_bin', 'colnum_bin',  ],
-         'my_split_23'  : [ 'colnum_bin',   ],
-      }   
 
-          ### Filter data rows   ##################################################################
-         ,"filter_pars": { "ymax" : 2 ,"ymin" : -1 }
+        'data_pars' :{
+                'cols_model_type': {
+                },
+                # Raw dataset, pre preprocessing
+                "dataset_path" : "",
+                "batch_size":128,   ### Mini Batch from data
+                # Needed by getdataset
+                "clean" : False,
+                "data_path": "",
+
+                'colcat_unique' : colcat_unique,
+                'colcat'        : colcat,
+                'colnum'        : colnum,
+                'coly'          : coly,
+                'colembed_dict' : None
+        }
+
+        ### Filter data rows   #################################
+        ,"filter_pars": { "ymax" : 2 ,"ymin" : -1 }
 
          }
       }
