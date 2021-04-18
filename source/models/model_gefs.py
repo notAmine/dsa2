@@ -260,8 +260,8 @@ def test(n_sample = 100):
     ### Unique values
     colcat_unique = {  col: list(df[col].unique())  for col in colcat }
 
-    X = df[colcat + colnum + coly]
-    y = df[coly]
+    X = df[colcat + colnum + [coly]]
+    y = df[ [coly]]
 
     X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.05, random_state=2021, )#stratify=y) Regression no classes to stratify to
     X_train, X_valid, y_train, y_valid         = train_test_split(X_train_full, y_train_full, random_state=2021,)# stratify=y_train_full)
