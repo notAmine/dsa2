@@ -77,7 +77,7 @@ class Model(object):
                 self.model = RandomForest(n_estimators=self.n_estimators, ncat=self.ncat)
             log(None, self.model)
 
-                
+
 def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
     """
@@ -88,14 +88,14 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
 
     if model.ncat is None:
         log("#!IMPORTANT This indicates that the preprocessing pipeline was not adapted to GEFS! and we need to calculate ncat")
-        cont_cols  = data_pars['cols_input_type'].get("colnum")  #  continous, float column is this correct?
+        cont_cols  = data_pars['data_pars'].get("colnum")  #  continous, float column is this correct?
         temp_train = pd.concat([Xtrain, ytrain], axis=1)
         temp_test  = pd.concat([Xtest, ytest],   axis=1)
         df         = pd.concat([temp_train, temp_test], ignore_index=True, sort=False)
         model.ncat = pd_colcat_get_catcount(
-            df, 
+            df,
             # categ cols
-            colcat=data_pars["cols_input_type"]["colcat"],
+            colcat=data_pars["data_pars"]["colcat"],
             # target col index
             classcol=-1,
             # num cols indices
@@ -117,7 +117,7 @@ def fit(data_pars=None, compute_pars=None, out_pars=None, **kw):
     # y should be 1-dim
     model.model.fit(X.values, ytrain.values.reshape(-1))
 
-    # Make sure ncat is consistent, otherwise model.topc() 
+    # Make sure ncat is consistent, otherwise model.topc()
     # will throw all kind of numba errors
     # check this issue : https://github.com/AlCorreia/GeFs/issues/5
     model.model = model.model.topc()  # Convert to a GeF
@@ -129,7 +129,8 @@ def eval(data_pars=None, compute_pars=None, out_pars=None, **kw):
     """
     global model, session
     data_pars['train'] = True
-    Xval, yval        = get_dataset(data_pars, task_type="eval")
+    Xval, yval        = get_dataset(data_pars, task_type="val")
+    print("Xval : ",Xval, "\nyval : ", yval)
     ypred, ypred_prob = predict(Xval, data_pars, compute_pars, out_pars)
     mpars = compute_pars.get("metrics_pars", {'metric_name': 'auc'})
 
@@ -152,16 +153,16 @@ def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     if Xpred is None:
         data_pars['train'] = False
         Xpred              = get_dataset(data_pars, task_type="predict")
-    
+
     # target column index
-    coly_index = Xpred.columns.get_loc(data_pars["cols_input_type"]["coly"][0])
-    # Models expect no target 
+    coly_index = Xpred.columns.get_loc(data_pars["data_pars"]["coly"][0])
+    # Models expect no target
     X = Xpred.iloc[:,:-1].values
     ypred, y_prob = model.model.classify(X, classcol=coly_index, return_prob=True)
-    
+
     ypred         = post_process_fun(ypred)
     y_prob        = np.max(y_prob, axis=1)
-    ypred_proba = y_prob  if compute_pars.get("probability", False) else None
+    ypred_proba = y_prob  if compute_pars.get("compute_pars").get("probability", False) else None
     return ypred, ypred_proba
 
 
@@ -204,7 +205,7 @@ def load_info(path=""):
 ####################################################################################################
 def get_dataset(data_pars=None, task_type="train", **kw):
     """
-      "ram"  : 
+      "ram"  :
       "file" :
     """
     # log(data_pars)
@@ -214,7 +215,7 @@ def get_dataset(data_pars=None, task_type="train", **kw):
             d = data_pars[task_type]
             return d["X"]
 
-        if task_type == "eval":
+        if task_type == "val":
             d = data_pars[task_type]
             return d["X"], d["y"]
 
@@ -230,7 +231,7 @@ def get_dataset(data_pars=None, task_type="train", **kw):
 
 
 
-####################################################################################################        
+####################################################################################################
 ############ Test ##################################################################################
 def pd_colcat_get_catcount(df, colcat, classcol, continuous_ids):
     """  Learns the number of categories in each variable and standardizes the df.
@@ -239,7 +240,7 @@ def pd_colcat_get_catcount(df, colcat, classcol, continuous_ids):
 
     if continuous_ids is None:
         continuous_ids = []
-        
+
     # get target col name from col idx
     classcol = df.columns[classcol]
 
@@ -304,38 +305,118 @@ def test():
     def pre_process_fun(y):    ### Before the prediction is done
         return  int(y)
 
+    # m = {
+    # "model_pars": {
+    #     "model_pars" : {'cat': 10, 'n_estimators': 5 }
+    #    ,"post_process_fun" : post_process_fun   ### After prediction  ########################
+    #    ,"pre_process_pars" : {
+    #         "y_norm_fun" :  pre_process_fun ,  ### Before training  ##########################
+    #     }
+    #     },
+
+    #   "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"],
+    #                     # Eval returns a probability
+    #                     "probability" : True
+    #                   },
+
+    #   "data_pars": {
+    #       "n_sample" : n_sample,
+    #       "download_pars" : None,
+    #       ### Raw data:  column input #####################
+    #       "cols_input_type" : {
+    #           "colnum" : colnum,
+    #           "colcat" : colcat,
+    #           "coly" : coly
+    #       },
+
+    #     ###################################################
+    #     'train':   {'Xtrain': X_train, 'ytrain': y_train,
+    #                 'Xtest':  X_valid, 'ytest': y_valid},
+    #     'val':    {'X': X_valid, 'y': y_valid},
+    #     'predict': {'X': X_valid},
+    #      }
+    #   }
+    ### Unique values
+    colcat_unique = {  col: list(df[col].unique())  for col in colcat }
     m = {
-    "model_pars": {
-        "model_pars" : {'cat': 10, 'n_estimators': 5 }
-       ,"post_process_fun" : post_process_fun   ### After prediction  ########################
-       ,"pre_process_pars" : {
-            "y_norm_fun" :  pre_process_fun ,  ### Before training  ##########################
+    'model_pars': {
+        'model_class' :  "model_gefs.py::RandomForest"
+        ,'model_pars' : {
+            'cat': 10, 'n_estimators': 5
         }
+        , 'post_process_fun' : post_process_fun   ### After prediction  ##########################################
+        , 'pre_process_pars' : {'y_norm_fun' :  pre_process_fun ,  ### Before training  ##########################
+            ### Pipeline for data processing ##############################
+            'pipe_list': [  #### coly target prorcessing
+            {'uri': 'source/prepro.py::pd_coly',                 'pars': {}, 'cols_family': 'coly',       'cols_out': 'coly',           'type': 'coly'         },
+            {'uri': 'source/prepro.py::pd_colnum_bin',           'pars': {}, 'cols_family': 'colnum',     'cols_out': 'colnum_bin',     'type': ''             },
+            {'uri': 'source/prepro.py::pd_colcat_bin',           'pars': {}, 'cols_family': 'colcat',     'cols_out': 'colcat_bin',     'type': ''             },
+
+            ],
+            }
+    },
+
+    'compute_pars': {
+        'compute_extra' :{
+
         },
 
-      "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"],
-                        # Eval returns a probability
-                        "probability" : True
-                      },
+        'compute_pars' :{
+            'metric_list': ['accuracy_score','average_precision_score'],
+            # Eval returns a probability
+            "probability" : True,
+            'epochs': 1,
+        },
 
-      "data_pars": {
-          "n_sample" : n_sample,
-          "download_pars" : None,
-          ### Raw data:  column input #####################
-          "cols_input_type" : {
-              "colnum" : colnum,
-              "colcat" : colcat,
-              "coly" : coly
-          },
+    },
 
-        ###################################################  
-        'train':   {'Xtrain': X_train, 'ytrain': y_train,
-                    'Xtest':  X_valid, 'ytest': y_valid},
-        'eval':    {'X': X_valid, 'y': y_valid},
-        'predict': {'X': X_valid},
-         }
-      }
+    'data_pars': {
+        "n_sample" : n_sample,
+        "download_pars" : None,
+        ### Raw data:  column input #####################
+        "cols_input_type" : {
+            "colnum" : colnum,
+            "colcat" : colcat,
+            "coly" : coly
+        },
+        ### family of columns for MODEL  ##################
+         'cols_model_group': [ 'colnum_bin',   'colcat_bin', ]
 
+        ### Filter data rows   ###########################
+        ,'filter_pars': { 'ymax' : 2 ,'ymin' : -1 },
+
+        ### Added continuous & sparse features groups ###
+        'cols_model_type2': {
+        },
+
+        'data_pars' :{
+                'cols_model_type': {
+                },
+                # Raw dataset, pre preprocessing
+                "dataset_path" : "",
+                "batch_size":128,   ### Mini Batch from data
+                # Needed by getdataset
+                "clean" : False,
+                "data_path": "",
+
+                'colcat_unique' : colcat_unique,
+                'colcat'        : colcat,
+                'colnum'        : colnum,
+                'coly'          : coly,
+                'colembed_dict' : None
+        }
+        ####### ACTUAL data Values #############################################################
+
+        ,'train':   {'Xtrain': X_train, 'ytrain': y_train,
+                    'Xtest':  X_valid, 'ytest': y_valid}
+        ,'val':     {'X': X_valid, 'y': y_valid}
+        ,'predict': {'X': X_valid}
+
+    },
+
+    'global_pars' :{
+    }
+    }
     ######## Run ###########################################
     test_helper(m['model_pars'], m['data_pars'], m['compute_pars'])
 
@@ -465,17 +546,17 @@ def test2():
     log('gefs model test ok')
 
 
-                                     
+
 if __name__ == "__main__":
     import fire
     fire.Fire()
     # test()
-                                     
+
 """
 python model_gef.py test_model
 
     def learncats(data, classcol=None, continuous_ids=[]):
-  
+
             Learns the number of categories in each variable and standardizes the data.
             Parameters
             ----------
@@ -491,7 +572,7 @@ python model_gef.py test_model
             ncat: numpy m
                 The number of categories of each variable. One if the variable is
                 continuous.
-      
+
         data = data.copy()
         ncat = np.ones(data.shape[1])
         if not classcol:
