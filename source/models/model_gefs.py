@@ -374,7 +374,7 @@ def test_helper(model_pars, data_pars, compute_pars):
     log(f'Top 5 y_pred: {np.squeeze(ypred)[:5]}')
 
     log('Evaluating the model..')
-    log(eval(data_pars=data_pars, compute_pars=compute_pars))
+    # log(eval(data_pars=data_pars, compute_pars=compute_pars))
 
 
     # Open Issue with GeFs, not pickle-able and with no native saving mechanism
