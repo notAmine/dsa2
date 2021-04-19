@@ -241,8 +241,7 @@ def pd_colcat_get_catcount(df, colcat, classcol, continuous_ids):
 
     # get num of target classes
     df[classcol]   = df[classcol].astype(int)
-    # ncat[classcol] = df[classcol].nunique()[0]
-    ncat[classcol] = df[classcol].nunique()
+    ncat[classcol] = df[classcol].nunique()[0]
 
     # get num of categ for each of the colcat
     for i, col in enumerate(colcat) :
@@ -275,7 +274,7 @@ def test(n_sample = 100):
 
     def pre_process_fun(y):    ### Before the prediction is done
         return  int(y)
-      
+
     ### Unique values
     colcat_unique = {  col: list(df[col].unique())  for col in colcat }
 
@@ -360,7 +359,6 @@ def test(n_sample = 100):
     }
     ######## Run ###########################################
     test_helper(m['model_pars'], m['data_pars'], m['compute_pars'])
-
 
 
 def test_helper(model_pars, data_pars, compute_pars):
@@ -507,7 +505,6 @@ def test_dataset_classi_fake(nrows=500):
         n_features=ndim,
         # No n_targets param for make_classification
         # n_targets=1,
-
         # Fake dataset, classification on 2 classes
         n_classes=2,
         # In classification, n_informative should be less than n_features
@@ -515,10 +512,8 @@ def test_dataset_classi_fake(nrows=500):
     )
     df         = pd.DataFrame(X,  columns= colnum)
     df[coly]   = y.reshape(-1, 1)
-
     for ci in colcat :
       df[colcat] = np.random.randint(2, len(df))
-
     return df, colnum, colcat, coly
 """
 
@@ -530,7 +525,6 @@ def test_dataset_classi_fake(nrows=500):
 """
 python model_gef.py test_model
     def learncats(data, classcol=None, continuous_ids=[]):
-
             Learns the number of categories in each variable and standardizes the data.
             Parameters
             ----------
@@ -546,7 +540,6 @@ python model_gef.py test_model
             ncat: numpy m
                 The number of categories of each variable. One if the variable is
                 continuous.
-
         data = data.copy()
         ncat = np.ones(data.shape[1])
         if not classcol:
