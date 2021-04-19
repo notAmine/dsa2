@@ -362,6 +362,7 @@ def test(n_sample = 100):
     test_helper(m['model_pars'], m['data_pars'], m['compute_pars'])
 
 
+
 def test_helper(model_pars, data_pars, compute_pars):
     global model, session
     root  = "ztmp/"
