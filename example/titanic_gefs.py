@@ -85,6 +85,7 @@ coly   = cols_input_type_1['coly']
 # colcat_unique = {  col: list(df[col].unique())  for col in colcat }
 colcat_unique = {  'Sex': 2, 'Embarked': 2 }   ### nbf unique values
 
+colcat_bin  = []  ### Compute the bins for category
 
 
 ####################################################################################
@@ -138,7 +139,7 @@ def config1() :
 
           ### Model Input :  Merge family of columns
           "cols_model_group": [ "colnum",
-                                "colcat",  ]
+                                "colcat_bin",  ]
 
           #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
           ,'cols_model_type': {
@@ -159,7 +160,7 @@ def config1() :
                 "data_path": "",
 
                 'colcat_unique' : colcat_unique,
-                'colcat'        : colcat,
+                'colcat_bin'    : colcat_bin,
                 'colnum'        : colnum,
                 'coly'          : coly,
                 'colembed_dict' : None
