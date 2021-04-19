@@ -211,8 +211,8 @@ jobs:
     - name: pip3 install tensorflow==1.15  keras==2.3.1
       run: |
         python3 -m pip uninstall tensorflow  keras -y
-        python3 -m pip install tensorflow==1.15  keras==2.3.1  --upgrade  --force-reinstall
-        python -c "import tensorflow as tf;print(tf.reduce_sum(tf.random.normal([1000, 1000])))"
+        python3 -m pip install tensorflow==1.4.1  --upgrade  --force-reinstall
+        python -c "import tensorflow as tf;print(tf) "
 
 
     - name: python model_vaem.py test
