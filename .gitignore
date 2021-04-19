@@ -229,3 +229,5 @@ mlflow_local.db
 /example/data/output/titanic/config1/features_store/colnum_bin-Age_SibSp_Parch_Fare
 /example/data/output/titanic/config1/pipeline
 /example/data/output/titanic/config1/features_store/dfy
+/example/data/input/download/github_arita37-dsa2_data-raw-master--input-titanic-train
+/example/data/output/titanic/config1/features_store/coly
