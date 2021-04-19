@@ -21,7 +21,7 @@ def commit():
     commit_message = f'{message}'
 
     _run("commit", "-am", commit_message)
-    _run("push", "-u", "origin", "master")
+    _run("push", "--all" )
 
 
 def _filter_on_size(size= 10000000, f=files):
