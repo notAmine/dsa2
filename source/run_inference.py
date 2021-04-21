@@ -20,16 +20,8 @@ def log3(*s):
 
 
 ####################################################################################################
-#### Add path for python import
-sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
-root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
-log(root)
-
-
-
-
-####################################################################################################
 from util_feature import load, load_function_uri, load_dataset
+
 def model_dict_load(model_dict, config_path, config_name, verbose=True):
     """ Load the model dict from the python config file.
        ### Issue wiht passing function durin pickle on disk
@@ -58,12 +50,10 @@ def model_dict_load(model_dict, config_path, config_name, verbose=True):
     return model_dict
 
 
-def map_model(model_name="model_sklear:MyClassModel"):
-    """
-      Get the module of the model stored in source/models/
+def map_model(model_name="model_sklearn:MyClassModel"):
+    """ Get the module of the model stored in source/models/
     :param model_name:   model_sklearn
     :return: model module
-
     """
     ##### Custom folder
     if ".py" in model_name :
@@ -109,48 +99,48 @@ def predict(model_dict, dfX, cols_family, post_process_fun=None):
     assert  'cols_model_type2' in data_pars, 'Missing cols_model_type2, split of columns by data type '
     log2(data_pars['cols_model_type2'])
 
-    log("#### Model Input preparation #########################################################")    
+    log("#### Model Input preparation ################################")    
     colsX  = data_pars['cols_model']
     coly   = data_pars['coly']
+    # colsX       = load(model_path + "/model/colsX.pkl")   ## column name
+    # coly  = load( model_path + "/model/coly.pkl"   )
+    colsX       = load(model_path + "/colsX.pkl")   ## column name
+    assert colsX        is not None, "cannot load colsx, " + model_path
 
 
     log("#### Load model  ############################################")
     modelx = map_model(model_name)
     modelx.reset()
-    log(modelx, model_path)
+    log2(modelx, model_path)
     sys.path.append( root)    #### Needed due to import source error
 
     log2(model_path + "/model/model.pkl")
     modelx.model = load(model_path + "/model.pkl")
-    # stats = load(model_path + "/model/info.pkl")
-    # colsX       = load(model_path + "/model/colsX.pkl")   ## column name
-    colsX       = load(model_path + "/colsX.pkl")   ## column name
-
-    # coly  = load( model_path + "/model/coly.pkl"   )
-    assert colsX        is not None, "cannot load colsx, " + model_path
     assert modelx.model is not None, "cannot load modelx, " + model_path
-    log("#### modelx\n", modelx.model.model)
+    log2("### modelx\n", modelx.model.model)
 
 
     log("### Prediction  ############################################")
     #dfX1  = dfX.reindex(columns=colsX)   #reindex included
     ypred, ypred_proba  = modelx.predict(dfX[colsX],
                            data_pars    = data_pars,
-                           compute_pars = compute_pars
-                           )
+                           compute_pars = compute_pars )
 
     dfX[coly + '_pred']  = ypred 
     dfX[coly + '_pred']  = dfX[coly + '_pred'].apply(lambda  x : post_process_fun(x) )
+    log("Pred    : ",  dfX[[ coly + '_pred'  ]])
 
-    if len(ypred_proba.shape) == 1  :  #### Single dim proba
+    if ypred_proba is None : 
+         pass 
+    elif len(ypred_proba.shape) == 1  :  #### Single dim proba
         dfX[coly + '_proba'] = ypred_proba
-
+        log3(coly + '_proba', dfX[coly + '_proba'])
+        
     elif len(ypred_proba.shape) > 1 :   ## Muitple proba
         from util_feature import np_conv_to_one_col
         dfX[coly + '_proba'] = np_conv_to_one_col(ypred_proba, ";")  ### merge into string "p1,p2,p3,p4"
         log3(coly + '_proba', dfX[coly + '_proba'])
 
-    log("Pred    : ",  dfX[[ coly + '_pred'  ]])
     stats = {}
     return dfX, stats 
 
@@ -166,7 +156,6 @@ def run_predict(config_name, config_path, n_sample=-1,
     path_data        = m['path_pred_data']   if path_data   is None else path_data
     path_pipeline    = m['path_pred_pipeline']    #   path_output + "/pipeline/" )
     path_model       = m['path_pred_model']
-
     path_output      = m['path_pred_output'] if path_output is None else path_output
     log(path_data, path_model, path_output)
 
@@ -183,7 +172,7 @@ def run_predict(config_name, config_path, n_sample=-1,
     dfX, cols        = preprocess(df, path_pipeline, preprocess_pars=pars)
 
 
-    log("#### Extract column names  ##########################################################")
+    log("#### Extract column names  ######################################################")
     ### Actual column names for Model Input :  label y and Input X (colnum , colcat), remove duplicate names
     model_dict['data_pars']['coly']       = cols['coly']
     model_dict['data_pars']['cols_model'] = list(set(sum([  cols[colgroup] for colgroup in model_dict['data_pars']['cols_model_group'] ]   , []) ))
@@ -196,21 +185,20 @@ def run_predict(config_name, config_path, n_sample=-1,
         model_dict['data_pars']['cols_model_type2'][colg] = list(set(sum([  cols[colgroup] for colgroup in colg_list ]   , [])))
 
 
-    log("#### Predict + Proba ################################################################")
+    log("##### Predict + Proba ###########################################################")
     log(str(model_dict)[:1000])
     post_process_fun      = model_dict['model_pars']['post_process_fun']
     dfX, stats            = predict(model_dict, dfX, cols, post_process_fun)
 
 
-    log("#### Export ########################################################################")
+    log("##### Export ####################################################################")
     dfX   = dfX.reset_index()
     log2(dfX)
-    stats = {}
     if return_mode == 'dict' :
         return { 'dfXy' : dfX, 'stats' : stats   }
 
 
-    log("############ Saving prediction  ###################################################" )
+    log("##### Saving prediction  #######################################################")
     os.makedirs(path_output, exist_ok=True)
     log(path_output)
     dfX.sample(n=500, replace=True).to_csv(f"{path_output}/pred_all_sample.csv")
@@ -260,5 +248,7 @@ def run_data_check(path_data, path_data_ref, path_model, path_output, sample_rat
 if __name__ == "__main__":
     import fire
     fire.Fire()
+
+
 
 
