@@ -26,43 +26,52 @@ root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
 log(root)
 
 
+
+
 ####################################################################################################
 from util_feature import load, load_function_uri, load_dataset
-
 def model_dict_load(model_dict, config_path, config_name, verbose=True):
-    """model_dict_load
-    Args:
-        model_dict ([type]): [description]
-        config_path ([type]): [description]
-        config_name ([type]): [description]
-        verbose (bool, optional): [description]. Defaults to True.
-    Returns:
-        [type]: [description]
+    """ Load the model dict from the python config file.
+       ### Issue wiht passing function durin pickle on disk
+    :param model_dict:
+    :param config_path:
+    :param config_name:
+    :param verbose:
+    :return:
     """
     if model_dict is None :
-       log("#### Model Params Dynamic loading  ###############################################")
-       model_dict_fun = load_function_uri(uri_name=config_path + "::" + config_name)
-       model_dict     = model_dict_fun()   ### params
-    if verbose : log( model_dict )
+      log("#### Model Params Dynamic loading  ###############################################")
+      model_dict_fun = load_function_uri(uri_name=config_path + "::" + config_name)
+      model_dict    = model_dict_fun()   ### params 
+
+    else :
+        ### Passing dict 
+        ### Due to Error when saving on disk the model, function definition is LOST, need dynamic loca
+        path_config = model_dict[ 'global_pars']['config_path']
+
+        p1 = path_config + "::" + model_dict['model_pars']['post_process_fun'].__name__
+        model_dict['model_pars']['post_process_fun'] = load_function_uri( p1)   
+
+        p1 = path_config + "::" + model_dict['model_pars']['pre_process_pars']['y_norm_fun'] .__name__ 
+        model_dict['model_pars']['pre_process_pars']['y_norm_fun'] = load_function_uri( p1 ) 
+
     return model_dict
 
 
-def map_model(model_name):
-    """ Get the Class of the object stored in source/models/
+def map_model(model_name="model_sklear:MyClassModel"):
+    """
+      Get the module of the model stored in source/models/
     :param model_name:   model_sklearn
     :return: model module
-    """
 
+    """
     ##### Custom folder
     if ".py" in model_name :
+       model_file = model_name.split(":")[0] 
        ### Asbolute path of the file
-       path = os.path.dirname(os.path.abspath(model_name))
+       path = os.path.dirname(os.path.abspath(model_file))
        sys.path.append(path)
-       mod    = os.path.basename(model_name).replace(".py", "")
-
-       if '::' in mod:
-          mod = mod.split('::')[0]
-
+       mod    = os.path.basename(model_file).replace(".py", "")
        modelx = importlib.import_module(mod)
        return modelx
 
@@ -76,116 +85,145 @@ def map_model(model_name):
        modelx = importlib.import_module(mod)
 
     except :
-        ### All SKLEARN API
-        ### ['ElasticNet', 'ElasticNetCV', 'LGBMRegressor', 'LGBMModel', 'TweedieRegressor', 'Ridge']:
+       ### SKLEARN API by default
        mod    = 'models.model_sklearn'
        modelx = importlib.import_module(mod)
 
     return modelx
 
 
-def predict(model_name, path_model, dfX, cols_family, model_dict):
+def predict(model_dict, dfX, cols_family, post_process_fun=None):
     """
-    Arguments:
-        model_name {[str]} -- [description]
-        path_model {[str]} -- [description]
-        dfX {[DataFrame]} -- [description]
-        cols_family {[dict]} -- [description]
-    Returns: ypred
-        [numpy.array] -- [vector of prediction]
+    :param model_dict:  dict containing params
+    :param dfX:  pd.DataFrame
+    :param cols_family: dict of list containing column names
+    :param post_process_fun:
+    :return: dfXtrain , dfXval  DataFrame containing prediction
     """
-    log("#### Load  model class  ############################################")
+    model_pars, compute_pars = model_dict['model_pars'], model_dict['compute_pars']
+    data_pars                = model_dict['data_pars']
+    model_name, model_path   = model_pars['model_class'], model_dict['global_pars']['path_train_model']
+    # metric_list              = compute_pars['metric_list']
+
+
+    assert  'cols_model_type2' in data_pars, 'Missing cols_model_type2, split of columns by data type '
+    log2(data_pars['cols_model_type2'])
+
+    log("#### Model Input preparation #########################################################")    
+    colsX  = data_pars['cols_model']
+    coly   = data_pars['coly']
+
+
+    log("#### Load model  ############################################")
     modelx = map_model(model_name)
-    assert modelx is not None, "cannot load modelx, " + path_model
     modelx.reset()
-    log2(modelx, path_model)
+    log(modelx, model_path)
     sys.path.append( root)    #### Needed due to import source error
 
-    log("#### Load existing model weights  #################################")
-    log2(path_model + "/model/")
-    # modelx.model = load(path_model + "/model//model.pkl")
-    # modelx.model = load(path_model + "/model.pkl")
-    modelx.load_model( path_model)
-    colsX       = load(path_model + "/colsX.pkl")   ## column name
+    log2(model_path + "/model/model.pkl")
+    modelx.model = load(model_path + "/model.pkl")
+    # stats = load(model_path + "/model/info.pkl")
+    # colsX       = load(model_path + "/model/colsX.pkl")   ## column name
+    colsX       = load(model_path + "/colsX.pkl")   ## column name
 
-    assert colsX is not None, "cannot load colsx, " + path_model
-    assert modelx.model is not None, "cannot load modelx, " + path_model
-    log2("#### modelx\n", modelx.model)
+    # coly  = load( model_path + "/model/coly.pkl"   )
+    assert colsX        is not None, "cannot load colsx, " + model_path
+    assert modelx.model is not None, "cannot load modelx, " + model_path
+    log("#### modelx\n", modelx.model.model)
 
-    log("### Prediction  ###################################################")
-    dfX  = dfX.reindex(columns=colsX)   #reindex included
-    ypred_tuple = modelx.predict(dfX, data_pars    = model_dict['data_pars'],
-                                      compute_pars = model_dict['compute_pars']                           )
-    log2('ypred shape', str(ypred_tuple)[:100] )
-    return ypred_tuple
+
+    log("### Prediction  ############################################")
+    #dfX1  = dfX.reindex(columns=colsX)   #reindex included
+    ypred, ypred_proba  = modelx.predict(dfX[colsX],
+                           data_pars    = data_pars,
+                           compute_pars = compute_pars
+                           )
+
+    dfX[coly + '_pred']  = ypred 
+    dfX[coly + '_pred']  = dfX[coly + '_pred'].apply(lambda  x : post_process_fun(x) )
+
+    if len(ypred_proba.shape) == 1  :  #### Single dim proba
+        dfX[coly + '_proba'] = ypred_proba
+
+    elif len(ypred_proba.shape) > 1 :   ## Muitple proba
+        from util_feature import np_conv_to_one_col
+        dfX[coly + '_proba'] = np_conv_to_one_col(ypred_proba, ";")  ### merge into string "p1,p2,p3,p4"
+        log3(coly + '_proba', dfX[coly + '_proba'])
+
+    log("Pred    : ",  dfX[[ coly + '_pred'  ]])
+    stats = {}
+    return dfX, stats 
 
 
 ####################################################################################################
 ############CLI Command ############################################################################
 def run_predict(config_name, config_path, n_sample=-1,
-                path_data=None, path_output=None, pars={}, model_dict=None):
+                path_data=None, path_output=None, pars={}, model_dict=None, return_mode='file'):
 
-    log("#### Run predict  ###############################################################")
     model_dict = model_dict_load(model_dict, config_path, config_name, verbose=True)
-    model_class      = model_dict['model_pars']['model_class']
 
-    m                = model_dict['global_pars']
+    m          = model_dict['global_pars']
     path_data        = m['path_pred_data']   if path_data   is None else path_data
     path_pipeline    = m['path_pred_pipeline']    #   path_output + "/pipeline/" )
     path_model       = m['path_pred_model']
+
     path_output      = m['path_pred_output'] if path_output is None else path_output
     log(path_data, path_model, path_output)
 
+
+    log("#### load raw data column family  ###############################################")
     pars = {'cols_group': model_dict['data_pars']['cols_input_type'],
             'pipe_list' : model_dict['model_pars']['pre_process_pars']['pipe_list']}
 
 
-    log("#### Run preprocess  ###########################################################")
+    log("#### Preprocess  ################################################################")
     from run_preprocess import preprocess_inference   as preprocess
     colid            = load(f'{path_pipeline}/colid.pkl')
     df               = load_dataset(path_data, path_data_y=None, colid=colid, n_sample=n_sample)
     dfX, cols        = preprocess(df, path_pipeline, preprocess_pars=pars)
-    coly = cols["coly"]
 
 
-    log("#### Extract column names  #########################################################")
+    log("#### Extract column names  ##########################################################")
     ### Actual column names for Model Input :  label y and Input X (colnum , colcat), remove duplicate names
-    ###  [  'colcat', 'colnum'
     model_dict['data_pars']['coly']       = cols['coly']
     model_dict['data_pars']['cols_model'] = list(set(sum([  cols[colgroup] for colgroup in model_dict['data_pars']['cols_model_group'] ]   , []) ))
 
 
-    #### Flatten Col Group by column type : Sparse, continuous, .... (ie Neural Network feed Input, remove duplicate names
+    #### Col Group by column type : Sparse, continuous, .... (ie Neural Network feed Input, remove duplicate names
     ## 'coldense' = [ 'colnum' ]     'colsparse' = ['colcat' ]
     model_dict['data_pars']['cols_model_type2'] = {}
     for colg, colg_list in model_dict['data_pars'].get('cols_model_type', {}).items() :
         model_dict['data_pars']['cols_model_type2'][colg] = list(set(sum([  cols[colgroup] for colgroup in colg_list ]   , [])))
 
 
-    log("############ Prediction  ##########################################################" )
-    ypred, yproba    = predict(model_class, path_model, dfX, cols, model_dict)
+    log("#### Predict + Proba ################################################################")
+    log(str(model_dict)[:1000])
+    post_process_fun      = model_dict['model_pars']['post_process_fun']
+    dfX, stats            = predict(model_dict, dfX, cols, post_process_fun)
 
-    post_process_fun        = model_dict['model_pars']['post_process_fun']
-    df[ coly + "_pred"]     = ypred
-    df[ coly + "_pred"]     = df[coly + '_pred'].apply(lambda  x : post_process_fun(x) )
-    if yproba is not None :
-       df[ coly + "_pred_proba"] = yproba
+
+    log("#### Export ########################################################################")
+    dfX   = dfX.reset_index()
+    log2(dfX)
+    stats = {}
+    if return_mode == 'dict' :
+        return { 'dfXy' : dfX, 'stats' : stats   }
 
 
     log("############ Saving prediction  ###################################################" )
-    log(len(ypred), path_output)
     os.makedirs(path_output, exist_ok=True)
-    df.to_csv(f"{path_output}/prediction.csv")
-    log(df.head(8))
+    log(path_output)
+    dfX.sample(n=500, replace=True).to_csv(f"{path_output}/pred_all_sample.csv")
+    dfX.to_parquet(f"{path_output}/pred_all.parquet")
+    colexport = [cols['colid'], cols['coly'] + "_pred"]
+    if cols['coly'] + '_proba' in  dfX.columns :
+        colexport.append( cols['coly'] + '_proba' )
+
+    dfX[ colexport ].sample(n=500, replace=True).to_csv(f"{path_output}/pred_only_sample.csv")
+    dfX[ colexport ].to_parquet(f"{path_output}/pred_only.parquet")
 
 
-    log("###########  Export Specific ######################################################")
-    df[cols["coly"]] = ypred
-    df[[cols["coly"]]].to_csv(f"{path_output}/pred_only.csv")
 
-
-
-##############################################################################################
 def run_data_check(path_data, path_data_ref, path_model, path_output, sample_ratio=0.5):
     """
      Calcualata Dataset Shift before prediction.
@@ -222,3 +260,5 @@ def run_data_check(path_data, path_data_ref, path_model, path_output, sample_rat
 if __name__ == "__main__":
     import fire
     fire.Fire()
+
+
