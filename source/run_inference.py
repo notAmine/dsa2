@@ -2,9 +2,8 @@
 """
 python source/run_inference.py  run_predict  --n_sample 1000  --config_name lightgbm  --path_model /data/output/a01_test/   --path_output /data/output/a01_test_pred/     --path_data_train /data/input/train/
 """
-import warnings,sys, os, json, importlib, copy
+import warnings,sys, os, json, importlib, copy, gc
 warnings.filterwarnings('ignore')
-
 ####################################################################################################
 from utilmy import global_verbosity, os_makedirs
 verbosity = global_verbosity(__file__, "/../config.json" ,default= 5)
@@ -17,6 +16,12 @@ def log2(*s):
 
 def log3(*s):
     if verbosity >= 3 : print(*s, flush=True)
+
+####################################################################################################
+#### Add path for python import
+sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
+root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
+log(root)
 
 
 ####################################################################################################
