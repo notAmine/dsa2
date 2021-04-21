@@ -87,6 +87,27 @@ def map_model(model_name="model_sklearn:MyClassModel"):
     return modelx
 
 
+##################################################################################################
+def run_predict_batch(config_name, config_path, n_sample=-1,
+                path_data=None, path_output=None, pars={}, model_dict=None, return_mode='file'):
+
+    model_dict = model_dict_load(model_dict, config_path, config_name, verbose=True)
+    m          = model_dict['global_pars']
+    path_model       = m['path_pred_model']    
+    path_data        = m['path_pred_data']   if path_data   is None else path_data
+    path_output      = m['path_pred_output'] if path_output is None else path_output
+    log(path_data, path_model, path_output)
+
+    flist = glob.glob( path_data + "/*.parquet")
+    for i, fi in enumerate(flist) :
+       log(fi) 
+       model_dict['global_pars']['path_pred_data'] = fi
+       run_predict(config_name, config_path, n_sample,
+                   path_data, 
+                   path_output + f"/pred_{i}*", 
+                   pars, model_dict, return_mode='file')
+
+
 def predict(model_dict, dfX, cols_family, post_process_fun=None):
     """
     :param model_dict:  dict containing params
