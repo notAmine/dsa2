@@ -111,10 +111,14 @@ jobs:
       #continue-on-error: true
       run:  |
             python tsampler.py  train_sampler        --config  config_sampler
-            python tsampler.py  transform_sampler    --config  config_sampler
             echo "tsampler.py" >> file_check.txt
 
 
+    - name: python tsampler.py  transform_sampler
+      #continue-on-error: true
+      run:  |
+            python tsampler.py  transform_sampler    --config  config_sampler
+            echo "tsampler.py" >> file_check.txt
 
 
 
