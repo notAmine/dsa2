@@ -7,58 +7,34 @@ python source/run_train.py  run_train --config_name elasticnet  --path_data_trai
 activate py36 && python source/run_train.py  run_train   --n_sample 100  --config_name lightgbm  --path_model_config source/config_model.py  --path_output /data/output/a01_test/     --path_data_train /data/input/train/
 
 """
-import warnings
+import warnings, sys, os, json, importlib, pandas as pd
 warnings.filterwarnings('ignore')
-import sys, os, json, importlib
-import pandas as pd
+####################################################################################################
+from utilmy import global_verbosity, os_makedirs
+verbosity = global_verbosity(__file__, "/../config.json" ,default= 5)
+
+def log(*s):
+    if verbosity >= 1 : print(*s, flush=True)
+
+def log2(*s):
+    if verbosity >= 2 : print(*s, flush=True)
+
+def log3(*s):
+    if verbosity >= 3 : print(*s, flush=True)
+
 ####################################################################################################
 #### Add path for python import
 sys.path.append( os.path.dirname(os.path.abspath(__file__)) + "/")
-
-#### Root folder analysis
 root = os.path.abspath(os.getcwd()).replace("\\", "/") + "/"
-print(root)
+log(root)
 
-DEBUG = True
 
-####################################################################################################
 ####################################################################################################
 from util_feature import   load, save_list, load_function_uri, save
 from run_preprocess import  preprocess, preprocess_load
 
-
 SUPERVISED_MODELS = ['SMOTE', 'SMOTEENN', 'SMOTETomek', 'NearMiss']
 
-"""
-### bug with logger
-from util import logger_class
-logger = logger_class()
-
-def log(*s):
-    logger.log(*s, level=1)
-
-def log2(*s):
-    logger.log(*s, level=2)
-
-def log_pd(df, *s, n=0, m=1):
-    sjump = "\n" * m
-    log(sjump,  df.head(n))
-"""
-
-
-def log(*s, n=0, m=0):
-    sspace = "#" * n
-    sjump = "\n" * m
-    ### Implement pseudo Logging
-    print(sjump, sspace, s, sspace, flush=True)
-
-
-def log2(*s, n=0, m=0):
-    if DEBUG :
-        sspace = "#" * n
-        sjump = "\n" * m
-        ### Implement pseudo Logging
-        print(sjump, sspace, s, sspace, flush=True)
 
 
 def save_features(df, name, path):
@@ -87,23 +63,21 @@ def model_dict_load(model_dict, config_path, config_name, verbose=True):
 ####################################################################################################
 ##### train    #####################################################################################
 def map_model(model_name):
-    """
-      Get the Class of the object stored in source/models/
+    """ Get the Class of the object stored in source/models/
     :param model_name:   model_sklearn
     :return: model module
-
     """
-
     ##### Custom folder
     if ".py" in model_name :
-       path = os.path.parent(model_name)
+       model_file = model_name.split(":")[0]
+       ### Asbolute path of the file
+       path = os.path.dirname(os.path.abspath(model_file))
        sys.path.append(path)
-       mod = os.path.basename(model_name)
+       mod    = os.path.basename(model_file).replace(".py", "")
        modelx = importlib.import_module(mod)
        return modelx
 
-
-    ##### Local folder
+    ##### Repo folder
     model_file = model_name.split(":")[0]
     if  'optuna' in model_name : model_file = 'optuna_lightgbm'
 
@@ -120,24 +94,6 @@ def map_model(model_name):
 
     return modelx
 
-
-def mlflow_register(dfXy, model_dict: dict, stats: dict, mlflow_pars:dict ):
-    log("#### Using mlflow #########################################################")
-    # def register(run_name, params, metrics, signature, model_class, tracking_uri= "sqlite:///local.db"):
-    from run_mlflow import register
-    from mlflow.models.signature import infer_signature
-
-    train_signature = dfXy[model_dict['data_pars']['cols_model']]
-    y_signature     = dfXy[model_dict['data_pars']['coly']]
-    signature       = infer_signature(train_signature, y_signature)
-
-    register( run_name    = model_dict['global_pars']['config_name'],
-             params       = model_dict['global_pars'],
-             metrics      = stats["metrics_test"],
-             signature    = signature,
-             model_class  = model_dict['model_pars']["model_class"],
-             tracking_uri = mlflow_pars.get( 'tracking_db', "sqlite:///mlflow_local.db")
-            )
 
 
 def train(model_dict, dfX, cols_family, post_process_fun):
@@ -310,12 +266,6 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
     dfXy, dfXytest,stats  = train(model_dict, dfXy, cols, post_process_fun)
 
 
-    log("#### Register model ##########################################################")
-    mlflow_pars = model_dict.get('compute_pars', {}).get('mlflow_pars', None)
-    if mlflow_pars is not None:
-        mlflow_register(dfXy, model_dict, stats, mlflow_pars)
-
-
     if return_mode == 'dict' :
         return { 'dfXy' : dfXy, 'dfXytest': dfXytest, 'stats' : stats   }
 
@@ -330,10 +280,8 @@ def run_train(config_name, config_path="source/config_model.py", n_sample=5000,
 
 
 ####################################################################################################
-############CLI Command ############################################################################
 def transform(model_name, path_model, dfX, cols_family, model_dict):
-    """
-    Arguments:
+    """Arguments:
         model_name {[str]} -- [description]
         path_model {[str]} -- [description]
         dfX {[DataFrame]} -- [description]
@@ -393,8 +341,6 @@ def run_transform(config_name, config_path, n_sample=1,
             'pipe_list' : model_dict['model_pars']['pre_process_pars']['pipe_list']}
     
 
-
-
     ##########################################################################################
     from run_preprocess import preprocess_inference   as preprocess
     colid            = load(f'{path_pipeline}/colid.pkl')
@@ -443,6 +389,8 @@ def run_transform(config_name, config_path, n_sample=1,
         os.makedirs(path_check_out, exist_ok=True)
         dfX.to_parquet(path_check_out + "/dfX.parquet")  # train input data generate parquet
         log("######### Finish #############################################################", )
+
+
 
 
 if __name__ == "__main__":

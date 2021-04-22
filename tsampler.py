@@ -11,7 +11,6 @@
 import warnings, copy, os, sys
 warnings.filterwarnings("ignore")
 
-
 ###### Path ########################################################################
 root_repo      =  os.path.abspath(os.getcwd()).replace("\\", "/") + "/"     ; print(root_repo)
 THIS_FILEPATH  =  os.path.abspath(__file__) 
@@ -77,10 +76,6 @@ cols_input_type_1 = {
 
 ####################################################################################
 def config_sampler() :
-    """
-       ONE SINGLE DICT Contains all needed informations for
-       used for titanic classification task
-    """
     data_name    = "titanic"         ### in data/input/
     model_class  = "CTGAN"  ### ACTUAL Class name for model_sklearn.py
     n_sample     = 1000
@@ -94,14 +89,13 @@ def config_sampler() :
 
     model_dict = {
       "model_pars": {
-        ### LightGBM API model   #######################################
          "model_class": model_class
         ,"model_pars" : {
                         }
 
-        , "post_process_fun" : post_process_fun   ### After prediction  ##########################################
+        , "post_process_fun" : post_process_fun   ### After prediction
         , "pre_process_pars" : {
-              "y_norm_fun" :  pre_process_fun ,  ### Before training  ##########################
+              "y_norm_fun" :  pre_process_fun ,  ### Before training
               ### Pipeline for data processing ##############################
               "pipe_list": [
                   #### coly target prorcessing
@@ -116,11 +110,11 @@ def config_sampler() :
 
                               ],
                                   }
-                  },
+      },
 
       "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
                         # ,"mlflow_pars" : {}   ### Not empty --> use mlflow
-                      },
+      },
 
       "data_pars": { 
           "n_sample" : n_sample,
@@ -142,10 +136,9 @@ def config_sampler() :
             'continuous'   : [ 'colnum',   ],
             'sparse'       : [ 'colcat_bin', 'colnum_bin',  ],
             'my_split_23'  : [ 'colnum_bin',   ],
-                              } 
-
          }
       }
+    }
 
     ##### Filling Global parameters    ############################################################
     model_dict        = global_pars_update(model_dict, data_name, config_name=os_get_function_name() )
