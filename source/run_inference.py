@@ -141,7 +141,7 @@ def predict(model_dict, dfX, cols_family, post_process_fun=None):
     sys.path.append( root)    #### Needed due to import source error
 
     log2(model_path + "/model/model.pkl")
-    modelx.model, session = modelx.load_model(model_path )
+    modelx.load_model(model_path )
     assert modelx.model is not None, "cannot load modelx, " + model_path
     log2("### modelx\n", modelx.model.model)
 
