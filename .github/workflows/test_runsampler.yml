@@ -93,7 +93,7 @@ jobs:
     #- name: run_models
     #  run: chmod -R 777 . && ztest/run_models.sh   # 2>&1 | tee   /home/runner/work/mlmodels/mlmodels_store/log_import/log_optim.py
 
-    - name: cd source - models && python model_sampler.py  test
+    - name: python model_sampler.py  test
       #continue-on-error: true
       run:  |
             cd source/models && python model_sampler.py  test

@@ -11,7 +11,7 @@
 import warnings, copy, os, sys
 warnings.filterwarnings("ignore")
 
-####################################################################################
+
 ###### Path ########################################################################
 root_repo      =  os.path.abspath(os.getcwd()).replace("\\", "/") + "/"     ; print(root_repo)
 THIS_FILEPATH  =  os.path.abspath(__file__) 
@@ -116,7 +116,7 @@ def config_sampler() :
 
                               ],
                                   }
-                      },
+                  },
 
       "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
                         # ,"mlflow_pars" : {}   ### Not empty --> use mlflow
@@ -152,11 +152,32 @@ def config_sampler() :
     return model_dict
 
 
+def log(*s):
+    print(s, flush=True)
 
-#####################################################################################
-########## Profile data #############################################################
-from core_run import  data_profile
-# def data_profile(path_data="", path_output="", n_sample= 5000):
+
+
+def test_batch(nsample=1000):
+   ll = [
+     ('CTGAN', { })
+
+   ]
+
+   for m in ll :
+     mdict['model_pars']['model_class'] = m[0]
+     mdict['model_pars']['model_pars']  = m[1]
+
+     mdict = config_sampler()
+     m     = mdict['global_pars']
+     log(mdict)
+     from source import run_sampler
+     run_sampler.run_train(config_name    =  None,
+                        config_path       =  None,
+                        n_sample          =  nsample,
+                        model_dict        =  mdict
+                        )
+
+
 
 
 
@@ -170,48 +191,18 @@ from core_run import preprocess
 
 ##################################################################################
 ########## Train #################################################################
-# def train_sampler(config=None, nsample=None):
+# train_sampler(config=None, nsample=None):
 from core_run import train_sampler
 
 
 
-def test_batch():
-   mdict = config_sampler()
-   
-   ll = [
-     ('CTGAN', { })
-
-   ]
-
-   for m in ll :
-     mdict['model_pars']['model_class'] = m[0]
-     mdict['model_pars']['model_pars']  = m[1]
-
-    config_uri, config_name = get_config_path(config)
-
-    mdict = get_global_pars(  config_uri)
-    m     = mdict['global_pars']
-    log(mdict)
-    from source import run_sampler
-    run_sampler.run_train(config_name     =  None,
-                        config_path       =  None,
-                        n_sample          =  nsample if nsample is not None else m['n_sample'],
-                        model_dict= mdict
-                        # use_mlmflow       =  False
-                        )
-
-
 ####################################################################################
 ####### Inference ##################################################################
-# predict(config="", nsample=10000)
-# from core_run import transform_sampler
+# transform(config='', nsample=None):
+from core_run import transform
 
 
 
-
-
-###########################################################################################################
-###########################################################################################################
 if __name__ == "__main__":
     from pyinstrument import Profiler;  profiler = Profiler() ; profiler.start()
     import fire
