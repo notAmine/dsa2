@@ -13,7 +13,7 @@ warnings.filterwarnings("ignore")
 
 ###### Path ########################################################################
 root_repo      =  os.path.abspath(os.getcwd()).replace("\\", "/") + "/"     ; print(root_repo)
-THIS_FILEPATH  =  os.path.abspath(__file__) 
+THIS_FILEPATH  =  os.path.abspath(__file__)
 
 sys.path.append(root_repo)
 from source.util_feature import save,os_get_function_name
@@ -23,7 +23,7 @@ def global_pars_update(model_dict,  data_name, config_name):
     dir_data  = root_repo + "/data/"  ; print("dir_data", dir_data)
 
     m                      = {}
-    m["config_path"]       = THIS_FILEPATH  
+    m["config_path"]       = THIS_FILEPATH
     m["config_name"]       = config_name
     m["model_file"]        = "model_sampler"
 
@@ -81,10 +81,10 @@ def config_sampler() :
     n_sample     = 1000
 
     def post_process_fun(y):   ### After prediction is done
-        return  int(y)
+        return  y
 
     def pre_process_fun(y):    ### Before the prediction is done
-        return  int(y)
+        return  y
 
 
     model_dict = {
@@ -117,7 +117,7 @@ def config_sampler() :
                         'compute_pars' : {}
       },
 
-      "data_pars": { 
+      "data_pars": {
           "n_sample" : n_sample,
           "download_pars" : None,
           ### Filter data rows   ##################################################################
@@ -202,7 +202,7 @@ if __name__ == "__main__":
     import fire
     fire.Fire()
     profiler.stop() ; print(profiler.output_text(unicode=True, color=True))
-    
+
 
 
 

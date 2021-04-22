@@ -114,10 +114,10 @@ jobs:
             echo "tsampler.py" >> file_check.txt
 
 
-    - name: python tsampler.py  transform_sampler
+    - name: python tsampler.py  transform
       #continue-on-error: true
       run:  |
-            python tsampler.py  transform_sampler    --config  config_sampler
+            python tsampler.py  transform    --config  config_sampler
             echo "tsampler.py" >> file_check.txt
 
 

@@ -115,8 +115,6 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
 
     log("#### Model Input preparation #########################################################")
-    log(dfX.shape)
-    dfX    = dfX.sample(frac=1.0)
     itrain = int(0.6 * len(dfX))
     ival   = int(0.8 * len(dfX))
     colsX  = data_pars['cols_model']
@@ -125,6 +123,9 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     log('Model coly', coly)
     log('Model column type: ',data_pars['cols_model_type2'])
 
+
+    log(dfX.shape)
+    dfX    = dfX.sample(frac=1.0)
     data_pars['data_type'] = 'ram'
     data_pars['train'] = {'Xtrain' : dfX[colsX].iloc[:itrain, :],
                           'ytrain' : dfX[coly].iloc[:itrain],
@@ -136,8 +137,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
                           }
     
     data_pars['eval'] = {'X'   : dfX[colsX].iloc[ival:, :],
-                          'y'   : dfX[coly].iloc[ival:],
-                          }
+                         'y'   : dfX[coly].iloc[ival:], }
 
     log("#### Init, Train ############################################################")
     # from config_model import map_model    
@@ -149,18 +149,16 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     modelx.reset()
     modelx.init(model_pars, compute_pars=compute_pars)
 
-    if 'optuna' in model_name:
-        modelx.fit(data_pars, compute_pars)
-        # No need anymore
-        # modelx.model.model_pars['optuna_model'] = modelx.fit(data_pars, compute_pars)
-    else:
-        modelx.fit(data_pars, compute_pars)
+    modelx.fit(data_pars, compute_pars)
 
 
     log("#### Transform ################################################################")
+    """
+       This part should match the source/models/ naming pattern.
+    """
     if model_name in SUPERVISED_MODELS:
         dfX2, y = modelx.transform((dfX[colsX], dfX[coly]),data_pars=data_pars, compute_pars=compute_pars)
-        dfX2 = pd.DataFrame(dfX2, columns = colsX)
+        dfX2    = pd.DataFrame(dfX2, columns = colsX)
     else:
         dfX2 = modelx.transform(dfX[colsX], data_pars=data_pars, compute_pars=compute_pars)
     # dfX2.index = dfX.index
@@ -171,9 +169,9 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     log("Actual    : ",  dfX[colsX])
     log("Prediction: ",  dfX2)
 
+
     log("#### Metrics ###############################################################")
     from util_feature import  metrics_eval
-
     # metrics_test = metrics_eval(metric_list,
     #                             ytrue       = dfX[coly].iloc[ival:],
     #                             ypred       = dfX[coly + '_pred'].iloc[ival:],
@@ -192,10 +190,12 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
 
     log("### Reload model,            ###############################################")
+    modelx.reset()
+    modelx.load_model(model_path )
     log(modelx.model.model_pars, modelx.model.compute_pars)
-    a = load(model_path + "/model.pkl")
-    log("Reload model pars", a.model_pars)
-    
+    log("Reload model pars", model_pars)
+
+
     return dfX2.iloc[:ival, :].reset_index(), dfX2.iloc[ival:, :].reset_index(), stats
 
 
@@ -297,8 +297,8 @@ def transform(model_name, path_model, dfX, cols_family, model_dict):
 
 
     log("#### Load model  ############################################")
-    print(path_model + "/model/model.pkl")
-    modelx.model = modelx.load(path_model + "/model.pkl")
+    log(path_model + "/model/model.pkl")
+    modelx.load_model(path_model )
 
     colsX       = load(path_model + "/colsX.pkl")   ## column name
 
@@ -307,9 +307,9 @@ def transform(model_name, path_model, dfX, cols_family, model_dict):
     assert modelx.model is not None, "cannot load modelx, " + path_model
     log("#### modelx\n", modelx.model.model)
 
+
     log("### Prediction  ############################################")
     # dfX1  = dfX.reindex(columns=colsX)   #reindex included
-
     dfX = modelx.transform(dfX,
                            data_pars    = model_dict['data_pars'],
                            compute_pars = model_dict['compute_pars']
