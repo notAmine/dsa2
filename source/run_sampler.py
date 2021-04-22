@@ -69,12 +69,14 @@ def map_model(model_name):
     """
     ##### Custom folder
     if ".py" in model_name :
+       log3(model_name)
        model_file = model_name.split(":")[0]
        ### Asbolute path of the file
        path = os.path.dirname(os.path.abspath(model_file))
        sys.path.append(path)
        mod    = os.path.basename(model_file).replace(".py", "")
        modelx = importlib.import_module(mod)
+       log3(model_file, modelx)
        return modelx
 
     ##### Repo folder
@@ -89,7 +91,7 @@ def map_model(model_name):
     except :
         ### All SKLEARN API
         ### ['ElasticNet', 'ElasticNetCV', 'LGBMRegressor', 'LGBMModel', 'TweedieRegressor', 'Ridge']:
-       mod    = 'models.model_sklearn'
+       mod    = 'models.model_sampler'
        modelx = importlib.import_module(mod)
 
     return modelx
@@ -108,7 +110,7 @@ def train(model_dict, dfX, cols_family, post_process_fun):
     data_pars                = model_dict['data_pars']
     model_name, model_path   = model_pars['model_class'], model_dict['global_pars']['path_train_model']
     metric_list              = compute_pars['metric_list']
-    model_file               = model_pars.get('model_file',"model_sampler")
+    #model_file               = model_pars.get('model_file',"model_sampler")
 
     assert  'cols_model_type2' in data_pars, 'Missing cols_model_type2, split of columns by data type '
     log2(data_pars['cols_model_type2'])
@@ -141,10 +143,12 @@ def train(model_dict, dfX, cols_family, post_process_fun):
 
     log("#### Init, Train ############################################################")
     # from config_model import map_model    
-    if len(model_file) == 0:
-        modelx = map_model(model_name)
-    else:
-        modelx = map_model(model_file +":"+model_name)    
+
+    modelx = map_model(model_name)
+    #if len(model_file) == 0:
+    #    modelx = map_model(model_name)
+    #else:
+    #    modelx = map_model(model_file +":"+model_name)
     log(modelx)
     modelx.reset()
     modelx.init(model_pars, compute_pars=compute_pars)

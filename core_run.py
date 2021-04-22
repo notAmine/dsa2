@@ -194,7 +194,7 @@ def train_sampler(config='', nsample=None):
     m     = mdict['global_pars']
     log(mdict)
     from source import run_sampler
-    run_sampler.run_train(config_name       =  config_name,
+    run_sampler.run_train(config_name     =  config_name,
                         config_path       =  m['config_path'],
                         n_sample          =  nsample if nsample is not None else m['n_sample'],
                         # use_mlmflow       =  False

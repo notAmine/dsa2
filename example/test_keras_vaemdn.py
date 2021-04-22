@@ -71,11 +71,16 @@ cols_input_type_1 = {
     ,"colcross" : [ "Name", "Sex", "Ticket","Embarked","Pclass", "Age", "SibSp", ]
 }
 
+coly   =   "Survived"
+colid  =   "PassengerId"
+colcat =   ["Sex", "Embarked", "Pclass", ]
+colnum =   [ "Age","SibSp", "Parch","Fare"]
+
 
 ####################################################################################
 def config_sampler() :
     data_name    = "titanic"         ### in data/input/
-    model_class  = "source/models/model_vaemdn.py.py::VAEMDN"   ### ACTUAL Class name
+    model_class  = "source/models/model_vaemdn.py::VAEMDN"   ### ACTUAL Class name
     n_sample     = 1000
 
     def post_process_fun(y):   ### After prediction is done
@@ -89,6 +94,15 @@ def config_sampler() :
       "model_pars": {
          "model_class": model_class
         ,"model_pars" : {
+            'original_dim':       len( colcat + colnum),
+            'class_num':             2,
+            'intermediate_dim':     64,
+            'intermediate_dim_2':   16,
+            'latent_dim' :           3,
+            'Lambda1'    :           1,
+            'batch_size' :         256,
+            'Lambda2'    :         200,
+            'Alpha'      :         0.075
                         }
 
         , "post_process_fun" : post_process_fun   ### After prediction
@@ -119,23 +133,27 @@ def config_sampler() :
           "n_sample" : n_sample,
           "download_pars" : None,
           ### Filter data rows   ##################################################################
-          "filter_pars": { "ymax" : 2 ,"ymin" : -1 },
+          # "filter_pars": { "ymax" : 2 ,"ymin" : -1 },
 
           ### Raw data:  column input ##############################################################
-          "cols_input_type" : cols_input_type_1,
+          "cols_input_type" :  {
+            'colid'  : colid,
+            'colcat' : colcat,
+            'colnum' : colnum,
+            'coly'  :  coly,
+          },
 
 
           ### Model Input :  Merge family of columns   #############################################
           "cols_model_group": [ "colnum",
-                                "colcat_bin",
+                                "colcat",
                               ]
 
           #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
         ,'cols_model_type': {
-            'continuous'   : [ 'colnum',   ],
-            'sparse'       : [ 'colcat_bin',  ],
-            'my_split_23'  : [ 'colnum',   ],
-         }
+            'colcontinuous':   colnum ,
+            'colsparse' :      colcat,
+        }
       }
     }
 
