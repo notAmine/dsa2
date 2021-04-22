@@ -2,7 +2,7 @@
 """
 python source/run_inference.py  run_predict  --n_sample 1000  --config_name lightgbm  --path_model /data/output/a01_test/   --path_output /data/output/a01_test_pred/     --path_data_train /data/input/train/
 """
-import warnings,sys, os, json, importlib, copy, gc
+import warnings,sys, os, json, importlib, copy, gc, glob
 warnings.filterwarnings('ignore')
 ####################################################################################################
 from utilmy import global_verbosity, os_makedirs
