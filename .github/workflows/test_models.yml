@@ -208,7 +208,7 @@ jobs:
 
 
     ########### Keras TF 1.5 #############################################################################
-    - name: pip3 install tensorflow==1.15  keras==2.3.1
+    - name: pip3 install tensorflow==1.4.1  keras==2.3.1
       run: |
         python3 -m pip uninstall tensorflow  keras -y
         python3 -m pip install tensorflow==1.4.1  --upgrade  --force-reinstall
