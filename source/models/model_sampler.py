@@ -110,7 +110,7 @@ def fit(data_pars: dict=None, compute_pars: dict=None, out_pars: dict=None, **kw
 
     cpars = copy.deepcopy(compute_pars.get("compute_pars", {}))
     log3(cpars)
-    
+
     if ytrain is not None and model.model_pars['model_class'] not in SDV_MODELS :  ###with label
        model.model.fit(Xtrain_tuple, ytrain, **cpars)
     else :

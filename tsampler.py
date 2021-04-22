@@ -112,8 +112,9 @@ def config_sampler() :
                                   }
       },
 
-      "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"]
+      "compute_pars": { "metric_list": ["accuracy_score","average_precision_score"],
                         # ,"mlflow_pars" : {}   ### Not empty --> use mlflow
+                        'compute_pars' : {}
       },
 
       "data_pars": { 
