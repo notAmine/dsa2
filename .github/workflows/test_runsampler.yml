@@ -103,7 +103,7 @@ jobs:
     - name: python source/run_sampler.py 
       #continue-on-error: true
       run:  |
-            python source-run_sampler.py  
+            python source/run_sampler.py
             echo "source/run_sampler.py" >> file_check.txt
 
 
