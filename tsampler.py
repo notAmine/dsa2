@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 ### Usage:
-  python tsampler.py  train_sampler        --config  config_sampler
-  python tsampler.py  transform_sampler    --config  config_sampler
+  python tsampler.py  train         --config  config_sampler
+  python tsampler.py  transform     --config  config_sampler
 
 
 
@@ -186,7 +186,7 @@ from core_run import preprocess
 ##################################################################################
 ########## Train #################################################################
 # train_sampler(config=None, nsample=None):
-from core_run import train_sampler
+from core_run import train_sampler as train
 
 
 

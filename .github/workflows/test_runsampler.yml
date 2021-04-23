@@ -107,10 +107,10 @@ jobs:
             echo "source/run_sampler.py" >> file_check.txt
 
 
-    - name: python tsampler.py  train_sampler
+    - name: python tsampler.py  train
       #continue-on-error: true
       run:  |
-            python tsampler.py  train_sampler        --config  config_sampler
+            python tsampler.py  train        --config  config_sampler
             echo "tsampler.py" >> file_check.txt
 
 
