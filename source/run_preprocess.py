@@ -9,7 +9,6 @@
 """
 import warnings, sys, gc, os, sys, json, copy, pandas as pd
 warnings.filterwarnings('ignore')
-
 ####################################################################################################
 from utilmy import global_verbosity, os_makedirs
 verbosity = global_verbosity(__file__, "/../config.json" ,default= 5)
@@ -66,18 +65,26 @@ def load_features(name, path):
 
 
 def model_dict_load(model_dict, config_path, config_name, verbose=True):
-    """
-    :param model_dict:
-    :param config_path:
-    :param config_name:
-    :param verbose:
+    """ Load the model dict from the python config file.
+       ### Issue wiht passing function durin pickle on disk
     :return:
     """
     if model_dict is None :
-       log("#### Model Params Dynamic loading  ###############################################")
-       model_dict_fun = load_function_uri(uri_name=config_path + "::" + config_name)
-       model_dict     = model_dict_fun()   ### params
-    if verbose : log( model_dict )
+      log("#### Model Params Dynamic loading  ###############################################")
+      model_dict_fun = load_function_uri(uri_name=config_path + "::" + config_name)
+      model_dict     = model_dict_fun()   ### params
+
+    else :
+        ### Passing dict
+        ### Due to Error when saving on disk the model, function definition is LOST, need dynamic load
+        path_config = model_dict[ 'global_pars']['config_path']
+
+        p1 = path_config + "::" + model_dict['model_pars']['post_process_fun'].__name__
+        model_dict['model_pars']['post_process_fun'] = load_function_uri( p1)
+
+        p1 = path_config + "::" + model_dict['model_pars']['pre_process_pars']['y_norm_fun'] .__name__
+        model_dict['model_pars']['pre_process_pars']['y_norm_fun'] = load_function_uri( p1 )
+
     return model_dict
 
 
@@ -85,10 +92,7 @@ def model_dict_load(model_dict, config_path, config_name, verbose=True):
 ####################################################################################################
 def preprocess(path_train_X="", path_train_y="", path_pipeline_export="", cols_group=None, n_sample=5000,
                preprocess_pars={}, path_features_store=None):
-    """
-      Used for trainiing only
-      Save params on disk
-
+    """ Used for trainiing only, Save params on disk
     :param path_train_X:
     :param path_train_y:
     :param path_pipeline_export:
@@ -337,11 +341,12 @@ def preprocess_load(path_train_X="", path_train_y="", path_pipeline_export="", c
     :return:
     """
     from source.util_feature import load
+    from utilmy  import pd_read_file
 
-    dfXy    = pd.read_parquet(path_features_store + "/dfX/features.parquet")
+    dfXy    = pd_read_file(path_features_store + "/dfX/*.parquet")
 
     try :
-       dfy  = pd.read_parquet(path_features_store + "/dfy/features.parquet")
+       dfy  = pd_read_file(path_features_store + "/dfy/*.parquet")
        dfXy = dfXy.join(dfy, on= cols_group['colid']  , how="left")
 
     except :
@@ -357,7 +362,6 @@ def preprocess_load(path_train_X="", path_train_y="", path_pipeline_export="", c
 ############CLI Command ############################################################################
 def run_preprocess(config_name, config_path, n_sample=5000,
                    mode='run_preprocess', model_dict=None):     #prefix "pre" added, in order to make if loop possible
-
     """
     :param config_name:   titanic_lightgbm
     :param config_path:   titanic_classifier.py
@@ -383,10 +387,6 @@ def run_preprocess(config_name, config_path, n_sample=5000,
     log("#### load input column family  ###################################################")
     cols_group = model_dict['data_pars']['cols_input_type']  ### the model config file
 
-    #pars_download = model_dict['data_pars'].get('download_pars', None )
-    #if pars_download :
-    #    for url, target_path in pars_download['']:
-    #        pass
 
     log("#### Preprocess  #################################################################")
     preprocess_pars = model_dict['model_pars']['pre_process_pars']
@@ -410,7 +410,7 @@ def run_preprocess(config_name, config_path, n_sample=5000,
     save(model_dict, path_output  +"/model_dict.pkl")
 
 
-    log("######### finish ###############################################################", )
+    log("######### finish ################################################################", )
 
 
 if __name__ == "__main__":
