@@ -121,6 +121,9 @@ jobs:
             echo "tsampler.py" >> file_check.txt
 
 
+    - name: python model_encoder.py test
+      continue-on-error: true
+      run:  cd source/models && ipython model_encoder.py test
 
 
 
