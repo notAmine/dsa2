@@ -129,6 +129,32 @@ def predict(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
 
 def predict_forward(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw):
     """   Recursive prediction by one step
+    https://machinelearningmastery.com/xgboost-for-time-series-forecasting/
+
+    # walk-forward validation for univariate data
+def walk_forward_validation(data, n_test):
+	predictions = list()
+	# split dataset
+	train, test = train_test_split(data, n_test)
+	# seed history with training dataset
+	history = [x for x in train]
+	# step over each time-step in the test set
+	for i in range(len(test)):
+		# split test row into input and output columns
+		testX, testy = test[i, :-1], test[i, -1]
+		# fit model on history and make a prediction
+		yhat = xgboost_forecast(history, testX)
+		# store forecast in list of predictions
+		predictions.append(yhat)
+		# add actual observation to history for the next loop
+		history.append(test[i])
+		# summarize progress
+		print('>expected=%.1f, predicted=%.1f' % (testy, yhat))
+	# estimate prediction error
+	error = mean_absolute_error(test[:, -1], predictions)
+	return error, test[:, -1], predictions
+
+
     :param Xpred:
     :param data_pars:
     :param compute_pars:
