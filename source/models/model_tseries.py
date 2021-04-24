@@ -138,21 +138,24 @@ def predict_forward(Xpred=None, data_pars={}, compute_pars={}, out_pars={}, **kw
     """
     global model, session
 
-    calc_features =compute_pars.get("calc_features", None)
+    ### Auto-regressive Feature calculator
+    features_calc =compute_pars.get("_features_calc", None)
 
     if Xpred is None:
         data_pars['train'] = False
         Xpred = get_dataset(data_pars, task_type="predict")
 
-    coly = 'sales'
+    coly    = 'sales'
     coldate = 'date'
     ypred_list = []
-    for Xi in Xpred.iterrows() :
+    for i, Xi in enumerate(Xpred.iterrows()) :
+        if Xi[coly] > -999999999.0 : continue  ## Not Missing
+
         ypred = model.model.predict(Xi)
         Xpred[coly].iloc[i] = ypred
-        Xpred = calc_features(Xpred)
+        Xpred.iloc[i,:]     = features_calc(Xpred.iloc[:i+1,:])
 
-    ypred = Xpred[coly]
+    ypred       = Xpred[coly]
     ypred_proba = None
     return ypred, ypred_proba
 
