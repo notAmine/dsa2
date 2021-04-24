@@ -58,7 +58,7 @@ def global_pars_update(model_dict,  data_name, config_name):
 
 ####################################################################################
 ##### Params########################################################################
-config_default   = "config1"    ### name of function which contains data configuration
+config_default   = "config1"    ### name of function which contains configuration
 
 cols_input_type_1 = {
      "coly"   :   "sales"
@@ -77,13 +77,11 @@ cols_input_type_1 = {
 
 ####################################################################################
 def config1() :
-    """
-       ONE SINGLE DICT Contains all needed informations for
-       used for tseries_demand classification task
+    """  ONE SINGLE DICT Contains all needed informations forused for tseries_demand
     """
     data_name    = "tseries_demand"         ### in data/input/
-    model_class  = "source/models/model_tseries.py:LGBMRegressor"  ### ACTUAL Class name for model_sklearn.py
-    n_sample     = 100000
+    model_class  = "source/models/model_tseries.py:LGBMRegressor"  ### ACTUAL Class name
+    n_sample     = 500
 
     def post_process_fun(y):   ### After prediction is done
         # ynew = np.exp(y) - 1.0
@@ -166,7 +164,6 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
     prepro, pars_saved, cols_saved = prepro_load(prefix, pars)
 
 
-    ################################################################################### 
     #### Do something #################################################################
     from source.prepro_tseries import pd_ts_date, pd_ts_rolling
     if prepro is None :   ###  Training time
@@ -213,25 +210,21 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
 
 
 
-###################################################################################
 ########## Preprocess #############################################################
 ### def preprocess(config="", nsample=1000):
 from core_run import preprocess
 
 
-##################################################################################
 ########## Train #################################################################
 # def train(config=None, nsample=None):
 from core_run import train
 
 
-####################################################################################
 ####### Inference ##################################################################
 # predict(config="", nsample=10000)
 from core_run import predict
 
 
-###########################################################################################################
 ###########################################################################################################
 if __name__ == "__main__":
     from pyinstrument import Profiler;  profiler = Profiler() ; profiler.start()
