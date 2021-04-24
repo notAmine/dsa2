@@ -241,7 +241,7 @@ def pd_colcat_get_catcount(df, colcat, classcol, continuous_ids):
 
     # get num of target classes
     df[classcol]   = df[classcol].astype(int)
-    ncat[classcol] = df[classcol].nunique()[0]
+    ncat[classcol] = df[classcol].nunique() # [0]
 
     # get num of categ for each of the colcat
     for i, col in enumerate(colcat) :
