@@ -479,6 +479,20 @@ def learncats(data, classcol=None, continuous_ids=[]):
             ncat[i] = max(data[:, i]) + 1
     return ncat
 
+def gef_is_continuous(data):
+    """
+        Returns true if data was sampled from a continuous variables, and false
+    """
+    observed = data[~np.isnan(data)]  # not consider missing values for this.
+    rules = [np.min(observed) < 0,
+             np.sum((observed) != np.round(observed)) > 0,
+             len(np.unique(observed)) > min(30, len(observed)/3)]
+    if any(rules):
+        return True
+    else:
+        return False
+
+
 
 def gef_get_stats(data, ncat=None):
     """
@@ -534,18 +548,7 @@ def gef_standardize_data(data, mean, std):
     return data
 
 
-def gef_is_continuous(data):
-    """
-        Returns true if data was sampled from a continuous variables, and false
-    """
-    observed = data[~np.isnan(data)]  # not consider missing values for this.
-    rules = [np.min(observed) < 0,
-             np.sum((observed) != np.round(observed)) > 0,
-             len(np.unique(observed)) > min(30, len(observed)/3)]
-    if any(rules):
-        return True
-    else:
-        return False
+
 
 
 def train_test_split2(data, ncat, train_ratio=0.7, prep='std'):
