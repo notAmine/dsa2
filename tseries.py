@@ -97,7 +97,6 @@ def config1() :
 
 
     model_dict = {"model_pars": {
-        ### LightGBM API model   #######################################
          "model_class": model_class
         ,"model_pars" : {"objective": "huber",    ### Regression Type Loss
                            "n_estimators": 100,
@@ -105,54 +104,49 @@ def config1() :
                            "boosting_type":"gbdt",     ### Model hyperparameters
                            "early_stopping_rounds": 5
 
-                        }
+        }
 
-        , "post_process_fun" : post_process_fun   ### After prediction  #######
-        , "pre_process_pars" : {"y_norm_fun" :  pre_process_fun ,  ### Before training  ##########################
+        , "post_process_fun" : post_process_fun
+        , "pre_process_pars" : {"y_norm_fun" :  pre_process_fun ,
+            ### Pipeline for data processing ##############################
+            "pipe_list": [
+            #### Example of Custom processor
+            {"uri":  THIS_FILEPATH + "::pd_dsa2_custom",
+                "pars"        : {'coldate': 'date'},
+                "cols_family" : "col_tseries",
+                "cols_out"    : "tseries_feat",  "type": "" },
 
+            ],
+        }
+    },
 
-        ### Pipeline for data processing ##############################
-        "pipe_list": [
-        #### Example of Custom processor
-        {"uri":  THIS_FILEPATH + "::pd_dsa2_custom",
-            "pars"        : {'coldate': 'date'},
-            "cols_family" : "col_tseries",
-            "cols_out"    : "tseries_feat",  "type": "" },
-
-        ],
-               }
-        },
-
-      "compute_pars": { "metric_list": ['root_mean_squared_error', 'mean_absolute_error',
+    "compute_pars": { "metric_list": ['root_mean_squared_error', 'mean_absolute_error',
                                        'explained_variance_score', 'r2_score', 'median_absolute_error']
-                      },
+    },
 
-      "data_pars": { "n_sample" : n_sample,
+    "data_pars": { "n_sample" : n_sample,
           "download_pars" : None,
-
-          ### Raw data:  column input ##############################################################
+          ### Raw data:  column input ##################
           "cols_input_type" : cols_input_type_1,
 
-
-          ### Model Input :  Merge family of columns   #############################################
-          "cols_model_group": [
-                               ### cols_out of  pd_dsa2_custom
+          ### Model Input :  Merge family of columns
+          "cols_model_group": [ ### cols_out of  pd_dsa2_custom
                                "tseries_feat"
                               ]
 
-      #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
-     ,'cols_model_type': {
-         'My123_continuous' : [ 'tseries_feat',   ],
-         'my_sparse'        : [ 'colcat',  ],
-      }
+          #### Model Input : Separate Category Sparse from Continuous : Aribitrary name is OK (!)
+         ,'cols_model_type': {
+             'My123_continuous' : [ 'tseries_feat',   ],
+             'my_sparse'        : [ 'colcat',  ],
+          }
 
-          ### Filter data rows   ##################################################################
+          ### Filter data rows   #################
          ,"filter_pars": { "ymax" : 999999999 ,"ymin" : -1 }
 
          }
-      }
+    }
 
-    ##### Filling Global parameters    ############################################################
+    ##### Filling Global parameters
     model_dict        = global_pars_update(model_dict, data_name, config_name=os_get_function_name() )
     return model_dict
 
@@ -170,7 +164,6 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
     #### Inference time LOAD previous pars  ###########################################
     from prepro import prepro_load, prepro_save
     prepro, pars_saved, cols_saved = prepro_load(prefix, pars)
-
 
 
     ################################################################################### 
@@ -196,8 +189,6 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
         """
           y is NOT provided, need to calculate y based on past values.
           Auto-regressive feature engineering.
-          
-
 
         """
 
@@ -222,14 +213,6 @@ def pd_dsa2_custom(df: pd.DataFrame, col: list=None, pars: dict=None):
 
 
 
-
-
-#####################################################################################
-########## Profile data #############################################################
-from core_run import  data_profile
-# def data_profile(path_data="", path_output="", n_sample= 5000):
-
-
 ###################################################################################
 ########## Preprocess #############################################################
 ### def preprocess(config="", nsample=1000):
@@ -251,10 +234,12 @@ from core_run import predict
 ###########################################################################################################
 ###########################################################################################################
 if __name__ == "__main__":
-    d = { "data_profile": data_profile,  "train" : train, "predict" : predict, "config" : config_default }
+    from pyinstrument import Profiler;  profiler = Profiler() ; profiler.start()
     import fire
-    fire.Fire(d)
-    
+    fire.Fire()
+    profiler.stop() ; print(profiler.output_text(unicode=True, color=True))
+
+
 
 
 

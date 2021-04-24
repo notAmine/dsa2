@@ -27,7 +27,6 @@ jobs:
       
 
     ##### Log Start  ######################################################
-
     #- name: ssh_gen
     #  uses: webfactory/ssh-agent@v0.2.0
       #with:
@@ -40,8 +39,6 @@ jobs:
            # cd /home/runner/work/mlmodels/mlmodels/
 
     ########################################################################
-                
-
     # - name: log_start
     #  run: |
     #       cd /home/runner/work/mlmodels/  && git clone git@github.com:arita37/mlmodels_store.git  &&  ls && pwd
